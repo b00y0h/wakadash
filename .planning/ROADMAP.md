@@ -27,10 +27,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Tap repository b00y0h/homebrew-wakafetch exists with README
   3. Fine-grained PAT exists with Contents read/write on tap repo
   4. HOMEBREW_TAP_TOKEN secret configured in wakafetch repository
-**Plans**: TBD
+**Plans**: 3 plans in 2 waves
 
 Plans:
-- [ ] TBD (will be defined during phase planning)
+- [ ] 01-01-PLAN.md - Fork upstream repository and configure settings
+- [ ] 01-02-PLAN.md - Create tap repository and initialize structure
+- [ ] 01-03-PLAN.md - Create PAT and configure repository secret (has checkpoint)
 
 ### Phase 2: Release Automation
 **Goal**: Automated multi-platform releases work end-to-end
@@ -69,6 +71,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Repository Setup | 0/TBD | Not started | - |
+| 1. Repository Setup | 0/3 | Planned | - |
 | 2. Release Automation | 0/TBD | Not started | - |
 | 3. Homebrew Distribution | 0/TBD | Not started | - |
