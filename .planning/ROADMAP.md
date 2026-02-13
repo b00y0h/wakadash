@@ -12,8 +12,8 @@ This roadmap delivers automated Homebrew distribution for the wakafetch Go CLI i
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [x] **Phase 1: Repository Setup** - GitHub infrastructure ready for automation ✓
-- [x] **Phase 2: Release Automation** - GoReleaser builds and publishes releases ✓
+- [x] **Phase 1: Repository Setup** - GitHub infrastructure ready for automation
+- [x] **Phase 2: Release Automation** - GoReleaser builds and publishes releases
 - [ ] **Phase 3: Homebrew Distribution** - Users can install via brew
 
 ## Phase Details
@@ -55,22 +55,23 @@ Plans:
 **Requirements**: DIST-01, DIST-02, DIST-03, DIST-04
 **Success Criteria** (what must be TRUE):
   1. GoReleaser automatically publishes Homebrew cask to tap repository on release
-  2. Cask includes proper install block that places wakafetch binary in PATH
+  2. Cask includes post-install hook for macOS quarantine removal
   3. User can run `brew tap b00y0h/wakafetch` successfully
   4. User can run `brew install wakafetch` and execute `wakafetch` command
-  5. Cask includes test block for installation verification
-**Plans**: TBD
+  5. Binary executes without macOS security warnings
+**Plans**: 2 plans in 2 waves
 
 Plans:
-- [ ] TBD (will be defined during phase planning)
+- [ ] 03-01-PLAN.md - Update GoReleaser to use homebrew_casks
+- [ ] 03-02-PLAN.md - Create release and verify Homebrew installation (has checkpoint)
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3
+Phases execute in numeric order: 1 -> 2 -> 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Repository Setup | 3/3 | ✓ Complete | 2026-02-13 |
-| 2. Release Automation | 1/1 | ✓ Complete | 2026-02-13 |
-| 3. Homebrew Distribution | 0/TBD | Not started | - |
+| 1. Repository Setup | 3/3 | Complete | 2026-02-13 |
+| 2. Release Automation | 1/1 | Complete | 2026-02-13 |
+| 3. Homebrew Distribution | 0/2 | In Progress | - |
