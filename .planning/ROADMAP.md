@@ -44,10 +44,10 @@ Plans:
   3. GitHub Release is created with tar.gz archives and SHA256 checksums
   4. Release includes auto-generated changelog from commit history
   5. Workflow authenticates to tap repository using HOMEBREW_TAP_TOKEN
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] TBD (will be defined during phase planning)
+- [ ] 02-01-PLAN.md - Create GoReleaser config and release workflow (has checkpoint)
 
 ### Phase 3: Homebrew Distribution
 **Goal**: Users can install wakafetch via Homebrew
@@ -72,5 +72,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Repository Setup | 3/3 | ✓ Complete | 2026-02-13 |
-| 2. Release Automation | 0/TBD | Not started | - |
+| 2. Release Automation | 0/1 | In progress | - |
 | 3. Homebrew Distribution | 0/TBD | Not started | - |
