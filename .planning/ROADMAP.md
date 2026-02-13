@@ -13,7 +13,7 @@ This roadmap delivers automated Homebrew distribution for the wakafetch Go CLI i
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Repository Setup** - GitHub infrastructure ready for automation ✓
-- [ ] **Phase 2: Release Automation** - GoReleaser builds and publishes releases
+- [x] **Phase 2: Release Automation** - GoReleaser builds and publishes releases ✓
 - [ ] **Phase 3: Homebrew Distribution** - Users can install via brew
 
 ## Phase Details
@@ -47,7 +47,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 02-01-PLAN.md - Create GoReleaser config and release workflow (has checkpoint)
+- [x] 02-01-PLAN.md - Create GoReleaser config and release workflow (has checkpoint)
 
 ### Phase 3: Homebrew Distribution
 **Goal**: Users can install wakafetch via Homebrew
@@ -72,5 +72,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Repository Setup | 3/3 | ✓ Complete | 2026-02-13 |
-| 2. Release Automation | 0/1 | In progress | - |
+| 2. Release Automation | 1/1 | ✓ Complete | 2026-02-13 |
 | 3. Homebrew Distribution | 0/TBD | Not started | - |
