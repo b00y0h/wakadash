@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-13)
 
 **Core value:** Users can install wakafetch with `brew tap b00y0h/wakafetch && brew install wakafetch`
-**Current focus:** MILESTONE COMPLETE
+**Current focus:** Milestone complete
 
 ## Current Position
 
-Phase: 3 of 3 (Homebrew Distribution) — COMPLETE
-Plan: 2/2 complete
-Status: Milestone v1.0 complete - Homebrew distribution working
-Last activity: 2026-02-17 — Phase 3 verified and complete
+Phase: 3 of 3 — MILESTONE COMPLETE
+Plan: 6/6 complete
+Status: All phases delivered
+Last activity: 2026-02-17 — Phase 4 removed (brew.sh discoverability requires homebrew-core; decided to keep personal tap only)
 
 Progress: [██████████] 100%
 
@@ -78,6 +78,11 @@ Recent decisions affecting current work:
 - v0.1.0 released successfully with all platform binaries
 - Added Homebrew installation instructions to README.md
 
+### Roadmap Evolution
+
+- Phase 4 added: Enable wakafetch to show up when searching on brew.sh
+- Phase 4 removed: brew.sh only indexes homebrew-core (not personal taps). Submitting to homebrew-core requires formula to point to upstream sahaj-b/wakafetch (Homebrew's no-forks policy). Decision: keep personal tap only.
+
 ### Pending Todos
 
 None.
@@ -89,5 +94,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Milestone v1.0 complete
+Stopped at: Milestone complete
 Resume command: /gsd:complete-milestone
