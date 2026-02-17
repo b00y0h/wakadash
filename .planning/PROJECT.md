@@ -1,28 +1,22 @@
-# wakafetch Homebrew Distribution
+# wakadash
 
 ## What This Is
 
-Release automation for the wakafetch Go CLI that enables macOS and Linux users to install via Homebrew. Uses GoReleaser with GitHub Actions to build multi-platform binaries and auto-publish to a dedicated Homebrew tap.
+A terminal dashboard for WakaTime/Wakapi coding stats. Displays live-updating visualizations of coding activity with color-coded charts, sparklines, and heatmaps — bringing the WakaTime web dashboard experience to the terminal.
 
 ## Core Value
 
-Users can install wakafetch with `brew tap b00y0h/wakafetch && brew install wakafetch` — no manual downloads or Go toolchain required.
+A beautiful, live-updating terminal dashboard that shows your coding stats at a glance — like htop for your coding activity.
 
-## Current State (v1.0)
+## Current Milestone: v2.0 wakadash
 
-**Shipped:** 2026-02-17
+**Goal:** Create a standalone terminal dashboard tool with live updates and rich data visualization, ready for homebrew-core submission.
 
-**Repositories:**
-- **Fork:** b00y0h/wakafetch (GoReleaser + GitHub Actions)
-- **Tap:** b00y0h/homebrew-wakafetch (Homebrew cask)
-- **Upstream:** sahaj-b/wakafetch (Go CLI)
-
-**Release pipeline:**
-- Tag v*.*.* triggers GitHub Actions
-- GoReleaser builds darwin/linux × amd64/arm64
-- Cask auto-published to tap with quarantine removal hook
-
-**Current release:** v0.1.0
+**Target features:**
+- Live-updating dashboard mode (auto-refresh, persistent window)
+- Color-coded data visualizations (sparklines, bar charts, heatmaps)
+- Fresh standalone repo (ported from wakafetch, not a fork)
+- homebrew-core compatible (original work, proper formula)
 
 ## Requirements
 
@@ -38,21 +32,32 @@ Users can install wakafetch with `brew tap b00y0h/wakafetch && brew install waka
 
 ### Active
 
-(None — milestone complete)
+(To be defined — running requirements phase)
 
 ### Out of Scope
 
-- App code changes — only release/CI infrastructure
 - Windows builds — Homebrew is macOS/Linux focused
-- Additional package managers (apt, yum, etc.) — Homebrew only
-- brew.sh discoverability — requires homebrew-core submission with upstream cooperation
-- Automated dependency updates — manual releases only
+- Real-time WebSocket streaming from WakaTime — API polling sufficient
+- Mobile/web interface — terminal only
+- Multi-user/server mode — single-user CLI tool
+
+## Context
+
+**Origin:** This project started as release automation for a wakafetch fork. v2.0 pivots to creating a standalone, enhanced tool called wakadash.
+
+**Technical foundation:**
+- Port wakafetch Go code to new repo (WakaTime/Wakapi API integration)
+- Add TUI/terminal graphics capabilities for live dashboard
+- Fresh repo enables homebrew-core submission (no fork restrictions)
+
+**Key insight from v1.0:** homebrew-core won't accept forks. Creating original work with unique value proposition solves this.
 
 ## Constraints
 
-- **No secrets in code**: Tokens via GitHub Actions secrets only
-- **No app modifications**: Only release infrastructure (.goreleaser.yaml, .github/workflows/)
-- **PAT rotation**: Fine-grained token expires Feb 2027
+- **Go language**: Continuing with Go for consistency and performance
+- **WakaTime API**: Must work with existing WakaTime/Wakapi API (no custom backend)
+- **Terminal-native**: Pure terminal output, no external dependencies
+- **homebrew-core eligible**: Must meet Homebrew's criteria for core inclusion
 
 ## Key Decisions
 
@@ -64,6 +69,9 @@ Users can install wakafetch with `brew tap b00y0h/wakafetch && brew install waka
 | homebrew_casks over brews | Modern GoReleaser v2.10+ syntax, v3-ready | ✓ Good |
 | xattr quarantine removal | Prevents macOS Gatekeeper warnings | ✓ Good |
 | Keep personal tap only | brew.sh requires homebrew-core + upstream cooperation | — Accepted |
+| Create standalone wakadash | Enables homebrew-core, adds unique value | — Pending |
+| Port and enhance wakafetch | Preserve working API code, build on top | — Pending |
+| Dashboard mode with live updates | Differentiates from simple fetch tools | — Pending |
 
 ---
-*Last updated: 2026-02-17 after v1.0 milestone*
+*Last updated: 2026-02-17 after v2.0 milestone start*
