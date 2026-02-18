@@ -7,6 +7,13 @@
 
 Requirements for the wakadash milestone. Each maps to roadmap phases.
 
+### Repository Setup
+
+- [ ] **REPO-01**: Fresh wakadash repository created (b00y0h/wakadash, not a fork)
+- [ ] **REPO-02**: Wakafetch code ported to new repo with proper attribution
+- [ ] **REPO-03**: GoReleaser configured for multi-platform builds
+- [ ] **REPO-04**: GitHub Actions workflow for tag-triggered releases
+
 ### Dashboard Foundation
 
 - [ ] **DASH-01**: User can launch persistent full-screen dashboard with `wakadash` command
@@ -27,13 +34,6 @@ Requirements for the wakadash milestone. Each maps to roadmap phases.
 - [ ] **UX-01**: Dashboard responds to terminal resize events
 - [ ] **UX-02**: Dashboard handles API rate limits with exponential backoff and visual indicator
 - [ ] **UX-03**: User can toggle panel visibility with number keys (1-4)
-
-### Repository Setup
-
-- [ ] **REPO-01**: Fresh wakadash repository created (b00y0h/wakadash, not a fork)
-- [ ] **REPO-02**: Wakafetch code ported to new repo with proper attribution
-- [ ] **REPO-03**: GoReleaser configured for multi-platform builds
-- [ ] **REPO-04**: GitHub Actions workflow for tag-triggered releases
 
 ### Distribution
 
@@ -101,8 +101,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 **Coverage:**
 - v2.0 requirements: 20 total
 - Mapped to phases: 20
-- Unmapped: 0 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-17*
-*Last updated: 2026-02-17 after definition*
+*Roadmap created: 2026-02-18*
