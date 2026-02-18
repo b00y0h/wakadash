@@ -1,291 +1,207 @@
 # Project Research Summary
 
-**Project:** wakafetch Homebrew Distribution
-**Domain:** Go CLI Release Automation with Homebrew Tap Distribution
-**Researched:** 2026-02-13
-**Confidence:** HIGH
+**Project:** wakadash — Live Dashboard Milestone (added to wakafetch)
+**Domain:** Live-updating terminal dashboard (TUI) for WakaTime/Wakapi coding statistics
+**Researched:** 2026-02-17
+**Confidence:** HIGH (stack + architecture + core pitfalls) / MEDIUM (ntcharts maturity, terminal compatibility)
 
 ## Executive Summary
 
-This project involves automating the release and distribution of wakafetch, a Go CLI tool, through Homebrew on macOS and Linux. The standard approach is to use GoReleaser (v2.13.3+) with GitHub Actions for automated multi-platform builds, releases, and Homebrew tap updates. GoReleaser handles the entire release pipeline: cross-compilation for multiple platforms, archive creation, checksum generation, GitHub Release creation, and automatic Homebrew cask generation.
+wakadash is a live-refresh terminal dashboard mode added to the existing wakafetch Go CLI. The pattern is well-established — htop, btop, and k9s define user expectations. The charmbracelet ecosystem (bubbletea + lipgloss + bubbles) is the clear standard for Go TUI development in 2026, with bubbletea v1.3.10 being production-stable (v2 is alpha and must be avoided). The existing wakafetch codebase is well-structured for this extension: api.go is pure and reusable, ui/ functions already return composable []string slices, and config loading is already decoupled. The recommended approach is to add a new `dashboard/` package that wraps existing code rather than rewriting it, activated by a `--dashboard` / `-w` flag.
 
-The recommended approach uses a tag-triggered GitHub Actions workflow that runs GoReleaser to build binaries for macOS (arm64/amd64), Linux (arm64/amd64), and Windows (amd64). GoReleaser then creates a GitHub Release and automatically commits an updated Homebrew cask to a separate tap repository (homebrew-wakafetch). This approach is well-established with extensive documentation and strong community support. The key enabler is GoReleaser's built-in integration with Homebrew taps using the modern `homebrew_casks` configuration (the older `brews` approach is deprecated as of v2.10).
+The primary architectural decision is to adopt the Elm Architecture (Model-Update-View) from bubbletea, which solves the live-refresh problem cleanly via tea.Tick and async tea.Cmd for HTTP calls. The most dangerous mistakes are concurrency-related: mutating model state outside Update(), blocking the event loop with synchronous API calls, and goroutine leaks from mismanaged tickers. All three are prevented by consistently using tea.Cmd for async work — this is the single most important pattern to enforce from day one. ntcharts is the only bubbletea-native charting library but has no tagged releases; the existing handwritten graph/heatmap code in ui/ is a viable fallback if ntcharts proves problematic.
 
-The primary risk is cross-repository authentication. The default GitHub Actions GITHUB_TOKEN cannot write to the separate tap repository. This requires creating a dedicated Personal Access Token (PAT) or GitHub App token with repo permissions for the tap repository. Security best practice demands using a bot account (not a personal account) to minimize blast radius if the token is compromised. Other critical pitfalls include using deprecated configurations, missing shallow clone configuration (fetch-depth: 0), and accidentally publishing pre-release versions to the main tap. Following established patterns and running goreleaser check before releases mitigates these risks.
+For features, the research identifies a clear MVP boundary: a full-screen TUI with auto-refresh, summary header, languages and projects bar charts, visible refresh status, keyboard quit, help overlay, graceful resize, and non-crashing error display. This set differentiates wakadash from a fancier wakafetch without overreaching. The sparkline for hourly activity, panel toggles, runtime range switching, and color themes are confirmed differentiators that belong in a second phase after the dashboard foundation is solid. Mouse interaction, real-time streaming, in-app config editing, and interactive sorting are explicitly out of scope and should not be built.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The stack centers on GoReleaser as the complete release automation solution, integrated with GitHub Actions for CI/CD orchestration. GoReleaser is the industry standard for Go CLI releases with 15,557+ GitHub stars and active development (latest release January 10, 2026).
+The existing wakafetch codebase has zero external dependencies — a deliberate design choice. This milestone is the first point where external libraries are introduced, making the choice consequential. The charmbracelet ecosystem is the right call: bubbletea v1.3.10 for the event loop, lipgloss v1.1.0 for layout composition, and bubbles v1.0.0 for loading spinners and help components. These three form a coherent, actively maintained suite (last releases: Sep 2025, Mar 2025, Feb 2025 respectively) with 18,200+ dependent projects on bubbletea alone. They are the first external dependencies added via go.mod.
+
+ntcharts (NimbleMarkets/ntcharts) provides the only purpose-built charting for bubbletea: sparklines, bar charts, and heatmaps. The risk is its lack of tagged releases — pin by commit hash. If ntcharts becomes unmaintained, the existing graphStr() and heatmap() functions in ui/ are a direct fallback since they already produce []string slices that compose into bubbletea View() methods. Do not use bubbletea v2 (alpha, breaking API, import path changed); do not introduce Cobra/pflag (conflicts with existing stdlib flag setup).
 
 **Core technologies:**
-- **GoReleaser v2.13.3+**: Complete release automation handling builds, packaging, signing, and publishing — recommended because it consolidates multi-platform builds, Homebrew tap generation, checksums, signing, and GitHub releases into one actively-maintained tool
-- **Go 1.24+ (stable)**: Build toolchain required by GoReleaser — use "stable" in GitHub Actions for latest stable release
-- **GitHub Actions (v4+ checkout, v5+ setup-go, v6+ goreleaser-action)**: CI/CD automation — native GitHub integration, free for public repos, well-maintained actions with tight GoReleaser integration
-- **Homebrew Tap (separate repository)**: Binary distribution for macOS/Linux — standard package manager convention, GoReleaser generates and updates cask automatically, requires repository name like `homebrew-wakafetch`
-- **SHA-256 checksums**: Artifact verification — default in GoReleaser, automatically generated for all release artifacts
-
-**Authentication tokens:**
-- **GITHUB_TOKEN**: Built-in token for creating releases in same repository
-- **Personal Access Token (PAT) or GitHub App Token**: Required for cross-repository publishing to separate Homebrew tap, needs `repo` or `contents:write` permissions, should be generated from dedicated bot account
-
-**Optional security enhancements:**
-- Cosign for keyless signing (modern alternative to GPG)
-- macOS notarization (requires $99/year Apple Developer Account, only needed for App Store or enterprise distribution)
+- charmbracelet/bubbletea v1.3.10: TUI event loop, Elm Architecture, auto-refresh via tea.Tick — the only Go TUI framework with production stability and ecosystem depth at this scale
+- charmbracelet/lipgloss v1.1.0: Layout composition, borders, responsive column sizing — replaces handwritten ANSI layout code; handles color degradation automatically
+- charmbracelet/bubbles v1.0.0: Spinner, help component — pre-built components that match bubbletea's model/update/view cycle
+- NimbleMarkets/ntcharts (pin by commit): Sparklines, bar charts, heatmaps native to bubbletea — the only library supporting all three required chart types in a bubbletea context
 
 ### Expected Features
 
-Based on competitive analysis (kubectl, gh, hugo) and user expectations for Go CLI tools, features fall into three tiers.
+The research identifies what users expect from a "live dashboard" versus what differentiates wakadash from both wakafetch and browser-based WakaTime dashboards. See FEATURES.md for the full comparison table against existing tools.
 
 **Must have (table stakes):**
-- Multi-platform binaries (macOS arm64/amd64, Linux arm64/amd64, Windows amd64) — users expect CLIs to work on their platform
-- GitHub Release automation — standard distribution method
-- Homebrew cask in personal tap — macOS users expect `brew install` for CLI tools
-- SHA-256 checksums — security-conscious users verify downloads
-- Automated changelog — users expect to see what changed
-- Archive packaging (.tar.gz for Unix, .zip for Windows) — standard formats
-- Semantic versioning (v1.2.3 format) — industry standard
+- Auto-refresh loop (configurable interval, default 60s; +/- keys to adjust) — the defining characteristic of a live dashboard
+- Full-screen TUI layout (AltScreen mode, not inline scrolling) — users expect dedicated terminal occupation
+- Keyboard quit (q / Ctrl-C) with clean terminal restore — absence is jarring; bubbletea handles this
+- Visible refresh indicator (last-updated timestamp in footer) — users must know if data is live or stale
+- Graceful terminal resize without crashing — mandatory for any tool used in resizable terminals
+- Color-coded bar chart for top languages — core visual requirement; every WakaTime dashboard shows this
+- Summary header panel (today total, week total, daily average, best day) — always-visible glanceable stats
+- Top N projects bar chart panel — second most-watched metric after languages
+- Error state display (friendly, non-crashing) — API failures must not surface Go stack traces
+- Help overlay (? key) — all serious TUI tools provide in-app keybinding reference
 
 **Should have (competitive):**
-- Binary signatures (GPG/Cosign) — enterprise security requirements (add when first requested)
-- Conventional Commits for better changelogs — improves when changelog quality complaints arise
-- macOS Universal Binaries — single binary for both Intel and ARM Macs (add if users complain about confusion)
-- SBOM generation — supply chain security compliance (add when enterprise users request)
+- Sparkline for today's hourly activity — answers "when am I most productive?" — requires separate durations API endpoint
+- Multi-panel layout (side-by-side on wide terminals, stacked on narrow) — information density matching btop
+- Configurable refresh interval at runtime (+/- keys) — btop pattern; users control data staleness
+- Panel toggle (show/hide editors, OSs, machines panels) — btop region-toggle UX
+- Time range switcher at runtime (r key cycles today/week/month) — eliminates restart-to-change-range workflow
+- Color themes (--theme flag, 2-3 presets: dark/light/high-contrast) — differentiates from all existing WakaTime CLI tools
+- Editors panel (toggleable bar chart) — valuable for polyglot developers
 
 **Defer (v2+):**
-- AI-enhanced release notes — requires GoReleaser Pro subscription, benefit unclear
-- Automated semantic versioning — adds workflow complexity, manual tags work fine initially
-- Docker image distribution — add if container users request it (5+ requests)
-- Beta/stable tap separation — only needed when significant user base exists
-- Homebrew core submission — only after 1000+ GitHub stars and stable 1.0 release
-
-**Anti-features (explicitly do NOT build):**
-- Custom download server — use GitHub Releases instead (free, trusted, CDN)
-- Manual changelog editing — auto-generate from conventional commits
-- Version numbers in code — inject via `-ldflags` at build time
-- Custom update mechanism — let Homebrew handle updates
-- Building on release server — build in CI for reproducibility
+- Goals and streak display (Wakapi may not support goals API; endpoint availability is uncertain)
+- Operating systems panel (low user interest relative to adding another panel)
+- Machines panel (niche — only useful for multi-device developers)
+- Dependencies breakdown (rarely the first developer dashboard check)
+- Mouse interaction, real-time heartbeat streaming, in-app config editing, interactive sorting (all explicitly anti-features for this milestone)
 
 ### Architecture Approach
 
-The architecture follows a linear pipeline pattern triggered by git tag pushes. The pipeline executes seven sequential phases: before hooks (tests/linting), builds (cross-compilation matrix), archives (packaging with extras), checksums (SHA-256 generation), optional signing (GPG/Cosign), GitHub Release creation, and Homebrew cask generation/publishing. This pattern is standard across the Go CLI ecosystem and well-supported by tooling.
+The recommended architecture introduces a new `dashboard/` package (model.go, messages.go, fetch.go, layout.go) that wraps existing code. The existing api.go, config.go, types/, and ui/ packages require zero logic changes — only ui/ function export visibility needs updating (lowercase graphStr → exported GraphStr, etc.). The entry point (main.go, flags.go) adds the --dashboard/-w flag branch and launches tea.NewProgram with AltScreen. This is the minimum-change strategy: the static CLI mode remains entirely unchanged.
+
+The data flow is: Init() returns tea.Batch(fetchStatsCmd(), tickCmd()) to kick off initial fetch and schedule the first tick concurrently. The tick fires after the configured interval; Update() checks elapsed time and issues a new fetch command. All HTTP calls run in goroutines managed by bubbletea via tea.Cmd — never called synchronously in Update(). View() calls layout.RenderDashboard(m), which uses lipgloss.JoinVertical/Horizontal to compose ui/ function outputs into panels.
 
 **Major components:**
-1. **Source Repository (wakafetch)** — holds Go source code, `.goreleaser.yaml` config, and `.github/workflows/release.yml` GitHub Actions workflow
-2. **GitHub Actions Workflow** — triggers on semantic version tags (v*), orchestrates checkout with full git history, sets up Go toolchain, and runs GoReleaser action
-3. **GoReleaser Engine** — executes seven-phase pipeline producing multi-platform binaries, archives, checksums, and GitHub Release assets
-4. **dist/ Directory** — temporary storage for build artifacts (git-ignored, cleaned between runs)
-5. **GitHub Release** — hosts binaries and archives for public download via GITHUB_TOKEN
-6. **Tap Repository (homebrew-wakafetch)** — separate repository containing `Casks/wakafetch.rb` auto-generated by GoReleaser
-7. **Homebrew Cask** — Ruby DSL defining download URLs, SHA-256 checksums, and installation instructions
-
-**Key architectural patterns:**
-- **Tag-triggered releases**: Workflow triggers only on semantic version tags, providing clean separation between development and release
-- **Cross-repository publishing**: Uses separate PAT/GitHub App token for pushing to tap repository (GITHUB_TOKEN cannot write to other repos)
-- **Multi-platform build matrix**: Go's cross-compilation builds all GOOS/GOARCH combinations in one CI run
-- **Homebrew casks over deprecated brews**: Modern approach for pre-compiled binaries (as of GoReleaser v2.10+)
-
-**Data flow:**
-Git tag push → GitHub Actions trigger → GoReleaser build pipeline → GitHub Release creation → Homebrew cask generation → commit to tap repository → user installation via `brew tap` and `brew install`
+1. `dashboard/model.go` — Root bubbletea model: holds all dashboard state, routes all messages to panels
+2. `dashboard/messages.go` — Typed Msg definitions: TickMsg, StatsDataMsg, SummaryDataMsg, ErrMsg
+3. `dashboard/fetch.go` — tea.Cmd wrappers around existing api.go calls; no HTTP logic duplicated
+4. `dashboard/layout.go` — Lipgloss composition of ui/ []string returns into joined panel view string + status bar
+5. `ui/*.go` (existing, minimally modified) — Export visibility changes only; logic unchanged
+6. `api.go` / `config.go` / `types/` (existing, unchanged) — Reused directly as-is
 
 ### Critical Pitfalls
 
-The research identified 12 pitfalls ranging from critical (project-breaking) to moderate (quality-impacting). The top five critical pitfalls all occur during initial setup and can prevent successful releases.
+The pitfall research is unusually strong because the codebase was analyzed directly. All pitfalls are traced to specific existing code patterns. Six critical pitfalls were identified; five must be addressed in Phase 1 (TUI Foundation) before any feature work begins.
 
-1. **Wrong GitHub Token for Cross-Repository Publishing** — GoReleaser fails with 404 errors when using default GITHUB_TOKEN to push to tap repository. Prevention: Create separate PAT or GitHub App token with `repo` permissions, add as HOMEBREW_TAP_TOKEN secret, reference in GoReleaser config.
+1. **Mutating model state outside Update()** — Never write model.field = value from a goroutine. All API responses must arrive as tea.Msg through the event loop. Enforce with `go run -race .` throughout development. Getting this wrong causes non-deterministic crashes that masquerade as rendering bugs.
 
-2. **Personal Access Token Security Risk** — Using personal user's PAT exposes all user repositories if token is compromised. Prevention: Create dedicated bot GitHub account, generate PAT from bot account, give bot only push access to tap repository, rotate PAT periodically.
+2. **Blocking the event loop with synchronous API calls** — The existing fetchStats() and fetchSummary() use synchronous HTTP with a 10-second timeout. Calling these directly in Init() or Update() freezes the entire UI. Wrap every API call in tea.Cmd from the start — this cannot be retrofitted cleanly.
 
-3. **Formulas vs Casks Confusion** — Using deprecated `brews` configuration instead of `homebrew_casks` violates Homebrew semantics and faces deprecation. Prevention: Use `homebrew_casks` section in `.goreleaser.yaml`, use Casks/ directory in tap repository, run `goreleaser check` to detect deprecated fields.
+3. **Panic leaves terminal in raw mode** — Any unrecovered panic in a bubbletea Cmd goroutine can leave the terminal unusable. Do not use tea.WithoutCatchPanics(). Never call os.Exit() from within a running bubbletea program (the existing showCustomHelp() does this — it must not be reused inside TUI paths).
 
-4. **Missing fetch-depth: 0 in GitHub Actions** — Shallow clone prevents GoReleaser from generating changelogs and detecting version information. Prevention: Always include `fetch-depth: 0` in `actions/checkout@v4` step.
+4. **Terminal width via stty subprocess** — The existing getTerminalCols() spawns a stty subprocess. In AltScreen TUI mode this is slow, breaks on resize, and returns 9999 on Windows. Replace with bubbletea's WindowSizeMsg handler from the start. This cannot be retrofitted without rewriting the layout layer.
 
-5. **Pre-release Version Overwriting Production** — Tagging pre-release versions (v1.0.0-rc1) updates main cask, replacing stable version unexpectedly. Prevention: Set `skip_upload: auto` in homebrew_casks configuration to automatically skip pre-release publishing.
+5. **Flag system conflict** — The existing codebase uses stdlib flag package. Introducing Cobra/pflag creates silent conflicts or panics on duplicate registration. Add --dashboard and --interval to the existing stdlib flag setup. Do not introduce Cobra in this milestone.
 
-**Additional moderate pitfalls:**
-- Insufficient GitHub Actions workflow permissions (missing `contents: write`)
-- Formula naming convention violations (incorrect class name capitalization)
-- Missing or inadequate test blocks in cask definitions
-- Multi-architecture archive conflicts (multiple OS/arch combinations without explicit configuration)
+6. **Goroutine leaks from ticker** — Using time.NewTicker directly creates goroutines that never clean up when the ticker is recreated (e.g., user changes refresh interval). Use bubbletea's tea.Tick pattern exclusively — one-shot per tick, requeued after each data arrival, cancelled on quit.
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure prioritizes getting the basic release pipeline working end-to-end before adding enhancements. The architecture dictates a sequential approach where each phase builds on working infrastructure from the previous phase.
+All four research sources converge on a 3-phase structure with a clear dependency ordering. The architecture research provides the build sequence directly, validated by the pitfall research showing which decisions must come first.
 
-### Phase 1: Core Release Pipeline Setup
+### Phase 1: TUI Foundation
 
-**Rationale:** Must establish working end-to-end pipeline before any features. All critical pitfalls occur in this phase. Cannot validate approach without successful release. Foundation for all subsequent work.
+**Rationale:** Five of six critical pitfalls must be addressed before any feature work begins. Architectural decisions made here (state model, message types, async patterns, flag system, terminal width handling) cannot be changed later without rewriting the dashboard layer. The dependency graph in ARCHITECTURE.md confirms that messages.go and fetch.go must exist before model.go, which must exist before layout.go, which must exist before any feature panels.
 
-**Delivers:**
-- Working GoReleaser configuration (.goreleaser.yaml)
-- GitHub Actions release workflow (.github/workflows/release.yml)
-- Separate Homebrew tap repository (homebrew-wakafetch)
-- Bot account with properly scoped PAT
-- First successful test release (v0.1.0)
+**Delivers:** A running but minimal bubbletea dashboard — full-screen AltScreen mode, initial data fetch (async), loading state, basic stats display, keyboard quit, terminal resize handling. No auto-refresh yet; no fancy layout. Proves the integration works end-to-end before adding complexity.
 
-**Addresses (from FEATURES.md):**
-- Multi-platform binaries (macOS/Linux/Windows with arm64/amd64)
-- GitHub Release creation
-- Checksums (SHA-256)
-- Archive packaging (.tar.gz/.zip)
-- Semantic versioning
+**Addresses (from FEATURES.md):** Full-screen TUI layout, keyboard quit (q/Ctrl-C), graceful terminal resize, error state display, summary header panel, visible refresh indicator
 
-**Avoids (from PITFALLS.md):**
-- Wrong GitHub token (Critical Pitfall 1) — configure HOMEBREW_TAP_TOKEN from start
-- Personal PAT security risk (Critical Pitfall 2) — create bot account immediately
-- Formulas vs Casks confusion (Critical Pitfall 3) — use homebrew_casks from start
-- Missing fetch-depth (Critical Pitfall 6) — configure in initial workflow
-- Multi-arch conflicts (Critical Pitfall 5) — configure architecture targets clearly
+**Avoids (from PITFALLS.md):** Model state mutation outside Update() (#1), blocking event loop (#2), panic leaving raw mode (#3), stty subprocess (#6), flag system conflict (#10), state complexity explosion (#11)
 
-**Critical path items:**
-1. Create homebrew-wakafetch tap repository first (GoReleaser needs it to exist)
-2. Create bot account and generate PAT before testing pipeline
-3. Add PAT as HOMEBREW_TAP_TOKEN secret before first test release
-4. Configure .goreleaser.yaml with homebrew_casks (not deprecated brews)
-5. Test with snapshot release before pushing first tag
+**Stack elements:** bubbletea v1.3.10, lipgloss v1.1.0; bubbles optional at this phase
 
-### Phase 2: Homebrew Tap Publication
+**Architecture components:** dashboard/messages.go, dashboard/fetch.go, dashboard/model.go, dashboard/layout.go (minimal), ui/ export visibility changes, main.go + flags.go entry point
 
-**Rationale:** Once pipeline works, focus on Homebrew distribution quality. Adds user-facing polish and prevents common installation issues. Validates that end-users can actually install and use the tool.
+**Research flag:** Standard patterns — bubbletea Elm Architecture is thoroughly documented in official docs and tutorials. ARCHITECTURE.md provides the complete build sequence. No additional research-phase needed; follow ARCHITECTURE.md build sequence directly.
 
-**Delivers:**
-- Homebrew cask with proper test block
-- Pre-release handling (skip_upload: auto)
-- Automated changelog from commit messages
-- README in tap repository with usage instructions
-- Verification that `brew tap` and `brew install` work end-to-end
+### Phase 2: Live Refresh and Data Panels
 
-**Addresses (from FEATURES.md):**
-- Homebrew tap publication (table stakes)
-- Automated changelog (table stakes)
-- README/docs in release (table stakes)
+**Rationale:** With the TUI foundation proven, all remaining table-stakes features can be implemented. The auto-refresh loop is the defining characteristic of the dashboard; the bar chart panels are the primary visual differentiator from wakafetch. Three API-level pitfalls (goroutine leaks, 429 rate limiting, 202 computing state) are specific to the refresh loop and must be addressed here, not deferred.
 
-**Avoids (from PITFALLS.md):**
-- Pre-release overwriting production (Critical Pitfall 4) — configure skip_upload: auto
-- Missing test block (Moderate Pitfall 10) — add functional test verification
-- Insufficient workflow permissions (Moderate Pitfall 8) — verify contents:write permission
-- Formula naming violations (Moderate Pitfall 9) — run brew audit --strict
+**Delivers:** The complete MVP dashboard — auto-refresh ticker, languages bar chart panel, projects bar chart panel, configurable refresh interval (--interval flag and +/- keys), help overlay (? key), last-updated footer with countdown, rate-limit handling with exponential backoff, 202 "calculating" state display. This is the shippable milestone.
 
-**Uses (from STACK.md):**
-- GoReleaser homebrew_casks configuration
-- GitHub Actions workflow permissions
-- Conventional commit format for changelog
+**Addresses (from FEATURES.md):** Auto-refresh loop, color-coded bar chart for top languages, top N projects panel, help overlay, configurable refresh interval at runtime, best day callout in header
 
-**Implements (from ARCHITECTURE.md):**
-- Homebrew cask generation (Phase 7 of GoReleaser pipeline)
-- Tap repository structure (Casks/ directory, README)
-- User installation flow verification
+**Avoids (from PITFALLS.md):** Goroutine leaks from ticker (#4), WakaTime 202 response treated as error (#5), 429 rate limit without backoff (#7), ANSI codes in non-TTY output (#8), hardcoded intervals hitting API (#12), 302 redirect treated as rate limit (#13), cached_at staleness (#14)
 
-### Phase 3: Release Process Documentation
+**Stack elements:** ntcharts (bar chart component) or existing graphStr() as fallback; bubbles spinner for loading state
 
-**Rationale:** Codify release process for repeatability and future maintainers. Establishes operational patterns before they're forgotten. Prevents mistakes during subsequent releases.
+**Architecture components:** Auto-refresh tick loop in model.go, ntcharts BarChart in layout.go, status bar with countdown, enhanced fetch.go with backoff and 202/302 handling
 
-**Delivers:**
-- Release runbook (RELEASING.md)
-- Pre-release checklist
-- Token rotation procedure
-- Troubleshooting guide for common failures
-- Test procedure for M1/Intel Macs
+**Research flag:** ntcharts integration needs validation before this phase begins — no tagged releases, heatmap quality vs existing custom renderer needs comparison. Validate ntcharts bar chart output quality before committing to it; the existing graphStr() is a full fallback.
 
-**Addresses (from FEATURES.md):**
-- None directly, but enables sustainable long-term operation
+### Phase 3: Enhanced Visualization and Polish
 
-**Avoids (from PITFALLS.md):**
-- Deprecated configuration fields (Moderate Pitfall 7) — document how to check
-- Recovery strategies for all critical pitfalls — document response procedures
-- Token security mistakes — document rotation policy
+**Rationale:** With a solid, correct dashboard in place, the differentiating features (sparkline, panel toggles, runtime range switching, color themes) can be added incrementally. These are all model-state additions — new keys update model fields, new renders respond to them. The architecture is already set up for this; they are additive. Terminal compatibility polish (true color degradation, Unicode fallbacks) belongs here as well.
 
-### Phase 4: Enhanced Security Features (Optional)
+**Delivers:** The full differentiated dashboard — sparkline for hourly activity (hourly rhythm view), panel toggle keybindings (e/o/m), runtime time range switcher (r key), multi-column layout on wide terminals, editors panel, color theme support (--theme flag), terminal compatibility hardening.
 
-**Rationale:** Add when enterprise users or security-conscious users request. Not needed for MVP. Can defer until proven demand.
+**Addresses (from FEATURES.md):** Sparkline for today's hourly activity, panel toggle, time range switcher, color themes, multi-panel side-by-side layout, editors panel
 
-**Delivers:**
-- Binary signatures with Cosign (keyless signing via GitHub OIDC)
-- SBOM generation for supply chain transparency
-- GitHub attestations for build provenance
+**Avoids (from PITFALLS.md):** True color in degraded terminals (#9), Unicode bar chars in limited fonts (#15)
 
-**Addresses (from FEATURES.md):**
-- Binary signatures (should have, add when requested)
-- SBOM generation (should have, add for enterprise)
+**Stack elements:** ntcharts Sparkline/StreamlineChart for hourly activity; lipgloss adaptive colors for theme system
 
-**Uses (from STACK.md):**
-- Cosign (optional, modern alternative to GPG)
-- GoReleaser signing configuration
-- GitHub Actions OIDC for keyless signing
+**Architecture components:** Durations API endpoint integration in fetch.go, sparkline panel in layout.go, panel visibility state in model, theme configuration via lipgloss style config
+
+**Research flag:** Wakapi durations endpoint availability needs validation — not all Wakapi versions are confirmed to support the hourly activity endpoint needed for the sparkline. Design Phase 3 sparkline with a capability check — if endpoint returns 404, hide the sparkline panel silently rather than showing an error.
 
 ### Phase Ordering Rationale
 
-- **Sequential dependency chain**: Cannot test Homebrew publication (Phase 2) without working release pipeline (Phase 1). Cannot document process (Phase 3) without stable working pipeline.
-- **Risk mitigation first**: All critical pitfalls addressed in Phase 1 before adding features. Foundation must be solid before building on it.
-- **User value priority**: Phases 1-2 deliver complete end-user value (working Homebrew installation). Phase 3 is operational excellence. Phase 4 is optional enhancement.
-- **Validation gates**: Each phase includes end-to-end validation before proceeding. Phase 1 must produce successful release. Phase 2 must complete successful `brew install`. Phase 3 must have runbook tested by following it.
-- **Defer optional complexity**: Security features (Phase 4) are valuable but not blocking. Add based on actual user requests, not speculation.
+- Pitfall research is unambiguous that concurrency/event-loop correctness must come first — five critical pitfalls are Phase 1 concerns that cannot be retrofitted after feature work begins
+- Feature dependency graph from FEATURES.md confirms ordering: full-screen TUI layout must exist before panels, panels before toggles, all before themes
+- Architecture build sequence from ARCHITECTURE.md maps directly to Phase 1: messages.go → fetch.go → layout.go → model.go → entry point
+- Sparkline (Phase 3) requires the durations API endpoint, a separate HTTP call with uncertain Wakapi support — correctness gate before adding that complexity
+- Color themes (Phase 3) require lipgloss to be established across all panels — must come after all panels exist in Phase 2
 
 ### Research Flags
 
-**Phases with standard patterns (skip research-phase):**
-- **Phase 1: Core Release Pipeline Setup** — extremely well-documented, GoReleaser official docs are comprehensive, hundreds of example repositories available, established patterns
-- **Phase 2: Homebrew Tap Publication** — standard Homebrew cask patterns, clear documentation, examples in ARCHITECTURE.md research
-- **Phase 3: Release Process Documentation** — internal documentation, no new technical research needed
+Phases needing deeper research during planning:
+- **Phase 2:** Validate ntcharts bar chart output quality vs existing graphStr() before choosing ntcharts vs the existing code. The existing heatmap renderer uses a custom 5-level green RGB gradient that ntcharts may not replicate exactly — determine early whether to use ntcharts or keep the existing chart renderers.
+- **Phase 3:** Confirm Wakapi durations endpoint availability across common Wakapi versions before designing the sparkline panel. Design for graceful absence (hide panel, not error).
 
-**Phases NOT needing deeper research:**
-All phases use well-established patterns with HIGH confidence research. GoReleaser and Homebrew documentation is excellent. No phases require `/gsd:research-phase` during planning.
+Phases with standard patterns (skip research-phase):
+- **Phase 1:** bubbletea Elm Architecture is thoroughly documented. ARCHITECTURE.md provides the exact build sequence and all code patterns needed.
+- **Phase 2 (refresh loop):** tea.Tick pattern is official API with clear documentation. PITFALLS.md provides the exact code patterns for backoff and 202 handling.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Official GoReleaser documentation, active project (latest release Jan 2026), verified version compatibility, clear migration path from deprecated patterns |
-| Features | HIGH | Competitive analysis of major tools (kubectl, gh, hugo), clear table stakes vs differentiators, strong community consensus on MVP scope |
-| Architecture | HIGH | Official architecture documentation, well-established patterns across Go CLI ecosystem, clear integration points and data flow |
-| Pitfalls | MEDIUM | Based on GitHub issues, community tutorials, and official deprecation notices. Some findings need validation during implementation, but core pitfalls are well-documented |
+| Stack | HIGH | bubbletea/lipgloss/bubbles all have official docs and stable releases. ntcharts is MEDIUM — no tagged releases, small team (4 contributors); fallback to existing ui/ code is viable and confirmed composable. |
+| Features | HIGH | WakaTime API confirmed for all data fields. Existing codebase confirmed as baseline. Feature set validated against btop/k9s/lazygit UX patterns. Wakapi compatibility is MEDIUM for optional endpoints. |
+| Architecture | HIGH | Official bubbletea pkg.go.dev docs verified all patterns (WindowSizeMsg, tea.Cmd, tea.Tick, AltScreen). Existing codebase read directly to confirm reuse path and identify specific files/functions. |
+| Pitfalls | HIGH (concurrency), MEDIUM (terminal compat) | Concurrency pitfalls verified against official Go race detector docs and bubbletea API docs. Terminal compatibility from community sources only — no single authoritative spec for degradation behavior. |
 
 **Overall confidence:** HIGH
 
-The stack choice (GoReleaser) is industry standard with comprehensive documentation. The architecture patterns are proven across thousands of Go CLI projects. The main uncertainty is in pitfall recovery strategies which may evolve as GoReleaser versions change.
-
 ### Gaps to Address
 
-Areas where research was inconclusive or needs validation during implementation:
-
-- **macOS notarization requirements post-2025** — Apple Developer documentation may have changed. Validation: Check current Apple notarization requirements if/when pursuing enterprise distribution. Impact: LOW (optional feature, defer to Phase 4).
-
-- **GitHub Actions pricing changes (Jan 1, 2026)** — May affect cost for high-volume projects. Validation: Review current GitHub Actions pricing during Phase 1 setup. Impact: LOW (free tier sufficient for typical release cadence).
-
-- **GoReleaser Pro features** — Research covered OSS version. Pro features (AI release notes, advanced SBOM) may provide value. Validation: Evaluate Pro subscription after MVP if changelog quality becomes concern. Impact: LOW (not blocking).
-
-- **Fine-grained PAT vs GitHub App tokens** — Research mentions GitHub Apps as "recommended alternative" but GoReleaser documentation primarily shows PAT examples. Validation: Test GitHub App token support during Phase 1 setup. Impact: MEDIUM (affects security posture, but both approaches work).
-
-- **Homebrew core submission requirements** — Research notes "after 1000+ stars" but exact requirements may change. Validation: Review Homebrew core submission guidelines before pursuing. Impact: LOW (defer to post-v1.0).
-
-**Handling during planning:**
-- Document assumptions in roadmap
-- Include validation checkpoints in Phase 1 and Phase 2 tasks
-- Add "verify current requirements" tasks for items that may have changed
-- Plan for alternative approaches where uncertainty exists (e.g., PAT vs GitHub App tokens)
+- **ntcharts heatmap fidelity:** The existing heatmap uses a custom 5-level green RGB gradient with specific color values. ntcharts heatmap may not match visually. Validate before Phase 2 — if the custom gradient is important to the project, keep the existing heatmap renderer and only use ntcharts for bar charts and sparklines.
+- **Wakapi durations endpoint:** MEDIUM confidence that all Wakapi versions support the hourly activity durations endpoint needed for the sparkline. Design Phase 3 sparkline with a capability check — if endpoint returns 404, hide the panel silently rather than showing an error.
+- **Refresh interval default:** Research suggests 60s minimum to stay well under WakaTime's rate limit (10 req/s averaged over 5 minutes) when making 2 API calls per refresh. Validate the actual call count per refresh cycle and adjust the default accordingly during Phase 2 implementation.
+- **WakaTime free plan stats lag:** Free plan users may regularly see 202 responses on first load. The "Calculating..." state needs clear UX — not an error, but a distinguishable waiting state. Confirm this is common enough to warrant a polished UI treatment before Phase 2 ships.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [GoReleaser Official Documentation](https://goreleaser.com/) — Core features, configuration, CI/CD integration
-- [GoReleaser GitHub Releases](https://github.com/goreleaser/goreleaser/releases) — Version compatibility, latest features
-- [GoReleaser GitHub Actions](https://goreleaser.com/ci/actions/) — Official CI/CD patterns
-- [Homebrew Documentation](https://docs.brew.sh/How-to-Create-and-Maintain-a-Tap) — Tap structure, cask conventions
-- [Go Release History](https://go.dev/doc/devel/release) — Version requirements
-- [GitHub Actions Documentation](https://docs.github.com/en/actions) — Workflow configuration, permissions
+- [charmbracelet/bubbletea v1.3.10](https://github.com/charmbracelet/bubbletea) — Elm Architecture, tea.Tick, tea.Every, tea.Batch, tea.Cmd, WithAltScreen, WindowSizeMsg
+- [pkg.go.dev bubbletea](https://pkg.go.dev/github.com/charmbracelet/bubbletea) — CatchPanics, ErrInterrupted, WithoutCatchPanics behavior
+- [charmbracelet/lipgloss v1.1.0](https://github.com/charmbracelet/lipgloss) — JoinHorizontal, JoinVertical, Border styles, adaptive colors
+- [charmbracelet/bubbles v1.0.0](https://github.com/charmbracelet/bubbles/releases) — Spinner, help components
+- [WakaTime API Documentation](https://wakatime.com/developers) — Rate limits, 202 handling, cached_at, all data fields confirmed
+- [Existing codebase: /workspace/wakafetch](https://github.com/sahaj-b/wakafetch) — api.go, ui/*.go, types/types.go, main.go — read directly for integration analysis
+- [Go Race Detector](https://go.dev/doc/articles/race_detector) — Race condition detection methodology
+- [Bubbletea Commands Tutorial](https://github.com/charmbracelet/bubbletea/blob/main/tutorials/commands/README.md) — Official async command patterns
 
 ### Secondary (MEDIUM confidence)
-- [Applied Go: Whisper CLI Tutorial](https://appliedgo.net/whisper-cli/) — March 2025 current best practices
-- [Medium: Automating Golang Releases](https://medium.com/@wprimadi/automating-golang-project-releases-with-goreleaser-8ccba7cd2a9e) — May 2025 patterns
-- [GitHub Issues and Discussions](https://github.com/goreleaser/goreleaser/issues) — Real-world pitfalls and solutions
-- Community tutorials from 2025-2026 — Current implementation patterns
+- [NimbleMarkets/ntcharts](https://github.com/NimbleMarkets/ntcharts) — Chart types confirmed: Sparkline, BarChart, HeatMap, StreamlineChart. No tagged releases — pin by commit.
+- [Tips for Building Bubble Tea Programs](https://leg100.github.io/en/posts/building-bubbletea-programs/) — Event loop pitfalls, state management patterns, layout arithmetic
+- [Build a System Monitor TUI in Go](https://penchev.com/posts/create-tui-with-go/) — htop-style dashboard pattern with bubbletea, tea.Every refresh
+- [Handling Polling in BubbleTea for Go](https://m3talsmith.medium.com/handling-polling-in-bubbletea-for-go-b17185835549) — tea.Batch + tick pattern validation
+- [Wakapi](https://wakapi.dev/) — WakaTime API compatibility scope, supported endpoints
+- [btop++ feature analysis](https://linuxblog.io/btop-the-htop-alternative/) — +/- refresh adjustment, region toggle, keyboard-first UX reference
 
-### Tertiary (LOW confidence)
-- macOS notarization requirements — May have changed post-2025, needs validation
-- GitHub Actions pricing — Effective Jan 1, 2026 changes, needs verification
-- GoReleaser Pro features — Limited public documentation for Pro-only features
+### Tertiary (LOW confidence, needs validation)
+- ntcharts maintenance trajectory — 4 contributors, no tagged releases. Validate heatmap output quality and long-term maintenance before committing.
+- Wakapi durations endpoint availability across versions — not all Wakapi deployments confirmed. Design for graceful absence.
+- ANSI escape code terminal compatibility specifics — community sources only; no single authoritative spec for degradation behavior.
 
 ---
-*Research completed: 2026-02-13*
+*Research completed: 2026-02-17*
 *Ready for roadmap: yes*

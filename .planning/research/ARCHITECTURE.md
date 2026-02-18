@@ -1,607 +1,413 @@
-# Architecture Research: Go CLI Release Pipeline with Homebrew Tap
+# Architecture Patterns: wakadash Live Terminal Dashboard
 
-**Domain:** Go CLI Release Automation with Homebrew Distribution
-**Researched:** 2026-02-13
-**Confidence:** HIGH
+**Domain:** Live-updating terminal dashboard (TUI) added to existing Go CLI
+**Researched:** 2026-02-17
+**Confidence:** HIGH (Bubbletea API verified via pkg.go.dev official docs; existing code read directly)
 
-## Standard Architecture
+## Context: Adding Dashboard to Existing CLI
 
-### System Overview
+wakafetch already has a working CLI with the following architecture:
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                      Source Repository (wakafetch)                   │
-├─────────────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌───────────────────┐  ┌──────────────────────┐  │
-│  │   Go Source  │  │  .goreleaser.yaml │  │  .github/workflows/  │  │
-│  │     Code     │  │  Configuration    │  │    release.yml       │  │
-│  └──────┬───────┘  └─────────┬─────────┘  └──────────┬───────────┘  │
-│         │                    │                        │              │
-├─────────┴────────────────────┴────────────────────────┴──────────────┤
-│                           Git Tag Push (vX.Y.Z)                      │
-│                                    ↓                                 │
-├─────────────────────────────────────────────────────────────────────┤
-│                        GitHub Actions Workflow                       │
-├─────────────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌──────────────────────────┐    │
-│  │  Checkout   │→ │  Setup Go   │→ │  Run GoReleaser Action   │    │
-│  │ (full hist) │  │             │  │  (distribution: OSS/Pro) │    │
-│  └─────────────┘  └─────────────┘  └──────────┬───────────────┘    │
-│                                                │                     │
-├────────────────────────────────────────────────┴─────────────────────┤
-│                         GoReleaser Pipeline                          │
-├─────────────────────────────────────────────────────────────────────┤
-│  Phase 1: Before Hooks                                               │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  Execute custom commands (tests, linters, etc.)             │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-│                                 ↓                                    │
-│  Phase 2: Builds                                                     │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  Build matrix: GOOS × GOARCH combinations                   │    │
-│  │  Output to: dist/{BuildID}_{BuildTarget}/binary             │    │
-│  │  Common targets: linux/amd64, darwin/amd64, darwin/arm64    │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-│                                 ↓                                    │
-│  Phase 3: Archives                                                   │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  Package binaries: .tar.gz (Unix), .zip (Windows)           │    │
-│  │  Include extras: README, LICENSE, completions, manpages     │    │
-│  │  Output: dist/wakafetch_v1.0.0_linux_amd64.tar.gz          │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-│                                 ↓                                    │
-│  Phase 4: Checksums                                                  │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  Generate SHA256 checksums for all artifacts                │    │
-│  │  Output: dist/checksums.txt                                 │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-│                                 ↓                                    │
-│  Phase 5: Signing (optional)                                         │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  Sign checksums with GPG or Cosign                          │    │
-│  │  Output: checksums.txt.sig, checksums.txt.sigstore.json     │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-│                                 ↓                                    │
-│  Phase 6: GitHub Release                                             │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  Create GitHub release with generated changelog             │    │
-│  │  Upload: binaries, archives, checksums, signatures          │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-│                                 ↓                                    │
-│  Phase 7: Homebrew Cask Generation                                  │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  Generate Ruby Cask definition from template                │    │
-│  │  Include: download URLs, SHA256, installation steps         │    │
-│  │  Commit to tap repo: Casks/wakafetch.rb                     │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────────┘
-                                   ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│              Tap Repository (homebrew-wakafetch)                     │
-├─────────────────────────────────────────────────────────────────────┤
-│  Casks/                                                              │
-│  └── wakafetch.rb          # Auto-generated cask definition         │
-│                                                                      │
-│  README.md                 # User installation instructions          │
-└─────────────────────────────────────────────────────────────────────┘
-                                   ↓
-                   User: brew tap b00y0h/wakafetch
-                   User: brew install wakafetch
+main.go           -- flag parsing, API routing
+config.go         -- reads ~/.wakatime.cfg (api_url, api_key)
+api.go            -- fetchStats(), fetchSummary(), fetchApi[T]() generic HTTP
+flags.go          -- flag definitions (flag stdlib, no cobra)
+ui/
+  display.go      -- DisplayStats(), DisplaySummary(), DisplayBreakdown(), DisplayHeatmap()
+  render.go       -- render(), renderCardSection(), printLeftRight()
+  card.go         -- cardify() -- border box drawing with ANSI strings
+  graph.go        -- graphStr() -- bar chart rendering
+  heatmap.go      -- heatmap() -- activity heatmap
+  breakdown.go    -- dailyBreakdownStr()
+  colors.go       -- ANSI color helpers
+  utils.go        -- timeFmt(), topItemName()
+types/
+  types.go        -- StatsResponse, SummaryResponse, StatItem, DayData
 ```
 
-### Component Responsibilities
+Key observations that drive architecture decisions:
 
-| Component | Responsibility | Typical Implementation |
-|-----------|----------------|------------------------|
-| **Source Repository** | Holds Go source code, build config, CI workflow | GitHub repository with Go modules |
-| **GoReleaser Config** | Defines build matrix, archives, distributions | `.goreleaser.yaml` in project root |
-| **GitHub Actions Workflow** | Triggers on tags, orchestrates release | `.github/workflows/release.yml` |
-| **GoReleaser Engine** | Executes build pipeline phases sequentially | goreleaser/goreleaser-action@v6 |
-| **dist/ Directory** | Temporary storage for all build artifacts | Generated locally/in CI, git-ignored |
-| **GitHub Release** | Hosts binaries and archives for download | Created via GITHUB_TOKEN |
-| **Tap Repository** | Homebrew package registry for your software | Separate GitHub repo: homebrew-{name} |
-| **Homebrew Cask** | Ruby DSL defining how to install your CLI | Auto-generated, committed to tap repo |
+1. `api.go` is already pure and reusable — `fetchStats()` and `fetchSummary()` return typed structs, no I/O side effects
+2. `ui/` functions produce `[]string` slices, not rendered terminal output directly — they are composable
+3. `card.go` and `graph.go` already implement the visual components needed for a dashboard panel
+4. `getTerminalCols()` uses `stty` subprocess — must be replaced with Bubbletea's `WindowSizeMsg` for the dashboard
+5. Config loading (`parseConfig()`) is already decoupled — reuse directly
 
-## Recommended Project Structure
+---
 
-### Source Repository (b00y0h/wakafetch)
+## Recommended Architecture
+
+### Framework: Bubbletea + Lipgloss
+
+Use **charmbracelet/bubbletea v1.x** (current: v1.3.10, released Sep 2025) as the TUI runtime. It implements the Elm Architecture (Model-Update-View), which is the standard for Go TUI dashboards. Use **charmbracelet/lipgloss** for layout composition (replacing the manual `printLeftRight()` approach).
+
+Do NOT use tview, termui, or tcell directly. Bubbletea is the dominant Go TUI framework with 9,300+ dependents, active maintenance, and the best documented composition model. (HIGH confidence — official docs + ecosystem search)
+
+---
+
+## System Structure
 
 ```
 wakafetch/
-├── .github/
-│   └── workflows/
-│       └── release.yml          # GitHub Actions workflow for releases
-├── cmd/
-│   └── wakafetch/
-│       └── main.go              # CLI entrypoint
-├── internal/                     # Internal packages
-├── .goreleaser.yaml             # GoReleaser configuration
-├── .gitignore                   # MUST include: dist/
-├── go.mod                       # Go module definition
-├── go.sum                       # Dependency checksums
-├── LICENSE                      # Required for Homebrew
-├── README.md                    # Documentation (referenced by cask)
-└── dist/                        # Generated by GoReleaser (git-ignored)
-    ├── wakafetch_darwin_amd64/
-    ├── wakafetch_linux_amd64/
-    ├── wakafetch_v1.0.0_linux_amd64.tar.gz
-    ├── checksums.txt
-    └── artifacts.json
+├── main.go                    -- MODIFIED: add --dashboard / -w flag routing
+├── dashboard/                 -- NEW package
+│   ├── model.go               -- Root Bubbletea model (state + Update + View)
+│   ├── messages.go            -- Message type definitions
+│   ├── fetch.go               -- tea.Cmd wrappers around existing api.go calls
+│   └── layout.go              -- Panel composition using lipgloss
+├── ui/                        -- UNCHANGED (reused as rendering functions)
+│   └── ... (existing files)
+├── api.go                     -- UNCHANGED
+├── config.go                  -- UNCHANGED
+├── types/                     -- UNCHANGED
+└── flags.go                   -- MODIFIED: add dashboard flag
 ```
 
-### Tap Repository (b00y0h/homebrew-wakafetch)
+The `dashboard/` package is entirely new. The existing `ui/`, `api.go`, `config.go`, and `types/` packages are reused as-is. This is the minimum-change integration strategy.
+
+---
+
+## Component Boundaries
+
+| Component | Responsibility | Communicates With |
+|-----------|---------------|-------------------|
+| `dashboard/model.go` | Root model: holds all dashboard state, routes messages to panels | `dashboard/fetch.go` (via Cmd), `dashboard/layout.go` (via View call) |
+| `dashboard/messages.go` | Defines all Msg types: `TickMsg`, `StatsDataMsg`, `SummaryDataMsg`, `ErrMsg`, `RefreshMsg` | Consumed by `model.go` Update() |
+| `dashboard/fetch.go` | Wraps `api.fetchStats()` and `api.fetchSummary()` as `tea.Cmd` functions | Calls existing `api.go`; returns typed Msg structs |
+| `dashboard/layout.go` | Composes `ui/` rendering functions into lipgloss-joined panel strings | Calls existing `ui/graph.go`, `ui/card.go`, `ui/heatmap.go` |
+| `ui/` (existing) | Produces `[]string` representations of data — unchanged | Called by `dashboard/layout.go` |
+| `api.go` (existing) | HTTP fetching — unchanged | Called by `dashboard/fetch.go` |
+| `config.go` (existing) | Reads `~/.wakatime.cfg` — unchanged | Called from `main.go` dashboard entrypoint |
+
+---
+
+## Data Flow for Live Updates
 
 ```
-homebrew-wakafetch/
-├── Casks/
-│   └── wakafetch.rb            # Auto-generated by GoReleaser
-├── README.md                    # Installation instructions for users
-└── .github/                     # Optional: CI for cask validation
-    └── workflows/
-        └── test.yml             # brew audit --cask wakafetch
+App Start
+    │
+    ▼
+main.go: loadAPIConfig() → apiURL, apiKey
+    │
+    ▼
+tea.NewProgram(model, tea.WithAltScreen())
+    │
+    ▼
+model.Init()
+    │── returns: tea.Batch(fetchStatsCmd(), tickCmd())
+    │
+    ▼
+goroutine: fetchStatsCmd() runs api.fetchStats()  [does not block UI]
+goroutine: tickCmd() fires after interval
+    │
+    ▼
+Update(StatsDataMsg{data}) → model.stats = data → returns tickCmd()
+    │
+    ▼
+View() → layout.Render(model) → lipgloss.JoinVertical(panels...)
+    │
+    ▼
+[on next tick]
+Update(TickMsg) → if time.Since(lastFetch) >= interval → returns fetchStatsCmd()
+    │
+    ▼
+[loop continues]
 ```
 
-### Structure Rationale
+### Refresh Strategy
 
-- **Separate repositories:** Homebrew convention requires tap repos with `homebrew-` prefix
-- **Casks/ directory:** Homebrew expects casks here (not Formula/ which is for source builds)
-- **dist/ in .gitignore:** Build artifacts should never be committed to source
-- **.goreleaser.yaml in root:** GoReleaser convention and GitHub Actions default path
-- **LICENSE file required:** Homebrew won't accept packages without clear licensing
+Use `tea.Tick()` with a configurable interval (default: 5 minutes, matching WakaTime's heartbeat aggregation cadence). When the tick fires, issue a new fetch command. Do NOT use `tea.Every()` for API calls — `tea.Tick()` gives you a message to check elapsed time, avoiding stacked fetches if a request takes longer than the interval.
 
-## Architectural Patterns
+```go
+// messages.go
+type TickMsg time.Time
+type StatsDataMsg struct{ Data *types.StatsResponse }
+type SummaryDataMsg struct{ Data *types.SummaryResponse }
+type ErrMsg struct{ Err error }
 
-### Pattern 1: GitHub Actions Tag-Triggered Release
+// fetch.go
+func fetchStatsCmd(apiKey, apiURL, rangeStr string) tea.Cmd {
+    return func() tea.Msg {
+        data, err := fetchStats(apiKey, apiURL, rangeStr)
+        if err != nil {
+            return ErrMsg{Err: err}
+        }
+        return StatsDataMsg{Data: data}
+    }
+}
 
-**What:** Workflow triggers only on semantic version tags (v1.0.0, v2.3.1-beta, etc.)
-
-**When to use:** Standard for all Go CLI projects using GoReleaser
-
-**Trade-offs:**
-- **Pro:** Clean separation between development and release processes
-- **Pro:** Automatic versioning from git tags
-- **Con:** Requires discipline in tag management (can't easily "undo" a tag push)
-
-**Example:**
-```yaml
-name: release
-on:
-  push:
-    tags:
-      - 'v*'
-
-permissions:
-  contents: write  # Required for GitHub releases
-
-jobs:
-  goreleaser:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # CRITICAL: GoReleaser needs full history
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: stable
-
-      - uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: '~> v2'
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+func tickCmd(interval time.Duration) tea.Cmd {
+    return tea.Tick(interval, func(t time.Time) tea.Msg {
+        return TickMsg(t)
+    })
+}
 ```
 
-### Pattern 2: Cross-Repository Homebrew Publishing with Custom PAT
+```go
+// model.go Update()
+case TickMsg:
+    if time.Since(m.lastFetch) >= m.refreshInterval {
+        return m, tea.Batch(fetchStatsCmd(...), tickCmd(m.refreshInterval))
+    }
+    return m, tickCmd(m.refreshInterval)
 
-**What:** Use separate GitHub Personal Access Token for pushing to tap repository
-
-**When to use:** When tap repo is different from source repo (almost always the case)
-
-**Trade-offs:**
-- **Pro:** GITHUB_TOKEN can't write to other repos, PAT enables cross-repo commits
-- **Pro:** Fine-grained tokens can limit permissions to just the tap repo
-- **Con:** Requires creating and securing an additional secret
-- **Con:** PAT has broader permissions than ideal (security consideration)
-
-**Example:**
-```yaml
-# .goreleaser.yaml
-homebrew_casks:
-  - name: wakafetch
-    repository:
-      owner: b00y0h
-      name: homebrew-wakafetch
-      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    homepage: https://github.com/b00y0h/wakafetch
-    description: "Wakatime stats fetcher CLI"
-    license: MIT
+case StatsDataMsg:
+    m.statsData = msg.Data
+    m.lastFetch = time.Now()
+    m.loading = false
+    return m, nil
 ```
 
-### Pattern 3: Multi-Platform Build Matrix
+---
 
-**What:** Define GOOS/GOARCH combinations for cross-compilation
+## Layout Pattern
 
-**When to use:** Always, unless targeting only a single platform
+The existing `printLeftRight()` + ANSI string approach works for one-shot CLI output but cannot be used in Bubbletea's `View()` because:
+- It calls `fmt.Println()` directly (side effect, not allowed in View())
+- Terminal width is fetched via `stty` subprocess (not available in TUI context)
 
-**Trade-offs:**
-- **Pro:** One CI run produces binaries for all platforms
-- **Pro:** Go's excellent cross-compilation makes this nearly free
-- **Con:** More artifacts to upload/download increases release time
-- **Con:** Testing on all target platforms requires separate infrastructure
+Replace with lipgloss composition in `dashboard/layout.go`:
 
-**Example:**
-```yaml
-# .goreleaser.yaml
-builds:
-  - id: wakafetch
-    binary: wakafetch
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-      - darwin
-      - windows
-    goarch:
-      - amd64
-      - arm64
-    # Results in: linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64, windows/arm64
+```go
+// layout.go
+func RenderDashboard(m Model) string {
+    termWidth := m.width   // from WindowSizeMsg
+    termHeight := m.height
+
+    // Reuse existing rendering functions, they return []string
+    langLines, langW := ui.GraphStr(m.statsData.Data.Languages, 8)
+    statsLines, statsW := ui.FieldsStr(m.heading, m.statsFields)
+
+    // Convert []string to single string for lipgloss
+    langPanel := lipgloss.NewStyle().
+        Border(lipgloss.RoundedBorder()).
+        BorderForeground(lipgloss.Color("240")).
+        Render(strings.Join(langLines, "\n"))
+
+    statsPanel := lipgloss.NewStyle().
+        Border(lipgloss.RoundedBorder()).
+        BorderForeground(lipgloss.Color("240")).
+        Render(strings.Join(statsLines, "\n"))
+
+    body := lipgloss.JoinHorizontal(lipgloss.Top, statsPanel, langPanel)
+    statusBar := renderStatusBar(termWidth, m.lastFetch, m.loading)
+
+    return lipgloss.JoinVertical(lipgloss.Left, body, statusBar)
+}
 ```
 
-### Pattern 4: Archive Customization with Extras
+This requires making `ui/` functions exported (capitalizing `graphStr` → `GraphStr`, `fieldsStr` → `FieldsStr`, etc.). That is the only change needed in the existing `ui/` package.
 
-**What:** Include additional files (README, LICENSE, completions) in release archives
+---
 
-**When to use:** When users need documentation/tools beyond the binary
+## New vs Modified Components
 
-**Trade-offs:**
-- **Pro:** Self-contained archives with everything users need
-- **Pro:** Shell completions improve UX significantly
-- **Con:** Slightly larger download sizes
-- **Con:** Requires generating completions as part of build
+### New (must build from scratch)
 
-**Example:**
-```yaml
-# .goreleaser.yaml
-archives:
-  - format: tar.gz
-    format_overrides:
-      - goos: windows
-        format: zip
-    files:
-      - LICENSE
-      - README.md
-      - completions/*
-      - manpages/*
+| Component | File | What it does |
+|-----------|------|--------------|
+| Dashboard model | `dashboard/model.go` | Bubbletea Model interface: holds all state, routes all messages |
+| Message types | `dashboard/messages.go` | Typed Msg values for all async events |
+| Fetch commands | `dashboard/fetch.go` | Wraps api.go calls as tea.Cmd |
+| Layout composer | `dashboard/layout.go` | Turns `[]string` panels into lipgloss-joined view string |
+| Status bar | `dashboard/layout.go` | Shows last refresh time, refresh interval, loading state |
+
+### Modified (minimal changes)
+
+| Component | File | Change |
+|-----------|------|--------|
+| Entry point | `main.go` | Add `--dashboard` / `-w` flag branch, call `tea.NewProgram(...)` |
+| Flag definitions | `flags.go` | Add `dashboardFlag`, `intervalFlag` |
+| ui/ exports | `ui/*.go` | Capitalize function names: `graphStr` → `GraphStr`, `fieldsStr` → `FieldsStr`, `cardify` → `Cardify` |
+| Terminal width | `ui/render.go` | Remove `getTerminalCols()` usage in dashboard path; pass width via model |
+
+### Unchanged (zero modification needed)
+
+- `api.go` — already clean, just called from fetch.go
+- `config.go` — already clean, called from main.go
+- `types/types.go` — already clean
+- `ui/heatmap.go`, `ui/graph.go`, `ui/card.go`, `ui/colors.go`, `ui/utils.go` — logic unchanged, only export visibility changes
+
+---
+
+## Patterns to Follow
+
+### Pattern 1: AltScreen for Dashboard Mode
+
+Always enter AltScreen for full-window dashboard. This keeps the original terminal session clean and allows `q` to quit and restore original terminal state.
+
+```go
+p := tea.NewProgram(
+    initialModel(apiURL, apiKey, config),
+    tea.WithAltScreen(),
+)
 ```
 
-### Pattern 5: Homebrew Cask Over Deprecated Brews
+### Pattern 2: WindowSizeMsg for Responsive Layout
 
-**What:** Use `homebrew_casks` instead of deprecated `brews` section
+Bubbletea sends `tea.WindowSizeMsg` on startup and on every terminal resize. Store dimensions in the model and use them in View() for responsive layout. Never call `stty` or `exec.Command` inside a Bubbletea program.
 
-**When to use:** Always for Go CLI tools (as of GoReleaser v2.10+)
-
-**Trade-offs:**
-- **Pro:** Correct Homebrew semantics (casks for pre-built binaries)
-- **Pro:** Supported on both macOS and Linux
-- **Pro:** Simpler installation (no source building)
-- **Con:** Requires migration if using old `brews` config
-- **Con:** May need quarantine removal hook for unsigned binaries
-
-**Example:**
-```yaml
-# .goreleaser.yaml
-homebrew_casks:
-  - name: wakafetch
-    repository:
-      owner: b00y0h
-      name: homebrew-wakafetch
-    directory: Casks
-    homepage: https://github.com/b00y0h/wakafetch
-    description: "Wakatime stats fetcher CLI"
-    license: MIT
-
-    # For unsigned binaries (development phase)
-    hooks:
-      post:
-        install: |
-          if OS.mac?
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/wakafetch"]
-          end
+```go
+case tea.WindowSizeMsg:
+    m.width = msg.Width
+    m.height = msg.Height
+    return m, nil
 ```
 
-## Data Flow
+### Pattern 3: Loading State During Fetch
 
-### Release Trigger Flow
+Show a spinner or "Loading..." indicator while the first fetch is in flight. The model starts with `loading: true`; set to `false` when `StatsDataMsg` arrives.
 
-```
-Developer → git tag v1.0.0 → git push origin v1.0.0
-    ↓
-GitHub detects tag push
-    ↓
-Triggers .github/workflows/release.yml
-    ↓
-GitHub Actions runner starts
-```
-
-### Build Artifact Flow
-
-```
-Source Code (main.go)
-    ↓
-GoReleaser Build Phase
-    ↓ (for each GOOS/GOARCH)
-Compiled Binaries → dist/{BuildID}_{BuildTarget}/wakafetch
-    ↓
-Archive Phase
-    ↓ (tar.gz for Unix, zip for Windows)
-Packaged Archives → dist/wakafetch_v1.0.0_{OS}_{ARCH}.tar.gz
-    ↓
-Checksum Phase
-    ↓
-SHA256 Checksums → dist/checksums.txt
-    ↓
-GitHub Release Upload
-    ↓
-GitHub Release Assets (public URLs)
+```go
+func (m Model) View() string {
+    if m.loading {
+        return "Loading..."  // or a spinner component from charmbracelet/bubbles
+    }
+    return RenderDashboard(m)
+}
 ```
 
-### Homebrew Distribution Flow
+### Pattern 4: Error Display Without Crashing
 
-```
-GitHub Release Assets (URLs + SHA256s)
-    ↓
-GoReleaser Homebrew Cask Phase
-    ↓
-Generate wakafetch.rb (Ruby DSL)
-    ↓ (contains download URL, SHA256, install instructions)
-Commit to b00y0h/homebrew-wakafetch/Casks/wakafetch.rb
-    ↓ (using HOMEBREW_TAP_TOKEN)
-Push to tap repository
-    ↓
-User: brew tap b00y0h/wakafetch
-    ↓ (Homebrew clones tap repo locally)
-User: brew install wakafetch
-    ↓ (Homebrew reads Casks/wakafetch.rb)
-Download from GitHub Release URL
-    ↓ (verify SHA256)
-Extract archive
-    ↓
-Install binary to /usr/local/bin/ (Intel) or /opt/homebrew/bin/ (Apple Silicon)
+API errors should display in the status bar and schedule a retry, not crash the program. Return `ErrMsg` from fetch commands; store in model; display in status bar; retry on next tick.
+
+```go
+case ErrMsg:
+    m.lastErr = msg.Err
+    m.loading = false
+    return m, tickCmd(m.refreshInterval)
 ```
 
-### Key Data Flow Elements
+### Pattern 5: Keyboard Navigation
 
-1. **Version propagation:** Git tag → GoReleaser → Archive names → Cask version → User installation
-2. **Integrity chain:** Binary → SHA256 → checksums.txt → Cask definition → Homebrew verification
-3. **Authorization chain:** GITHUB_TOKEN (release) → HOMEBREW_TAP_TOKEN (tap commit) → Public access (user install)
+Minimal keybindings for MVP: `q`/`ctrl+c` to quit, `r` to manual refresh, `?` to toggle help. Do not build a full interactive UI in the first milestone.
 
-## Scaling Considerations
-
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| **0-1k users** | Basic setup is sufficient: GitHub releases + Homebrew tap. Single-arch builds acceptable. |
-| **1k-10k users** | Add multi-arch support (arm64), sign binaries with GPG/Cosign for trust, consider Scoop (Windows), AUR (Arch Linux). |
-| **10k-100k users** | Add CDN/mirror for release artifacts, implement SBOM generation for supply chain transparency, add attestations with Sigstore, consider Docker images for containerized users. |
-| **100k+ users** | Consider package managers: Snap, Flatpak, system package repos (APT, RPM), mirror artifacts to multiple CDNs, implement proper notarization for macOS (required for Gatekeeper). |
-
-### Scaling Priorities
-
-1. **First bottleneck: Download speed from GitHub Releases**
-   - **Symptom:** Slow downloads for users far from GitHub's servers
-   - **Fix:** Use GoReleaser's upload integrations (S3, GCS) as mirrors
-   - **Timing:** When you start seeing users outside North America/Europe
-
-2. **Second bottleneck: macOS Gatekeeper blocking unsigned binaries**
-   - **Symptom:** macOS users get security warnings, have to bypass Gatekeeper
-   - **Fix:** Code sign with Apple Developer cert + notarize via GoReleaser Pro
-   - **Timing:** As soon as you have any significant macOS user base
-
-3. **Third bottleneck: Trust and supply chain verification**
-   - **Symptom:** Security-conscious users can't verify build provenance
-   - **Fix:** Add Cosign signing, SBOM generation, GitHub attestations
-   - **Timing:** Before pursuing enterprise users
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Using GITHUB_TOKEN for Tap Repository Commits
-
-**What people do:** Try to use default `GITHUB_TOKEN` to commit to tap repo
-
-**Why it's wrong:** GitHub's automatic `GITHUB_TOKEN` is scoped only to the workflow's repository. It cannot push to other repositories, causing tap publishing to fail silently or with permission errors.
-
-**Do this instead:** Create a Personal Access Token (classic or fine-grained) with `repo` or `contents:write` permissions for the tap repository, add it as `HOMEBREW_TAP_TOKEN` secret, and reference it in GoReleaser config:
-
-```yaml
-homebrew_casks:
-  - repository:
-      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+```go
+case tea.KeyMsg:
+    switch msg.String() {
+    case "q", "ctrl+c":
+        return m, tea.Quit
+    case "r":
+        m.loading = true
+        return m, fetchStatsCmd(m.apiKey, m.apiURL, m.rangeStr)
+    }
 ```
 
-### Anti-Pattern 2: Committing dist/ Directory to Git
+---
 
-**What people do:** Commit GoReleaser's output directory to version control
+## Anti-Patterns to Avoid
 
-**Why it's wrong:** Binary artifacts bloat repository size, pollute git history, create merge conflicts, and belong in releases (not source control). GoReleaser explicitly warns about dirty repos with untracked files.
+### Anti-Pattern 1: Goroutines Inside Update()
 
-**Do this instead:** Add `dist/` to `.gitignore` immediately. Always use `--clean` flag in GoReleaser to remove old artifacts. Let GitHub Releases be the artifact storage, not git.
+**What:** Spawning `go func()` directly inside Update() to do async work
+**Why bad:** Race conditions on model state, messages can arrive out of order, Bubbletea's event loop is not goroutine-safe for model mutation
+**Instead:** Always return a `tea.Cmd` from Update(). Bubbletea manages the goroutine for you.
 
-```gitignore
-# .gitignore
-dist/
-```
+### Anti-Pattern 2: fmt.Println Inside View()
 
-### Anti-Pattern 3: Using Deprecated brews Section
+**What:** Calling `fmt.Println()` or writing to stdout inside View()
+**Why bad:** View() must return a `string`. Side effects in View() corrupt the terminal rendering. The existing `ui/` functions that call `printStrs()` cannot be called from View() — wrap them to return strings instead.
+**Instead:** Make `ui/` functions return `string` or `[]string` and call `strings.Join()` in View().
 
-**What people do:** Copy old GoReleaser examples using `brews:` configuration
+### Anti-Pattern 3: Blocking HTTP in Update()
 
-**Why it's wrong:** Homebrew formulae are designed for source-based installations. Using them for pre-compiled binaries confuses users and breaks Homebrew conventions. This pattern is deprecated as of GoReleaser v2.10 and will be removed in v3.
+**What:** Making an HTTP request directly inside Update()
+**Why bad:** Update() blocks the event loop. The entire TUI freezes until the request completes.
+**Instead:** Return a `tea.Cmd` from Update() that wraps the HTTP call. It runs in its own goroutine.
 
-**Do this instead:** Use `homebrew_casks:` which properly represents pre-built binary distribution:
+### Anti-Pattern 4: Calling stty or exec.Command for Terminal Size
 
-```yaml
-# WRONG (deprecated)
-brews:
-  - tap:
-      owner: b00y0h
-      name: homebrew-wakafetch
+**What:** Using the existing `getTerminalCols()` function (which runs `stty -F /dev/tty size`) inside the dashboard
+**Why bad:** In AltScreen mode, /dev/tty handling is managed by Bubbletea. The subprocess approach is fragile and cross-platform unreliable. Also, it does not react to terminal resize events.
+**Instead:** Handle `tea.WindowSizeMsg` and store `m.width` / `m.height` in the model.
 
-# RIGHT (current)
-homebrew_casks:
-  - repository:
-      owner: b00y0h
-      name: homebrew-wakafetch
-    directory: Casks  # Not Formula!
-```
+### Anti-Pattern 5: Sharing Mutable State Between Cmd and Model
 
-### Anti-Pattern 4: Shallow Git Checkout in CI
+**What:** Using pointers to model fields inside a `tea.Cmd` closure
+**Why bad:** The Cmd runs in a goroutine. If the model is replaced (as Bubbletea does on every Update call), the pointer may reference stale data.
+**Instead:** Capture only plain values (strings, ints) in Cmd closures, not model references.
 
-**What people do:** Use default `actions/checkout` without `fetch-depth: 0`
+---
 
-**Why it's wrong:** GoReleaser needs full git history to generate changelogs, detect previous tags, and compute version information. Shallow checkouts (depth=1) cause changelog generation to fail or produce incomplete results.
+## Suggested Build Order
 
-**Do this instead:** Always specify full history in checkout step:
-
-```yaml
-- uses: actions/checkout@v4
-  with:
-    fetch-depth: 0  # REQUIRED for GoReleaser
-```
-
-### Anti-Pattern 5: Hardcoding Versions and URLs
-
-**What people do:** Manually update version numbers in config files, hardcode download URLs
-
-**Why it's wrong:** Creates manual work, high chance of errors, defeats the purpose of automation. Version mismatches between git tag and config cause user confusion.
-
-**Do this instead:** Use GoReleaser's templating system:
-
-```yaml
-# Uses git tag automatically
-version: "{{ .Version }}"
-
-# Auto-generated from GitHub release
-url: "https://github.com/b00y0h/wakafetch/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-
-# Dynamic SHA256 from build
-sha256: "{{ .ArtifactChecksum }}"
-```
-
-## Integration Points
-
-### External Services
-
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| **GitHub Releases** | Direct API via GITHUB_TOKEN | Automatic with GoReleaser, requires `contents: write` permission |
-| **GitHub (Tap Repo)** | Git push via HOMEBREW_TAP_TOKEN | Requires separate PAT with `repo` or `contents:write` scope |
-| **Homebrew Core** | Manual PR submission | Optional: submit to official taps after proving stability |
-| **GPG Keyserver** | Cosign/GPG for signatures | Optional but recommended for trust/verification |
-| **Docker Registry** | Push via GoReleaser dockers section | Optional: parallel distribution method |
-
-### Internal Boundaries
-
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| **Source Code ↔ GoReleaser** | Filesystem read (go.mod, .goreleaser.yaml) | GoReleaser reads source, doesn't modify it |
-| **GoReleaser ↔ dist/ Directory** | Filesystem write | Temporary artifact storage, cleaned between runs |
-| **GitHub Actions ↔ GoReleaser** | Environment variables (secrets, tokens) | Secrets passed via env, not CLI args |
-| **Source Repo ↔ Tap Repo** | Git push via GitHub API | Unidirectional: source never reads tap, only writes |
-| **Homebrew Client ↔ Tap Repo** | Git clone, file read | Homebrew clones tap locally, reads Cask definitions |
-| **Homebrew Client ↔ GitHub Releases** | HTTPS download | Homebrew fetches binaries from release URLs in Cask |
-
-## Build Order Dependencies
-
-### Phase 1: Repository Setup (can be done in parallel)
+Dependencies flow strictly from bottom to top. Build in this sequence:
 
 ```
-Create source repo (b00y0h/wakafetch)
-    ∥
-Create tap repo (b00y0h/homebrew-wakafetch)
-    ∥
-Generate GitHub PAT with tap repo access
+Phase 1: Foundation (no external dependencies)
+    dashboard/messages.go      -- pure type definitions
+    dashboard/fetch.go         -- wrap api.go as tea.Cmd (depends only on existing api.go + types/)
+
+Phase 2: Layout Plumbing
+    ui/ export visibility      -- capitalize graphStr, fieldsStr, cardify (one-line changes)
+    dashboard/layout.go        -- lipgloss composition (depends on ui/ exports + lipgloss)
+
+Phase 3: Root Model
+    dashboard/model.go         -- Bubbletea Model (depends on messages.go, fetch.go, layout.go)
+
+Phase 4: Entrypoint
+    flags.go                   -- add --dashboard flag
+    main.go                    -- dashboard mode routing, tea.NewProgram(...)
+
+Phase 5: Polish
+    Status bar with last-refresh time, loading indicator, error display
+    Manual refresh keybinding (r)
+    Help overlay (?)
+    Configurable refresh interval (--interval flag)
 ```
 
-### Phase 2: Local Development (sequential)
+Each phase produces a runnable/testable artifact before the next phase begins.
 
-```
-1. Write Go CLI code
-    ↓
-2. Test locally (go build, go test)
-    ↓
-3. Create .goreleaser.yaml config
-    ↓
-4. Test GoReleaser locally (goreleaser release --snapshot)
-    ↓
-5. Verify dist/ artifacts look correct
-```
+---
 
-### Phase 3: CI Configuration (sequential, depends on Phase 1)
+## Scalability Considerations
 
-```
-1. Add PAT as HOMEBREW_TAP_TOKEN secret
-    ↓
-2. Create .github/workflows/release.yml
-    ↓
-3. Configure permissions (contents: write)
-    ↓
-4. Test with dry-run or pre-release tag
+| Concern | MVP (single panel) | Multi-panel | Future |
+|---------|-------------------|-------------|--------|
+| Terminal width | Hardcode 2-column layout | Use `m.width` for responsive breakpoints | Drag-to-resize panels |
+| Refresh rate | Fixed 5m interval | User-configurable `--interval` | Per-panel refresh rates |
+| Data staleness | Single stats fetch | Batch: stats + summary in parallel with `tea.Batch()` | Background cache with delta updates |
+| Panel count | 2 panels (stats + languages) | 4 panels (+ heatmap + projects) | Plugin panel architecture |
+| Error recovery | Show error in status bar | Exponential backoff retry | Circuit breaker per endpoint |
+
+---
+
+## Dependencies to Add
+
+```bash
+go get github.com/charmbracelet/bubbletea@v1.3.10
+go get github.com/charmbracelet/lipgloss@latest
 ```
 
-### Phase 4: First Release (sequential, depends on Phases 2-3)
-
-```
-1. Commit all changes to main
-    ↓
-2. Create and push git tag (git tag v0.1.0 && git push origin v0.1.0)
-    ↓
-3. Monitor GitHub Actions workflow
-    ↓
-4. Verify GitHub Release created
-    ↓
-5. Verify Cask committed to tap repo
-    ↓
-6. Test installation (brew tap b00y0h/wakafetch && brew install wakafetch)
+Optional (defer until needed):
+```bash
+go get github.com/charmbracelet/bubbles@latest  # for spinner, viewport components
 ```
 
-### Critical Dependencies
+The existing `ui/` package uses raw ANSI escape codes for colors. Lipgloss will handle layout colors. These coexist safely — lipgloss does not conflict with existing ANSI output in the `[]string` returns from `ui/` functions.
 
-- **GoReleaser config MUST exist** before first tag push (or release will fail)
-- **HOMEBREW_TAP_TOKEN MUST be set** before enabling tap publishing (or tap commits fail)
-- **fetch-depth: 0 MUST be set** before GoReleaser runs (or changelog fails)
-- **Tap repository MUST exist** before GoReleaser tries to commit (or push fails)
-- **GitHub Release MUST complete** before Homebrew cask generation (downloads need URLs)
+---
 
 ## Sources
 
 ### Official Documentation (HIGH confidence)
-- [GoReleaser Introduction](https://goreleaser.com/intro/)
-- [GoReleaser GitHub Actions](https://goreleaser.com/ci/actions/)
-- [GoReleaser Dist Folder](https://goreleaser.com/customization/dist/)
-- [GoReleaser Homebrew Formulas (deprecated)](https://goreleaser.com/customization/homebrew_formulas/)
-- [GoReleaser Homebrew Casks](https://goreleaser.com/customization/homebrew_casks/)
-- [GoReleaser v2.10 Announcement](https://goreleaser.com/blog/goreleaser-v2.10/)
-- [GoReleaser Checksums](https://goreleaser.com/customization/checksum/)
-- [GoReleaser Archives](https://goreleaser.com/customization/archive/)
-- [Homebrew Formula Cookbook](https://docs.brew.sh/Formula-Cookbook)
-- [Homebrew Ruby API: Formula](https://rubydoc.brew.sh/Formula.html)
-- [Homebrew Ruby API: Tap](https://rubydoc.brew.sh/Tap.html)
+- [Bubbletea API — pkg.go.dev](https://pkg.go.dev/github.com/charmbracelet/bubbletea) — v1.3.10, current API surface, WindowSizeMsg, tea.Tick, tea.Every, tea.Batch, tea.Sequence, WithAltScreen
+- [Lipgloss — charmbracelet/lipgloss](https://github.com/charmbracelet/lipgloss) — JoinHorizontal, JoinVertical, Style, border patterns
+- [Bubbletea Commands Tutorial](https://github.com/charmbracelet/bubbletea/blob/main/tutorials/commands/README.md) — official async command pattern
 
-### GitHub Repositories (HIGH confidence)
-- [goreleaser/goreleaser-action](https://github.com/goreleaser/goreleaser-action)
-- [goreleaser/goreleaser releases](https://github.com/goreleaser/goreleaser/releases)
-- [GitHub Issue #5594: Brew packages should be casks](https://github.com/goreleaser/goreleaser/issues/5594)
+### Architecture Articles (MEDIUM confidence, corroborated by official docs)
+- [Tips for Building Bubble Tea Programs — leg100.github.io](https://leg100.github.io/en/posts/building-bubbletea-programs/) — tree-of-models composition, Update/View performance, message ordering
+- [Build a System Monitor TUI in Go — penchev.com](https://penchev.com/posts/create-tui-with-go/) — tea.Every refresh pattern, gopsutil data fetching, lipgloss layout for dashboard
+- [Building a Terminal IRC Client with Bubble Tea — sngeth.com](https://sngeth.com/go/terminal/ui/bubble-tea/2025/08/17/building-terminal-ui-with-bubble-tea/) — custom message types, real-time update patterns
 
-### Community Resources (MEDIUM confidence)
-- [Creating Your First Homebrew Tap (Kristoffer.dev)](https://kristoffer.dev/blog/guide-to-creating-your-first-homebrew-tap/)
-- [From Go Code to Homebrew Tap (Applied Go)](https://appliedgo.net/whisper-cli/)
-- [Creating Homebrew Formulas with GoReleaser (Bindplane)](https://bindplane.com/blog/creating-homebrew-formulas-with-goreleaser)
-- [How to release to Homebrew with GoReleaser (Billy Hadlow)](https://billyhadlow.com/blog/how-to-release-to-homebrew/)
-- [DeepWiki: Homebrew/brew Core Package Management](https://deepwiki.com/Homebrew/brew/3-formula-and-cask-system)
+### Existing Codebase (HIGH confidence — read directly)
+- `/workspace/wakafetch/api.go` — `fetchStats()`, `fetchSummary()`, `fetchApi[T]()` — confirmed reusable
+- `/workspace/wakafetch/ui/render.go` — `render()`, `getTerminalCols()`, `printLeftRight()` — confirmed must change for TUI
+- `/workspace/wakafetch/ui/graph.go` — `graphStr()` returns `[]string` — confirmed composable
+- `/workspace/wakafetch/ui/card.go` — `cardify()` returns `[]string` — confirmed composable
+- `/workspace/wakafetch/types/types.go` — `StatsResponse`, `SummaryResponse` — confirmed data contracts
 
 ---
-*Architecture research for: Go CLI Release Pipeline with Homebrew Tap*
-*Researched: 2026-02-13*
+*Architecture research for: wakadash live terminal dashboard milestone*
+*Researched: 2026-02-17*
