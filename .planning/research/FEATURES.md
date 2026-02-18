@@ -1,242 +1,198 @@
 # Feature Landscape
 
-**Domain:** Go CLI Release Automation with Homebrew Distribution
-**Researched:** 2026-02-13
-**Confidence:** HIGH
+**Domain:** Terminal dashboard for WakaTime/Wakapi coding statistics
+**Researched:** 2026-02-17
+**Scope:** New capabilities only — wakafetch already provides static fetch, --full, --daily, --heatmap, --range/--days
+
+---
+
+## Context: What wakafetch Already Provides
+
+These features exist and must NOT be rebuilt. The dashboard extends them.
+
+- Static stat fetch (languages, projects, editors, OSs, categories)
+- --full breakdown
+- --daily table
+- --heatmap (GitHub-style coding frequency)
+- --range / --days time range selection
+- WakaTime + Wakapi API support
+- ~/.wakatime.cfg auto-config
+
+---
 
 ## Table Stakes
 
-Features users expect. Missing = product feels incomplete.
+Features users expect from a "live dashboard." Missing any of these and it feels like a slightly fancier wakafetch, not a real dashboard.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Multi-platform binaries | Go CLI users run macOS, Linux, Windows | Low | GoReleaser handles via cross-compilation automatically |
-| Multi-architecture builds | Apple Silicon (ARM64) + Intel (AMD64) required for macOS | Low | Must support arm64, amd64 at minimum |
-| GitHub Release creation | Standard distribution method for Go tools | Low | Automated via GoReleaser + GitHub Actions |
-| Homebrew tap | macOS users expect `brew install` for CLI tools | Low | GoReleaser auto-updates tap formula/cask |
-| Checksums | Security-conscious users verify downloads | Low | GoReleaser generates automatically |
-| Automated changelog | Users expect to see what changed | Low | Generated from git commits or conventional commits |
-| Archive packaging | Users need `.tar.gz` (Unix) and `.zip` (Windows) | Low | GoReleaser handles automatically |
-| Semantic versioning | Industry standard (v1.2.3 format) | Low | Tag-based releases with git tags |
-| README/docs in release | Users need usage instructions | Low | Include via GoReleaser extra_files |
+| Auto-refresh loop | Defining characteristic of "live dashboard" (htop, btop, glances pattern) | Low | Ticker-based, configurable interval (default 60s). Users expect +/- keys to adjust like btop |
+| Full-screen TUI layout | Dashboard implies a dedicated view occupying the terminal, not inline scrolling output | Low-Med | Bubbletea handles this; challenge is layout composition with lipgloss |
+| Keyboard quit (q / Ctrl-C) | Universal TUI convention — absence is jarring and unprofessional | Low | Must restore terminal state cleanly; Bubbletea handles cleanup |
+| Visible refresh indicator | Users need to know if data is live or stale | Low | Last-updated timestamp in header or footer, ideally showing seconds since last fetch |
+| Graceful terminal resize | Dashboard must reflow on window resize without crashing | Med | Bubbletea's WindowSizeMsg handles events; layout math for panel sizing is nontrivial |
+| Color-coded bar chart for top languages | Core "more visual than wakafetch" requirement; every WakaTime web dashboard shows this | Low-Med | Horizontal bar chart with percentage and time labels; ntcharts BarChart or lipgloss manual render |
+| Summary header panel | Today total, week total, daily average — always visible at a glance | Low | Static panel at top; data from stats API endpoint already used in wakafetch |
+| Top N projects panel | Second most-watched metric after languages in every developer stats tool | Low | Bar chart matching language panel style; same API data already fetched |
+| Error state display | API failures must not crash or show Go stack traces to users | Low | Friendly error message in panel area; retry on next refresh tick |
+| Help overlay (? key) | All serious TUI tools (lazygit, btop, k9s) provide in-app keybinding reference | Low | Static overlay showing all keybindings; dismiss with Esc or ? again |
+
+---
 
 ## Differentiators
 
-Features that set product apart. Not expected, but valued.
+Features that make wakadash worth using over opening a browser tab or running wakafetch repeatedly.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Binary signatures (GPG/Cosign) | Enterprise security requirements | Medium | Verifies authenticity, prevents tampering |
-| SBOM generation | Supply chain security compliance | Medium | Required for enterprise/government users |
-| macOS Universal Binaries | Single binary for both Intel + ARM Macs | Medium | Better UX than separate downloads |
-| AI-enhanced release notes | Polished, user-friendly changelogs | Low | GoReleaser Pro v2.6+ feature (requires API key) |
-| Docker image distribution | Alternative to Homebrew for containers | Medium | Parallel distribution channel |
-| Homebrew Cask (vs Formula) | Proper pre-compiled binary distribution | Low | GoReleaser v2.10+ standard (formula deprecated) |
-| Cross-platform CI matrix | Parallel builds speed up releases | Low | GitHub Actions matrix strategy |
-| Draft releases for review | Preview before publishing | Low | PR-based Homebrew updates, GitHub draft releases |
-| Automated version bumping | Commit-based semantic versioning | Medium | Tools like go-semantic-release, svu |
-| Multiple Homebrew taps | Stable vs beta channels | Medium | Separate taps for different release tracks |
+| Sparkline for today's hourly activity | Shows coding rhythm across the day — not exposed anywhere in wakafetch; answers "when am I most productive?" | Med | Requires durations API endpoint (separate from stats endpoint); ntcharts Streamline or Sparkline component |
+| Multi-panel layout (languages + projects side-by-side) | Information density similar to btop; glanceable at a single terminal view | Med | Lipgloss grid/join layout; must degrade gracefully to stacked single-column on narrow terminals |
+| Configurable refresh interval at runtime | btop's +/- pattern; user controls data staleness without restarting | Low | Keybinding adjusts ticker interval; display current interval in footer |
+| Panel toggle (show/hide editors, OSs, machines panels) | btop region-toggle UX pattern; users focus on what they care about | Med | Track panel visibility in model state; dedicated keybinding per panel (e, o, m); persist in session only |
+| Time range switcher (today / week / month) at runtime | Switch context without restarting the dashboard or re-running CLI flags | Med | r key (or tab) cycles ranges; triggers full API re-fetch; updates all panels simultaneously |
+| Color themes (via --theme flag or config) | Differentiates from all existing WakaTime CLI tools; lipgloss makes this low-effort once layout works | Low-Med | 2-3 preset themes: dark (default), light, high-contrast; applied globally via lipgloss style config |
+| Best day callout | "Your best day was X hours on Y" — motivating highlight; available directly from stats API best_day field | Low | Single-line display in header panel; no additional API call required |
+| Editors panel | Surfaces editor usage visually — valuable for polyglot developers switching between vim/vscode/etc | Low | Same API data as languages; just another bar chart panel that can be toggled |
+
+---
 
 ## Anti-Features
 
-Features to explicitly NOT build.
+Features to explicitly NOT build in this milestone.
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| Custom download server | Maintenance burden, trust issues | Use GitHub Releases (free, trusted, CDN) |
-| Manual changelog editing | Error-prone, delays releases | Auto-generate from conventional commits |
-| Version numbers in code | Out of sync, manual updates | Inject via `-ldflags` at build time |
-| Homebrew core submission (initially) | Slow review, high barrier | Start with personal tap, migrate later if popular |
-| Building on release server | Reproducibility issues | Build in CI, release server only publishes |
-| All-in-one mega binary | Complexity, size bloat | Single focused CLI, not a Swiss Army knife |
-| Custom update mechanism | Reinventing wheel, security risk | Let Homebrew/package managers handle updates |
-| Windows MSI/EXE installers (initially) | Complex signing, overhead | Provide .zip archives first, add installers if demand exists |
-| Nightly/continuous releases | Version fatigue, unstable perception | Use semantic versioning with pre-release tags (v1.2.3-beta.1) |
+| Mouse interaction / clickable panels | btop implements it at significant complexity cost; marginal gain in a keyboard-first tool; adds event handling complexity to every panel | Keyboard-only navigation; document all bindings in ? overlay |
+| Per-file / per-branch granularity | WakaTime exposes this via heartbeats API but it is noisy, slow, and rarely the first thing users want on a dashboard view | Expose as a future --files or --branch flag in wakafetch if requested; keep dashboard at project level |
+| Real-time heartbeat streaming | WakaTime API is summary/polling only, not an event stream; simulating real-time would be misleading about data freshness | Honest polling with a visible last-updated indicator showing exact timestamp |
+| Editable config from within dashboard | Config editing in TUI requires form widget library, input validation, file write logic — significant scope expansion for a stats viewer | Direct users to edit ~/.wakatime.cfg and restart; fail fast on launch with a clear config error message |
+| Interactive column sorting | Adds model state complexity for marginal value; sort order preference is rarely changed mid-session | Sort by time descending always; most-used first is the universal expectation and matches WakaTime web UI |
+| Notifications or desktop alerts | Out of scope for a stats viewer; belongs in a separate monitoring/goal-tracking tool | Not planned |
+| Authentication flow inside the dashboard | Secure input (masked API key entry) in a TUI requires careful handling; nontrivial edge cases with terminal echo | Require config to be set before launching; exit with a clear error message pointing to ~/.wakatime.cfg |
+| Custom data export from within dashboard | CSV/JSON export is a different workflow (analytics, not dashboard); better handled as a separate CLI subcommand | Not planned for dashboard mode; could be a future wakafetch --export flag |
+
+---
+
+## WakaTime API Data Available for Visualization
+
+Confirmed from official WakaTime API documentation. All of these are safe to build against.
+
+**Segmented breakdowns from stats endpoint (each breakdown includes time + percentage):**
+- Languages
+- Projects
+- Editors
+- Operating systems
+- Categories (Coding, Debugging, Building, Writing Tests, Writing Docs, etc.)
+- Machines (useful for multi-device developers)
+- Dependencies
+
+**Summary fields from stats endpoint:**
+- Total seconds for range
+- Daily average seconds
+- Best day (date + seconds)
+- Human-readable time strings (pre-formatted)
+
+**Requires separate durations API endpoint:**
+- Hourly activity breakdown within a single day (needed for sparkline showing coding rhythm)
+
+**Wakapi compatibility note:** Wakapi implements the WakaTime-compatible API. Not all endpoints exist in all Wakapi versions. The goals endpoint in particular may not be available. Code defensively for optional endpoints.
+
+---
 
 ## Feature Dependencies
 
 ```
-GitHub Release
-    └──requires──> Git tags (semantic versioning)
-    └──requires──> Multi-platform binaries
-    └──requires──> Checksums file
+Auto-refresh loop
+  --> Summary header panel (updates on each tick)
+  --> Top N languages panel (updates on each tick)
+  --> Top N projects panel (updates on each tick)
+  --> Refresh indicator (shows time since last tick completed)
 
-Homebrew Tap
-    └──requires──> GitHub Release
-    └──requires──> Archive packaging (.tar.gz)
-    └──enhances──> macOS Universal Binaries (better UX)
+Full-screen TUI layout
+  --> All panels (panels need a layout container to anchor to)
+  --> Multi-panel side-by-side layout (requires layout foundation first)
+  --> Panel toggle (requires panel identity tracked in model)
 
-Binary Signatures
-    └──requires──> Checksums file
-    └──requires──> GPG key or Cosign setup
+Sparkline for today's hourly activity
+  --> Durations API endpoint integration (separate from stats; new API call)
+  --> Full-screen TUI layout (needs dedicated panel area)
+  --> ntcharts Sparkline/Streamline component
 
-SBOM Generation
-    └──requires──> Built binaries (not source)
-    └──enhances──> Binary Signatures (sign SBOM)
+Time range switcher (runtime r key)
+  --> All data panels (all re-fetch when range changes)
+  --> Auto-refresh loop (range selection persists across ticks)
 
-macOS Universal Binaries
-    └──requires──> Both arm64 and amd64 builds
-    └──conflicts──> Homebrew Cask single-arch requirement (use separate archives)
+Panel toggle
+  --> Full-screen TUI layout (panels must have identifiable regions)
+  --> Multi-panel layout (toggle only meaningful when multiple panels exist)
 
-Docker Distribution
-    └──requires──> Multi-platform binaries
-    └──optional──> SBOM for image metadata
+Color themes
+  --> Full-screen TUI layout (themes must apply globally via lipgloss styles)
+  --> All panels (every rendered component references theme palette)
 
-Automated Version Bumping
-    └──requires──> Conventional Commits format
-    └──enables──> Automated changelog generation
+Editors panel
+  --> Same API call as languages/projects (no additional fetch needed)
+  --> Panel toggle (editors panel is a toggleable panel, not always visible)
 ```
 
-### Dependency Notes
-
-- **Homebrew requires GitHub Release**: Tap formulas/casks download from GitHub Release assets
-- **Checksums before signatures**: Sign the checksums file, not every individual binary
-- **Universal binaries are optional**: Provide separate arm64/amd64 archives for broader compatibility
-- **SBOM from binaries, not source**: More accurate dependency tree from `go version -m <binary>`
-- **Homebrew Cask vs Formula**: Casks are now standard for pre-compiled binaries (formula deprecated in GoReleaser v2.10)
+---
 
 ## MVP Recommendation
 
-### Launch With (v1)
+### Phase 1: Core Dashboard (ship first)
 
-Minimum viable release automation:
+1. Full-screen Bubbletea TUI layout with lipgloss
+2. Auto-refresh loop (60s default; +/- to adjust at runtime)
+3. Summary header panel (today total, week total, daily average, best day callout)
+4. Top N languages bar chart panel
+5. Top N projects bar chart panel
+6. Keyboard quit (q), help overlay (?)
+7. Visible last-updated timestamp in footer
+8. Graceful resize handling
+9. Error state display (friendly, non-crashing)
 
-- [x] **Multi-platform binaries** (macOS arm64/amd64, Linux arm64/amd64, Windows amd64) — Table stakes
-- [x] **GitHub Release automation** — Standard distribution method
-- [x] **Homebrew Cask in personal tap** — Primary macOS install method
-- [x] **Checksums file** — Security baseline
-- [x] **Basic changelog** (git log-based) — Users need to know what changed
-- [x] **Archive packaging** (.tar.gz, .zip) — Standard formats
-- [x] **GitHub Actions workflow** — Automate on tag push
+### Phase 2: Enhanced Visualization (second milestone)
 
-**Rationale**: This covers the absolute minimum users expect. Without Homebrew support, macOS users won't adopt. Without multi-platform builds, Linux/Windows users excluded. Without checksums, security-conscious users won't trust it.
+10. Sparkline for today's hourly activity (requires durations endpoint)
+11. Panel toggle keybindings (e for editors, o for OS, m for machines)
+12. Time range switcher (r key cycles today/week/month)
+13. Editors panel (toggleable)
+14. Multi-column layout on wide terminals (degrade to stacked on narrow)
+15. Color theme support (--theme flag, 2-3 presets)
 
-### Add After Validation (v1.x)
+### Defer to Phase 3 or Later
 
-Features to add once core is working and user feedback arrives:
+- Goals and streak display (Wakapi may not support; goals API varies)
+- Operating systems panel (low user interest relative to complexity of adding another panel)
+- Machines panel (only useful for multi-device developers; niche)
+- Dependencies breakdown (rarely the first thing developers check)
 
-- [ ] **Binary signatures (Cosign)** — Add when enterprise users request it (trigger: first security audit request)
-- [ ] **macOS Universal Binaries** — Add if users complain about confusion between arm64/amd64 (trigger: 3+ GitHub issues)
-- [ ] **Conventional Commits + better changelog** — Improve when changelog quality complaints arise (trigger: first "what changed?" issue)
-- [ ] **SBOM generation** — Add when compliance requirements surface (trigger: first enterprise deployment)
-- [ ] **Docker image distribution** — Add if container users request it (trigger: 5+ requests)
+---
 
-**Rationale**: These improve the product but aren't blockers for initial adoption. Add based on actual user demand, not speculation.
+## Comparison to Existing Tools
 
-### Future Consideration (v2+)
+| Feature | wakafetch (existing) | wakatime-cli (jaebradley) | wakadash (target) |
+|---------|---------------------|--------------------------|-------------------|
+| Output mode | Inline stdout | Inline stdout | Full-screen TUI |
+| Auto-refresh | No | No | Yes (configurable) |
+| Bar charts | No (text only) | No | Yes (ntcharts) |
+| Sparklines | No | No | Yes (phase 2) |
+| Multi-panel | No | No | Yes |
+| Time range switch | CLI flag, restart required | CLI flag, restart required | Runtime r key |
+| Color themes | No | No | Yes (2-3 presets) |
+| Heatmap | Yes (--heatmap flag) | No | Inherit via wakafetch; not duplicated |
+| Help overlay | No | No | Yes (? key) |
+| Editors visible | --full flag only | Limited | Dedicated panel (toggleable) |
 
-Features to defer until product-market fit established:
-
-- [ ] **AI-enhanced release notes** — Requires GoReleaser Pro subscription, benefit unclear
-- [ ] **Automated semantic versioning** — Adds complexity to workflow, manual tags work fine initially
-- [ ] **Beta/stable tap separation** — Only needed when significant user base exists
-- [ ] **Windows MSI installers** — Add if Windows adoption exceeds 20% of user base
-- [ ] **Homebrew core submission** — Only after 1000+ GitHub stars and stable 1.0 release
-
-**Rationale**: These are "nice to have" improvements that add complexity. Don't invest time until core value is proven and user base demands them.
-
-## Feature Prioritization Matrix
-
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| Multi-platform binaries | HIGH | LOW | P1 |
-| GitHub Release automation | HIGH | LOW | P1 |
-| Homebrew Cask | HIGH | LOW | P1 |
-| Checksums | HIGH | LOW | P1 |
-| Basic changelog | MEDIUM | LOW | P1 |
-| Archive packaging | HIGH | LOW | P1 |
-| GitHub Actions CI | HIGH | LOW | P1 |
-| Binary signatures | MEDIUM | MEDIUM | P2 |
-| macOS Universal Binaries | MEDIUM | MEDIUM | P2 |
-| Conventional Commits changelog | MEDIUM | LOW | P2 |
-| SBOM generation | LOW | MEDIUM | P2 |
-| Docker distribution | LOW | MEDIUM | P2 |
-| AI release notes | LOW | MEDIUM | P3 |
-| Automated version bumping | LOW | MEDIUM | P3 |
-| Separate beta tap | LOW | LOW | P3 |
-| Windows installers | LOW | HIGH | P3 |
-| Homebrew core | MEDIUM | HIGH | P3 |
-
-**Priority key:**
-- P1: Must have for launch (wakafetch v0.1.0)
-- P2: Should have, add when demand surfaces
-- P3: Nice to have, future consideration
-
-## Competitor Feature Analysis
-
-Comparing against popular Go CLI tools distributed via Homebrew:
-
-| Feature | kubectl | gh (GitHub CLI) | hugo | wakafetch Plan |
-|---------|---------|-----------------|------|----------------|
-| Homebrew tap | Official tap | Official tap | Official tap | Personal tap → core later |
-| Multi-arch macOS | Universal binary | Universal binary | Separate binaries | Separate binaries initially |
-| Checksums | ✓ SHA256 | ✓ SHA256 | ✓ SHA256 | ✓ SHA256 |
-| Binary signatures | ✓ Cosign | ✓ GPG | ✗ None | ✗ Initially, add if requested |
-| SBOM | ✓ Included | ✗ None | ✗ None | ✗ Initially, add if compliance needed |
-| Docker images | ✓ Official | ✓ Official | ✓ Official | ✗ Defer unless requested |
-| Auto-update check | ✓ Built-in | ✓ Built-in | ✗ None | ✗ Let Homebrew handle |
-| Changelog quality | Generated | High quality | Generated | Start generated, improve based on feedback |
-
-**Key insights:**
-- **Universal binaries aren't universal**: Even major tools (hugo) use separate binaries
-- **Security features vary**: kubectl has full SBOM/signatures, hugo has neither — depends on user base
-- **Docker is common but optional**: All three have official images, but it's not a blocker
-- **Auto-update is rare**: Most rely on package manager updates
-- **Homebrew core takes time**: All started with taps, migrated to core after adoption
+---
 
 ## Sources
 
-### GoReleaser Features and Capabilities
-- [GoReleaser Official Documentation](https://goreleaser.com/)
-- [GoReleaser Quick Start](https://goreleaser.com/quick-start/)
-- [GoReleaser GitHub Actions Integration](https://goreleaser.com/ci/actions/)
-- [GoReleaser Homebrew Casks Documentation](https://goreleaser.com/customization/homebrew_casks/)
-- [GoReleaser Homebrew Formulas (Deprecated)](https://goreleaser.com/customization/homebrew_formulas/)
-- [GoReleaser Changelog Generation](https://goreleaser.com/customization/changelog/)
-- [GoReleaser v2.10 Release - Cask Migration](https://goreleaser.com/blog/goreleaser-v2.10/)
-- [GoReleaser Supply Chain Security](https://goreleaser.com/blog/supply-chain-security/)
-- [GoReleaser Signing Documentation](https://goreleaser.com/customization/sign/)
-- [GoReleaser macOS Universal Binaries](https://goreleaser.com/customization/universalbinaries/)
-
-### Go CLI Distribution Best Practices
-- [Go Official Documentation - CLIs](https://go.dev/solutions/clis)
-- [Building and distributing a command-line app in Go](https://mauricio.github.io/2022/04/01/building-and-distributing-command-line-app-in-go.html)
-- [From Go Code to Homebrew Tap: Writing and Deploying a Whisper CLI with GoReleaser](https://appliedgo.net/whisper-cli/)
-- [CLI tools FTW (or: how to distribute your CLI tools with goreleaser)](https://appliedgo.net/release/)
-- [Deploying Go CLI Applications](https://medium.com/@ben.lafferty/deploying-go-cli-applications-316e9cca16a4)
-
-### Release Automation and GitHub Actions
-- [goreleaser/goreleaser-action](https://github.com/goreleaser/goreleaser-action)
-- [How to Configure GitHub Actions for Release Automation (2026)](https://oneuptime.com/blog/post/2026-02-02-github-actions-release-automation/view)
-- [How to Automate Releases with GitHub Actions (2026)](https://oneuptime.com/blog/post/2026-01-25-automate-releases-github-actions/view)
-- [wangyoucao577/go-release-action](https://github.com/wangyoucao577/go-release-action)
-
-### Multi-Architecture and Cross-Platform
-- [Creating Multi-architecture GitHub Releases for Go Binaries](https://ningbozhao.github.io/create-multi-arch-github-release-go-binary/)
-- [Go on ARM and Beyond](https://go.dev/blog/ports)
-- [How to Build Multi-Architecture Docker Images (ARM64 + AMD64) (2026)](https://oneuptime.com/blog/post/2026-01-06-docker-multi-architecture-images/view)
-- [A Detailed Guide to Golang Cross-Platform Cross-Compilation Technology and Practice](https://www.oreateai.com/blog/a-detailed-guide-to-golang-crossplatform-crosscompilation-technology-and-practice/4fb21cf3401260e66b46cd33c4f9cd18)
-
-### Security Features
-- [Go 1.26 Release Notes](https://go.dev/doc/go1.26)
-- [GoReleaser SBOM Generation Discussion](https://github.com/goreleaser/goreleaser/issues/2597)
-- [GitHub Artifact Naming Conventions - Kairos](https://kairos.io/docs/reference/artifacts/)
-
-### CLI Best Practices and User Expectations
-- [CLI tool software release process](https://medium.com/@henvic/cli-tool-software-release-1da0ef664323)
-- [Command Line Interface Guidelines](https://clig.dev/)
-- [UX patterns for CLI tools](https://www.lucasfcosta.com/blog/ux-patterns-cli-tools)
-
-### Semantic Versioning and Automation
-- [go-semantic-release/semantic-release](https://github.com/go-semantic-release/semantic-release)
-- [Semantic Release - GoReleaser Cookbook](https://goreleaser.com/cookbooks/semantic-release/)
-- [How to Implement Semantic Versioning Automation (2026)](https://oneuptime.com/blog/post/2026-01-25-semantic-versioning-automation/view)
-
-### Homebrew Distribution
-- [Homebrew Cask vs Formula Discussion](https://github.com/orgs/goreleaser/discussions/5563)
-- [Creating Homebrew Formulas With GoReleaser](https://dzone.com/articles/creating-homebrew-formulas-with-goreleaser)
-- [Packaging a project release (goreleaser part 2)](https://appliedgo.net/release2/)
-
----
-*Feature research for: Go CLI Release Automation with Homebrew Distribution*
-*Researched: 2026-02-13*
+- [WakaTime API Documentation](https://wakatime.com/developers) — confirmed all data fields, endpoint scopes, and data shapes (HIGH confidence)
+- [NimbleMarkets/ntcharts](https://github.com/NimbleMarkets/ntcharts) — confirmed chart types: Sparkline, BarChart, HeatMap, StreamlineChart, TimeSeriesChart (HIGH confidence)
+- [charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea) — confirmed as Go TUI framework standard; v2 released October 2025 (HIGH confidence)
+- [btop++ feature analysis](https://linuxblog.io/btop-the-htop-alternative/) — +/- refresh adjustment, region toggle, keyboard-first UX patterns (MEDIUM confidence, community sources)
+- [Wakapi feature set](https://wakapi.dev/) — confirmed WakaTime API compatibility and scope of supported endpoints (MEDIUM confidence)
+- [sahaj-b/wakafetch](https://github.com/sahaj-b/wakafetch) — baseline existing feature set to avoid rebuilding (HIGH confidence, this is the existing project)
+- [4 Ways to Visualize WakaTime Programming Data](https://wakatime.com/blog/15-4-ways-to-visualize-your-programming-data) — dashboard patterns and common visualizations (MEDIUM confidence)
+- [Grafana WakaTime Dashboard](https://grafana.com/grafana/dashboards/12790-wakatime-coding-stats/) — reference for which metrics are most valued by developers building dashboards (MEDIUM confidence)

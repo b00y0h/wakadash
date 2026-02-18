@@ -1,508 +1,508 @@
 # Domain Pitfalls
 
-**Domain:** GoReleaser + Homebrew Tap for Go CLI Distribution
-**Researched:** 2026-02-13
-**Confidence:** MEDIUM
+**Domain:** Live-updating terminal dashboard in Go (TUI milestone for existing CLI)
+**Researched:** 2026-02-17
+**Confidence:** HIGH for concurrency/API pitfalls (official docs + multiple corroborating sources), MEDIUM for terminal compatibility specifics
+
+---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Wrong GitHub Token for Cross-Repository Publishing
-
-**What goes wrong:**
-GoReleaser fails with `404 Not Found` when trying to push formula to the tap repository: `PUT https://api.github.com/repos/user/homebrew-tap/contents/Formula/app.rb: 404 Not Found`. The release succeeds but nothing is committed to the Homebrew tap.
-
-**Why it happens:**
-The default `GITHUB_TOKEN` provided by GitHub Actions only has permissions for the repository where the workflow runs. Cross-repository publishing requires a separate Personal Access Token (PAT) with `repo` or `contents: write` scope for the tap repository.
-
-**How to avoid:**
-1. Create a separate PAT with `repo` scope for the tap repository
-2. Add it as a secret (e.g., `HOMEBREW_TOKEN`)
-3. Pass it to GoReleaser in the workflow:
-   ```yaml
-   env:
-     HOMEBREW_TOKEN: ${{ secrets.HOMEBREW_TOKEN }}
-     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-   ```
-4. Optionally specify it in `.goreleaser.yaml`:
-   ```yaml
-   repository:
-     token: "{{ .Env.HOMEBREW_TOKEN }}"
-   ```
-
-**Warning signs:**
-- 404 errors during Homebrew tap publish step
-- Release completes but tap repository has no new commits
-- GitHub Actions logs show "failed to publish artifacts" for Homebrew
-
-**Phase to address:**
-Phase 1: Initial Setup - Token configuration must be correct from the start to test the full release pipeline.
+Mistakes that cause rewrites or leave the terminal in unusable state.
 
 ---
 
-### Pitfall 2: Personal Access Token Security Risk
+### Pitfall 1: Mutating TUI Model State Outside the Event Loop
 
 **What goes wrong:**
-Using a personal user's PAT in CI/CD exposes all of that user's repositories to any malicious CI/CD job. If the PAT is leaked or the repository is compromised, attackers gain access to every repository the user can access, not just the project repos.
+Race conditions corrupt UI state. Data renders partially updated or crashes. The `-race` detector fires, but the crashes are non-deterministic and hard to reproduce. In Bubble Tea, this typically appears as flicker, corrupted display, or panics in `View()`.
 
 **Why it happens:**
-PATs are user-scoped, not repository-scoped. They grant access to all repos of the user who created them. Developers often use their personal accounts without realizing the security implications.
+When an API fetch goroutine writes directly to a shared model struct while the Bubble Tea event loop is calling `View()`, two goroutines access the same memory concurrently. The pattern "start goroutine, write to model when done" is natural to Go developers but violates Bubble Tea's single-owner model.
 
-**How to avoid:**
-1. Create a dedicated "bot" GitHub account for automation
-2. Generate a PAT from the bot account
-3. Give the bot account minimal permissions - only push access to the tap repository
-4. Rotate the PAT periodically
-5. Consider GitHub Apps with fine-grained permissions as an alternative (when supported by GoReleaser)
+**Consequences:**
+- Non-deterministic crashes in production but not in tests
+- Corrupted display output that looks like a rendering bug (but isn't)
+- Full rewrite of state management once the root cause is found
 
-**Warning signs:**
-- PAT created from a personal developer account
-- PAT with broad scopes (all repos, admin access, etc.)
-- No documentation of who owns the PAT or how to rotate it
-- PAT stored in plain text or weakly encrypted
+**Prevention:**
+Never mutate model state from outside `Update()`. All API responses must arrive as `tea.Msg` through the event loop:
 
-**Phase to address:**
-Phase 1: Initial Setup - Security decisions made early are hard to change. Create bot account and proper token management from the beginning.
+```go
+// WRONG: goroutine writes to model directly
+go func() {
+    data, _ := fetchStats()
+    model.data = data  // race condition
+}()
 
----
+// CORRECT: goroutine sends a message; Update() handles it
+type statsMsg struct{ data *types.StatsResponse }
 
-### Pitfall 3: Formulas vs Casks Confusion (Deprecated Pattern)
-
-**What goes wrong:**
-Using the deprecated `brews` configuration section instead of `homebrew_casks`. The GoReleaser formula itself was disabled on 2025-06-14 "because the cask should be used now instead". Projects continuing to use formulas for pre-compiled binaries violate Homebrew semantics and face deprecation.
-
-**Why it happens:**
-Legacy documentation and tutorials still reference the `brews` section. In Homebrew terminology, a "formula" builds from source while a "cask" is pre-compiled. GoReleaser historically created formulas for pre-compiled binaries, which was technically incorrect.
-
-**How to avoid:**
-1. Use `homebrew_casks` instead of `brews` in `.goreleaser.yaml`
-2. Update tap structure to use Casks/ directory instead of Formula/
-3. Understand that since Homebrew v4.0, casks are supported on Linux, making this the correct approach for all platforms
-4. Run `goreleaser check` to detect deprecated configuration
-
-**Warning signs:**
-- Configuration uses `brews:` section
-- Tap repository has Formula/ directory for pre-compiled binaries
-- Deprecation warnings when running `goreleaser check`
-- Tutorial or example from before mid-2024
-
-**Phase to address:**
-Phase 1: Initial Setup - Start with the correct pattern. Migration later is possible but adds unnecessary work.
-
----
-
-### Pitfall 4: Pre-release Version Overwriting Production Formula
-
-**What goes wrong:**
-When tagging pre-release versions (e.g., `v1.0.0-rc1`), GoReleaser updates the main formula in the tap, overwriting the stable production version. Users who run `brew upgrade` get the pre-release version unexpectedly.
-
-**Why it happens:**
-By default, GoReleaser publishes every release to the tap. Without `skip_upload: auto`, all versions including pre-releases update the same formula file, making pre-releases public and replacing stable versions.
-
-**How to avoid:**
-1. Set `skip_upload: auto` in the homebrew/cask configuration:
-   ```yaml
-   homebrew_casks:
-     - skip_upload: auto
-   ```
-2. This automatically skips publishing when the tag contains pre-release indicators (rc, beta, alpha, etc.)
-3. Alternatively, use separate taps for stable vs pre-release versions
-4. For versioned formulas, use `name_template` with version suffixes
-
-**Warning signs:**
-- Pre-release versions appearing in the public tap
-- User reports of unstable versions after `brew upgrade`
-- Formula being updated for every tag including RCs
-- No `skip_upload` configuration in `.goreleaser.yaml`
-
-**Phase to address:**
-Phase 2: Release Automation - Before creating first pre-release tag. Must be configured before cutting v1.0.0-rc1.
-
----
-
-### Pitfall 5: Multi-Architecture Archive Conflicts
-
-**What goes wrong:**
-Error: "One tap can handle only one archive of an OS/Arch combination. Consider using ids in the brew section." GoReleaser builds both arm64 and amd64 binaries but can't determine which to include in the formula.
-
-**Why it happens:**
-GoReleaser builds multiple archives for the same OS (darwin/amd64 and darwin/arm64) but Homebrew formulas/casks expect a single binary per platform. Without explicit configuration, GoReleaser doesn't know which architecture to use.
-
-**How to avoid:**
-1. Use universal binaries for macOS when appropriate
-2. Or use `ids` in the cask configuration to specify which builds to include:
-   ```yaml
-   homebrew_casks:
-     - ids:
-         - darwin_amd64
-         - darwin_arm64
-   ```
-3. Configure architecture-specific URLs and checksums
-4. Modern approach: Homebrew handles multiple architectures automatically if properly configured
-
-**Warning signs:**
-- Error message about "one archive of an OS/Arch combination"
-- Multiple darwin archives in dist/ directory
-- GoReleaser release fails at Homebrew publish step
-- Confusion about which binary users will get on M1/M2 Macs
-
-**Phase to address:**
-Phase 1: Initial Setup - Architecture decisions impact build configuration from the start.
-
----
-
-### Pitfall 6: Missing `fetch-depth: 0` in GitHub Actions Checkout
-
-**What goes wrong:**
-GoReleaser fails to generate changelogs or properly detect version information. The release may fail entirely or produce incomplete metadata. Errors like "failed to generate changelog" or missing version tags.
-
-**Why it happens:**
-GitHub Actions checkout step defaults to shallow clone (fetch-depth: 1), which only fetches the latest commit. GoReleaser needs full Git history to generate changelogs and understand semantic versioning.
-
-**How to avoid:**
-Always include `fetch-depth: 0` in checkout step:
-```yaml
-- name: Checkout
-  uses: actions/checkout@v4
-  with:
-    fetch-depth: 0
+func fetchStatsCmd() tea.Cmd {
+    return func() tea.Msg {
+        data, err := fetchStats()
+        if err != nil {
+            return errMsg{err}
+        }
+        return statsMsg{data}
+    }
+}
 ```
 
-**Warning signs:**
-- Missing changelogs in releases
-- Version detection errors
-- Git history-related failures in GoReleaser
-- "shallow clone" warnings
+**Detection:**
+- Run with `go run -race .` during development
+- Any non-deterministic display corruption
+- `Update()` not being the only place model fields are assigned
 
 **Phase to address:**
-Phase 1: Initial Setup - Required for any GoReleaser GitHub Actions workflow.
+Phase 1 (TUI Foundation) — The architecture decision. Getting this wrong means rewriting state flow later.
 
 ---
 
-### Pitfall 7: Deprecated Configuration Fields Not Detected Until Runtime
+### Pitfall 2: Blocking the Event Loop with Synchronous API Calls
 
 **What goes wrong:**
-Configuration uses deprecated fields like `tap` instead of `repository`, or `plist` instead of `service`. GoReleaser may silently ignore the configuration or fail with obscure YAML parsing errors. The homebrew section may be missing entirely from generated output.
+The dashboard freezes completely during API fetches. Keyboard input stops responding. The terminal appears hung. Users Ctrl+C to escape and the terminal may be left in raw mode.
 
 **Why it happens:**
-GoReleaser evolves quickly. Fields deprecated in one version are removed in later versions. The configuration file may work today but break on the next GoReleaser upgrade.
+The existing `fetchStats()` and `fetchSummary()` functions in the codebase make synchronous HTTP calls with a 10-second timeout. If these are called directly in `Update()` or `Init()` rather than wrapped in a `tea.Cmd`, they block the single-threaded event loop.
 
-**How to avoid:**
-1. Run `goreleaser check` regularly to detect deprecated fields
-2. Review deprecation notices at https://goreleaser.com/deprecations/
-3. Key deprecations to watch:
-   - `tap` → `repository` (deprecated v1.19.0, removed v2.0)
-   - `plist` → `service` (deprecated by Homebrew)
-   - `brews` → `homebrew_casks` (deprecated v2.10)
-4. Subscribe to GoReleaser release notes
-5. Test configuration with `goreleaser release --snapshot --clean` locally
+**Consequences:**
+- Complete UI freeze for the duration of each API call (potentially 10 seconds)
+- No spinner or loading indicator is possible because rendering is also blocked
+- If the network is slow or WakaTime returns a 302 instead of 429, the freeze extends
 
-**Warning signs:**
-- YAML unmarshal errors mentioning field names
-- Warnings in `goreleaser check` output
-- Homebrew configuration being silently ignored
-- Empty dist/config.yml missing expected sections
-- Using examples from tutorials older than 1 year
+**Prevention:**
+Every API call must be a `tea.Cmd` (runs in a goroutine, returns a `tea.Msg`):
+
+```go
+// WRONG: called synchronously in Init() or Update()
+func (m Model) Init() tea.Cmd {
+    data, _ := fetchStats(m.apiKey, m.apiURL, m.rangeStr)  // blocks
+    m.data = data
+    return nil
+}
+
+// CORRECT: deferred to goroutine via Cmd
+func (m Model) Init() tea.Cmd {
+    return fetchStatsCmd(m.apiKey, m.apiURL, m.rangeStr)
+}
+```
+
+**Detection:**
+- UI freezes when refresh happens
+- No ability to quit with `q` or `Ctrl+C` during data load
 
 **Phase to address:**
-Phase 2: Release Automation - Check during initial configuration and establish process for ongoing validation.
+Phase 1 (TUI Foundation) — The wrapping of existing API calls must be part of initial TUI wiring.
+
+---
+
+### Pitfall 3: Panic Leaves Terminal in Raw Mode
+
+**What goes wrong:**
+Any unrecovered panic in a command goroutine (API call, ticker callback, etc.) leaves the terminal in raw mode. The cursor disappears, typed characters don't echo, the user cannot use the terminal at all. They must run `reset` to restore it.
+
+**Why it happens:**
+Bubble Tea puts the terminal into raw mode at startup. If a panic occurs in a goroutine that Bubble Tea spawned for a `tea.Cmd`, that goroutine's panic handler is separate from the main program panic handler. Panics in commands are caught individually — but only if Bubble Tea's `WithoutCatchPanics` option has NOT been set.
+
+The existing codebase uses `os.Exit(0)` in `showCustomHelp()`. If similar patterns are used inside TUI commands, the terminal cleanup is bypassed.
+
+**Consequences:**
+- Unusable terminal session requiring `reset`
+- User has to know to run `reset` — many don't
+- Can corrupt ongoing terminal multiplexer sessions (tmux, screen)
+
+**Prevention:**
+1. Never call `os.Exit()` from within a running Bubble Tea program
+2. Keep the default `CatchPanics` behavior enabled (do NOT use `tea.WithoutCatchPanics()`)
+3. Ensure cleanup on SIGINT/SIGTERM: use `tea.WithAltScreen()` so the terminal restores on exit
+4. Test panic recovery explicitly during development
+
+**Detection:**
+- Terminal cursor disappears after program exits
+- Typed characters don't appear in the terminal after closing the dashboard
+- `stty -echo` visible in output
+
+**Phase to address:**
+Phase 1 (TUI Foundation) — Set up correctly from the start; retrofitting panic safety is error-prone.
+
+---
+
+### Pitfall 4: Ticker-Driven Auto-Refresh Creates Goroutine Leaks
+
+**What goes wrong:**
+Each auto-refresh cycle spawns a goroutine that may not be cleaned up. Over time (especially when the user changes range or pauses/unpauses), leaked goroutines accumulate. Memory grows unboundedly. In extreme cases, multiple goroutines race to update the same model state.
+
+**Why it happens:**
+The typical implementation uses `time.NewTicker` inside a goroutine and sends messages on each tick. If the Bubble Tea program quits, exits, or the ticker is recreated (e.g., user changes refresh interval), the old ticker goroutine keeps running — Go's GC does not collect running goroutines.
+
+**Consequences:**
+- Memory leak in long-running dashboard sessions
+- Multiple simultaneous API requests when ticker restarts accumulate
+- Hitting WakaTime's rate limit (10 req/s avg over 5 minutes) from leaked refresh goroutines
+
+**Prevention:**
+Use Bubble Tea's built-in ticker pattern with context cancellation:
+
+```go
+// Bubble Tea's built-in approach: return a Cmd that fires once,
+// then requeue after data arrives
+func tickCmd(interval time.Duration) tea.Cmd {
+    return tea.Tick(interval, func(t time.Time) tea.Msg {
+        return tickMsg(t)
+    })
+}
+
+// In Update(), after handling tickMsg, return the next tick:
+case tickMsg:
+    return m, tea.Batch(fetchStatsCmd(...), tickCmd(m.refreshInterval))
+```
+
+Always cancel contexts and stop tickers in the `quit` message handler.
+
+**Detection:**
+- Increasing memory usage over time (visible with `htop`)
+- More API calls than expected (exceeding 1 per refresh interval)
+- `-race` detector firing after range changes
+
+**Phase to address:**
+Phase 2 (Live Refresh) — This pitfall is specific to implementing the auto-refresh loop.
+
+---
+
+### Pitfall 5: WakaTime 202 Response Treated as Error or Success
+
+**What goes wrong:**
+The `/stats` endpoint returns HTTP 202 (Accepted) when stats are still being calculated. The existing code only checks for `StatusOK`. A 202 response causes a JSON decode failure or is treated as an unknown error, crashing the dashboard or displaying "server error" to the user.
+
+**Why it happens:**
+WakaTime processes stats asynchronously. For free plan users and for time ranges >= 1 year, stats may not be immediately available. The API explicitly returns 202 with a `percent_calculated` field indicating background processing progress. This is documented behavior, not an error.
+
+**Consequences:**
+- Dashboard shows error to user when stats are legitimately still computing
+- User assumes the dashboard is broken when WakaTime is working correctly
+- Aggressive retry logic (to "fix" the apparent error) hammers the API unnecessarily
+
+**Prevention:**
+Handle 202 explicitly as a "loading" state with retry:
+
+```go
+case http.StatusAccepted:  // 202: stats still computing
+    return nil, ErrStatsNotReady  // special sentinel error
+// Caller: show "Calculating..." and retry after delay
+```
+
+Check `is_up_to_date` and `percent_calculated` fields in the response body when available.
+
+**Detection:**
+- "Stats not available" or JSON decode errors on first launch
+- Works fine after waiting and refreshing manually
+
+**Phase to address:**
+Phase 2 (Live Refresh) — Handle during API client enhancement for dashboard use.
+
+---
+
+### Pitfall 6: Terminal Width Detection Breaks Layout on Resize
+
+**What goes wrong:**
+The existing `getTerminalCols()` in `render.go` calls `stty` via `exec.Command` and has no Windows support (returns `fallback = 9999`). In TUI mode, the terminal size must be known at every render, and terminal resize events (SIGWINCH) must update the layout. Without this, the dashboard overflows or mis-aligns on resize.
+
+**Why it happens:**
+The current stty-based approach is a one-shot measurement during static rendering. For a live dashboard, the terminal can be resized at any time. Bubble Tea sends a `tea.WindowSizeMsg` whenever the terminal is resized, but the layout logic must be wired to consume it. If the old `getTerminalCols()` approach is reused, it won't receive resize events.
+
+**Consequences:**
+- Cards overflow terminal width after resize
+- Layout doesn't adapt to narrow vs wide terminals
+- `stty` subprocess calls on every render are expensive (measured in milliseconds)
+
+**Prevention:**
+Replace `getTerminalCols()` with Bubble Tea's `WindowSizeMsg` approach:
+
+```go
+case tea.WindowSizeMsg:
+    m.width = msg.Width
+    m.height = msg.Height
+    return m, nil
+```
+
+Use `m.width` in all layout calculations. The stty-based approach must not be used inside the TUI render loop.
+
+**Detection:**
+- Resize terminal while dashboard is running — layout breaks
+- `stty` subprocess calls appearing in `strace`/`dtruss` output during rendering
+
+**Phase to address:**
+Phase 1 (TUI Foundation) — Layout must use `WindowSizeMsg` from the start; retrofitting is a rewrite of the layout layer.
 
 ---
 
 ## Moderate Pitfalls
 
-### Pitfall 8: Insufficient GitHub Actions Workflow Permissions
+---
+
+### Pitfall 7: WakaTime Rate Limit (429) Not Handled Gracefully in Dashboard Mode
 
 **What goes wrong:**
-GitHub Actions workflow fails with permission errors: "Resource not accessible by integration" or fails to create releases, upload assets, or close milestones.
+In dashboard mode with frequent auto-refresh, a 429 response causes the existing error handler to surface an error to the user on every tick. The dashboard shows "Rate limit exceeded" repeatedly. The auto-refresh continues hammering the API despite getting 429 responses (no backoff).
 
 **Why it happens:**
-GitHub Actions has moved to more restrictive default permissions. Workflows need explicit permission grants for specific operations.
+The current `fetchApi()` converts 429 to an error string and returns it. In a one-shot CLI, this is correct. In a live dashboard, the refresh ticker keeps firing regardless of previous errors. Without exponential backoff, the dashboard makes the rate limit worse.
 
-**How to avoid:**
-Configure required permissions in workflow:
-```yaml
-permissions:
-  contents: write    # Required for releases and Homebrew
-  packages: write    # If pushing Docker images
-  issues: write      # If closing milestones
-  id-token: write    # If using Cosign with OIDC
+**Prevention:**
+1. Implement exponential backoff with jitter on 429 responses
+2. Check `Retry-After` header before next retry
+3. Show "Rate limited — retrying in Xs" in the dashboard status bar instead of an error
+4. Minimum refresh interval of 60 seconds (well under 10 req/s averaged over 5 minutes)
+
+**Detection:**
+- Console logs showing repeated 429 errors at fixed intervals
+- No "retry after" delay between requests
+
+**Phase to address:**
+Phase 2 (Live Refresh) — Implement alongside the refresh ticker.
+
+---
+
+### Pitfall 8: ANSI Escape Codes in Non-TTY Output After Adding TUI
+
+**What goes wrong:**
+When output is piped (e.g., `wakadash | grep ...`) or redirected, raw ANSI escape codes appear in the output. The existing code already handles this with `colorsShouldBeEnabled()` TTY check. But if the TUI framework is used without the alt-screen buffer, escape sequences appear in the shell history and pipe output.
+
+**Why it happens:**
+Adding a TUI framework changes output mode. The existing color guard (`NO_COLOR`, TTY check) only applies to the static render path. If the dashboard accidentally starts in a non-TTY context (e.g., piped, inside scripts), Bubble Tea still emits escape codes.
+
+**Prevention:**
+1. Detect non-TTY at startup and fall back to static output mode (existing behavior)
+2. Use `tea.WithAltScreen()` so TUI output doesn't pollute the scrollback buffer
+3. Preserve the existing `--no-colors` and `NO_COLOR` honor path for the static mode
+
+**Detection:**
+- `wakadash --watch | cat` shows escape codes
+
+**Phase to address:**
+Phase 1 (TUI Foundation) — Mode detection must be in the entry point before Bubble Tea starts.
+
+---
+
+### Pitfall 9: ANSI Color Code Compatibility Across Terminal Emulators
+
+**What goes wrong:**
+The existing code uses `\x1b[38;2;128;128;128m` (24-bit RGB true color for `MidGray`). This works in modern terminals (iTerm2, Windows Terminal, Kitty) but not in older terminals (some SSH clients, older macOS Terminal.app versions, tmux without `terminal-overrides`). In unsupported terminals, the color code renders as literal text or breaks surrounding formatting.
+
+**Why it happens:**
+24-bit true color (`\x1b[38;2;R;G;Bm`) is not universally supported. The existing colors.go uses it for `MidGray` but falls back to standard 256-color or 8-color codes for all other colors. This inconsistency can cause visible artifacts in degraded terminals.
+
+**Prevention:**
+1. Use 256-color or 8-color codes as the primary palette (already done for most colors)
+2. For `MidGray`, fall back to `\x1b[90m` (bright black / dark gray) when true color is unsupported
+3. Check `COLORTERM=truecolor` env var before using 24-bit codes
+4. Bubble Tea's Lip Gloss handles color degradation automatically — use it instead of manual ANSI strings
+
+**Detection:**
+- Test in `tmux` without `set -g terminal-overrides`
+- Test with `TERM=xterm` explicitly set
+- Literal characters appearing where colors should be
+
+**Phase to address:**
+Phase 3 (Polish) — Acceptable to address after core dashboard works. Use Lip Gloss early to avoid retroactive replacement.
+
+---
+
+### Pitfall 10: Adding Cobra Breaks Existing Flag Parsing
+
+**What goes wrong:**
+The existing codebase uses the standard `flag` package directly with short (`-r`) and long (`--range`) flag variants registered manually. If Cobra is introduced for the new `--watch` or `--interval` flags, the two flag systems conflict. Cobra's `pflag` library does not coexist cleanly with stdlib `flag` without explicit bridging.
+
+**Why it happens:**
+Cobra uses `pflag` (POSIX-compliant flags) while the existing code uses stdlib `flag`. When both are registered, the same flag name can be parsed by either, leading to silently ignored flags or panics on duplicate registration.
+
+**Prevention:**
+Two safe paths:
+1. Add new flags to the existing stdlib `flag` system (no Cobra introduction)
+2. Migrate entirely to `pflag`/Cobra in a single refactor (not incrementally)
+
+Do not mix `flag` and `pflag` in the same binary without a bridge layer.
+
+**Detection:**
+- Existing `-r` short flag stops working after Cobra added
+- `flag redefined: range` panic at startup
+
+**Phase to address:**
+Phase 1 (TUI Foundation) — Decision on flag system must precede adding any new flags.
+
+---
+
+### Pitfall 11: State Management Complexity Explosion
+
+**What goes wrong:**
+The dashboard state grows to include: current data, loading state, error state, refresh timer, selected range, selected tab, terminal size, color mode, refresh interval — all in one model. `Update()` becomes an unmaintainable switch statement with hundreds of cases. Bugs in one state transition corrupt another.
+
+**Why it happens:**
+Bubble Tea's single-model pattern is clean for simple apps but requires discipline for multi-screen dashboards. Without deliberate component boundaries, the model struct and Update() function accrete state without structure.
+
+**Prevention:**
+1. Define explicit state machine states (`Loading`, `Ready`, `Error`, `Paused`)
+2. Separate viewport/tab models as sub-components with their own `Update()` methods
+3. Keep the top-level model as an orchestrator, not a data store
+4. Use typed messages, not booleans: `type loadingMsg struct{}` not `m.isLoading = true`
+
+**Detection:**
+- Model struct has more than ~8 fields
+- `Update()` function longer than ~60 lines
+- Bug fixes in one feature break another unrelated feature
+
+**Phase to address:**
+Phase 1 (TUI Foundation) — Define the state machine before writing display logic.
+
+---
+
+## Minor Pitfalls
+
+---
+
+### Pitfall 12: Hardcoded Refresh Intervals Hit API Unexpectedly
+
+**What goes wrong:**
+A default refresh interval of 30 seconds seems reasonable, but with 10 req/s averaged over 5 minutes (300 seconds), the budget is 3,000 requests per 5-minute window. However, if the user opens multiple terminal windows running the dashboard, or if the dashboard makes multiple API calls per refresh (stats + summary), the combined load approaches the limit.
+
+**Prevention:**
+- Default refresh interval: minimum 60 seconds
+- Make interval configurable via `--interval` flag
+- Count API calls per refresh: if more than 2 endpoints are called, increase the default interval proportionally
+- Display the next-refresh countdown in the status bar so users understand the cadence
+
+**Phase to address:**
+Phase 2 (Live Refresh) — Set the default during implementation.
+
+---
+
+### Pitfall 13: WakaTime 302 Redirect Treated as Rate Limit
+
+**What goes wrong:**
+WakaTime sometimes returns HTTP 302 instead of 429 when rate limiting. The existing error handler catches only 429 explicitly. A 302 causes the HTTP client to follow the redirect, potentially hitting a different endpoint or timing out.
+
+**Prevention:**
+Configure the HTTP client to not follow redirects automatically:
+
+```go
+client := &http.Client{
+    Timeout: timeout,
+    CheckRedirect: func(req *http.Request, via []*http.Request) error {
+        return http.ErrUseLastResponse  // don't follow redirects
+    },
+}
+// Then handle 302 the same as 429 with backoff
 ```
 
-**Warning signs:**
-- "Resource not accessible" errors in GitHub Actions
-- Workflow has no `permissions:` block
-- Release created but assets not uploaded
-- Milestones not being closed automatically
-
 **Phase to address:**
-Phase 1: Initial Setup - Configure when setting up GitHub Actions workflow.
+Phase 2 (Live Refresh) — Handle during API client enhancement.
 
 ---
 
-### Pitfall 9: Formula Naming Conventions Violations
+### Pitfall 14: WakaTime `cached_at` Staleness in Status Bar Endpoints
 
 **What goes wrong:**
-Homebrew audit failures or formula rejections due to incorrect naming. Class names don't match file names. Formulas with spaces in paths fail to install.
+The `/status_bar/today` endpoint is backed only by cached data. During dashboard display, this endpoint returns an empty `{"data":{"chart_data":[]}}` response while the cache updates. If the dashboard shows this data without checking `cached_at`, it displays empty charts during the cache refresh window.
 
-**Why it happens:**
-Homebrew has strict naming conventions: filenames must be lowercase, class names must be CamelCase equivalents. Package names should match how the project markets itself, not variations.
-
-**How to avoid:**
-1. Name formula like the project markets it: `pkgconf` not `pkgconfig`, `sdl_mixer` not `sdl-mixer`
-2. Filenames: all lowercase (gnu-go.rb, sdl_mixer.rb)
-3. Class names: strict CamelCase (GnuGo, SdlMixer)
-4. No spaces in directory paths (causes build script failures)
-5. Run `brew audit --strict --online` before publishing
-6. For new formulas: `brew audit --new-formula <name>`
-
-**Warning signs:**
-- `brew audit` failures
-- "Class name doesn't match file name" errors
-- Formula installations failing on certain systems
-- Formula naming different from GitHub repository name
+**Prevention:**
+Always check `cached_at` timestamp. If older than the expected update interval, show "Updating..." state instead of empty charts.
 
 **Phase to address:**
-Phase 1: Initial Setup - Choose correct name from the start; renaming later requires coordinated changes.
+Phase 2 (Live Refresh) — Handle during data display implementation.
 
 ---
 
-### Pitfall 10: Test Block Missing or Inadequate
+### Pitfall 15: Emoji/Unicode Characters Break Layout in Some Terminals
 
 **What goes wrong:**
-Formula published without proper installation verification. Users report installation failures or binaries that don't work as expected. Formula fails Homebrew audit for missing tests.
+The existing `render.go` uses `🬋` (BLOCK SEXTANT character, U+1FB0B) as the bar character. This is a Unicode 13.0 character not supported in all terminal fonts. When the character is unsupported, it renders as a replacement character (□) with different width, breaking bar chart alignment.
 
 **Why it happens:**
-Developers focus on the install block but forget that Homebrew requires a test block to verify successful installation. Basic "assert version" tests are common but insufficient.
+The code already acknowledges this with the comment `// ❙ 🬋 ▆ ❘ ❚ █ ━ ▭ ╼ ━ 🬋`. When the character isn't available in the user's font, the fallback is invisible but the byte width still takes space.
 
-**How to avoid:**
-1. Always include a test block in formula/cask
-2. Test that the binary exists and is executable
-3. Test that `--version` or `--help` works
-4. Test core functionality if possible:
-   ```ruby
-   test do
-     system "#{bin}/wakafetch", "--version"
-     assert_match "wakafetch", shell_output("#{bin}/wakafetch --help")
-   end
-   ```
-5. Test on both Intel and ARM Macs before publishing
-6. Use `brew install --build-from-source` to test locally
-
-**Warning signs:**
-- No test block in generated formula
-- Test only checks `assert true`
-- Formula installs but binary doesn't run
-- Different behavior between `brew install` and manual installation
+**Prevention:**
+- Detect terminal Unicode support via `LANG` env var or `TERM` capabilities
+- Provide an ASCII fallback (`=`, `-`, `|`) when Unicode is not available
+- Use `--no-unicode` flag or auto-detect
 
 **Phase to address:**
-Phase 2: Release Automation - Add testing as part of GoReleaser configuration validation.
+Phase 3 (Polish) — Low priority; existing users already see this in static mode.
 
 ---
 
-### Pitfall 11: Version String Handling in Formulas
+## Phase-Specific Warnings
 
-**What goes wrong:**
-Versioned formulas have incorrect naming: `wakafetch@1.2.3.rb` instead of `[email protected]`. Formula class names don't follow the `AT` convention. Users can't install specific major/minor versions.
-
-**Why it happens:**
-Homebrew's versioning conventions are non-obvious. The `@` symbol in filenames must be translated to `AT` in class names. Homebrew versions differ in major/minor, not patch versions (security policy).
-
-**How to avoid:**
-1. Versioned formulas should differ in major/minor only: `[email protected]`, not `wakafetch@1.2.3`
-2. File naming: `wakafetch@1.2.rb`
-3. Class naming: `WakafetchAT12` (not `WakafetchAt12` or `Wakafetch@12`)
-4. Use GoReleaser's `name_template` for versioned formulas
-5. Understand Homebrew wants users to get security updates (patch versions)
-6. Tag both versioned and unversioned: `foo.rb` + `[email protected]`
-
-**Warning signs:**
-- Formula filenames include patch version numbers
-- Class name uses `@` symbol or lowercase `at`
-- Users report can't install specific versions
-- `brew audit` warnings about versioning
-
-**Phase to address:**
-Phase 3: Versioned Formula Support - Only needed if supporting multiple major versions simultaneously.
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| TUI Foundation | Model state mutation from goroutines | Use tea.Cmd for all async work; no direct model writes |
+| TUI Foundation | Blocking event loop with sync API calls | Wrap all existing fetch functions as tea.Cmd immediately |
+| TUI Foundation | Panic leaving terminal in raw mode | Keep CatchPanics enabled; use WithAltScreen |
+| TUI Foundation | Terminal width using stty subprocess | Replace getTerminalCols() with WindowSizeMsg handler |
+| TUI Foundation | Flag system conflict (flag vs pflag) | Decide: stay on stdlib flag or migrate to Cobra fully |
+| Live Refresh | Goroutine leak from ticker | Use tea.Tick pattern; cancel on quit; one ticker at a time |
+| Live Refresh | 429 rate limit from aggressive polling | 60s minimum interval; exponential backoff; show retry status |
+| Live Refresh | 202 treated as error | Handle StatusAccepted as "computing" sentinel, retry with delay |
+| Live Refresh | 302 redirect from WakaTime rate limiting | Disable redirect following; treat 302 same as 429 |
+| Live Refresh | cached_at staleness showing empty charts | Check cached_at; show "Updating..." not empty state |
+| Polish | True color codes in degraded terminals | Use Lip Gloss adaptive colors or check COLORTERM |
+| Polish | Unicode bar chars in limited fonts | Provide ASCII fallback; auto-detect or --no-unicode flag |
 
 ---
 
-### Pitfall 12: Configuration File Path Handling
+## Integration Pitfalls: Adding TUI to This Specific Codebase
 
-**What goes wrong:**
-After reinstalling formula, user configuration files are replaced with defaults. User loses their settings. Conflicts between different formulas' config files.
+The existing wakafetch codebase has specific patterns that create integration risk:
 
-**Why it happens:**
-Using `prefix.install` to place config files in the main install directory means reinstalls overwrite them. Config files need special handling to persist across installations.
-
-**How to avoid:**
-1. Use Homebrew's `etc` directory for configuration:
-   ```ruby
-   etc.install "config.yaml" => "wakafetch/config.yaml"
-   ```
-2. Ensure config files are uniquely named (include app name)
-3. Don't overwrite existing config files in install block
-4. Document config file location in formula description
-5. Consider using `etc.install` only if config doesn't exist
-
-**Warning signs:**
-- User complaints about lost configuration
-- Config files in `{prefix}/` or `bin/`
-- Multiple formulas sharing generic config names
-- No mention of config directory in formula
-
-**Phase to address:**
-Phase 2: Release Automation - If application uses configuration files. Otherwise skip.
+| Existing Pattern | Risk When Adding TUI | Correct Migration |
+|-----------------|---------------------|-------------------|
+| `ui.Errorln(err.Error())` calls `os.Exit(1)` | Will exit inside running TUI, no cleanup | Return errors; display via TUI error state |
+| `getTerminalCols()` spawns `stty` subprocess | Slow, breaks on resize, Windows returns 9999 | Replace with Bubble Tea `WindowSizeMsg` |
+| Global `var Clr Colors` package state | Safe in static mode; unsafe if TUI modifies it | Keep static mode path; TUI uses Lip Gloss directly |
+| `fetchApi[T]()` uses sync HTTP with 10s timeout | Will block event loop if called directly | Wrap in `tea.Cmd` — function body stays the same |
+| `flag` package for CLI flags | Conflicts with Cobra/pflag if introduced | Add `--watch` and `--interval` to existing `flag` setup |
+| `main()` directly calls display functions | No separation between data and render layers | Introduce model layer before TUI integration |
 
 ---
-
-## Technical Debt Patterns
-
-Shortcuts that seem reasonable but create long-term problems.
-
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Using personal PAT instead of bot account | Faster initial setup, no new account needed | Security risk, harder to rotate, tied to individual | Never - always use bot account |
-| Skipping `brew audit` during development | Faster iteration | Formula rejected later, users get broken installs | Only during initial local testing |
-| Using `brews` instead of `homebrew_casks` | Works with old tutorials | Deprecated pattern, migration needed | Never - start with casks |
-| No test block in formula | Simpler configuration | Can't verify installation success, audit failures | Never - tests are required |
-| Single architecture (amd64 only) | Simpler build configuration | M1/M2 users can't install | Only if targeting Linux-only or legacy systems |
-| Hardcoded version strings | No templating syntax needed | Manual updates required, prone to errors | Never - use GoReleaser templates |
-| Not using `skip_upload: auto` | All versions published | Pre-releases pollute tap, confuse users | During initial MVP if no pre-releases planned |
-
-## Integration Gotchas
-
-Common mistakes when connecting to external services.
-
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| GitHub Actions | Using default `GITHUB_TOKEN` for cross-repo | Create separate PAT with `repo` scope |
-| GoReleaser | Not running `goreleaser check` before release | Run check in CI and pre-commit |
-| Homebrew Audit | Publishing without local audit | Run `brew audit --strict --online` locally |
-| Multiple Repos | Committing formula to wrong branch | Configure default branch in GoReleaser config |
-| Semantic Versioning | Tags without `v` prefix | Use `v1.2.3` format (GoReleaser default) |
-| Token Environment | Typo in env var name (e.g., `HOMEBREW_TOKEN` vs expected name) | Verify exact variable names in GoReleaser config |
-
-## Performance Traps
-
-Patterns that work at small scale but fail as usage grows.
-
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Large binary size | Slow installation, user complaints | Strip binaries, use compression | >100MB uncompressed |
-| No architecture-specific builds | Rosetta translation overhead on M1/M2 | Build native arm64 binaries | Users notice slow startup |
-| Downloading from slow/unreliable URLs | Installation timeouts, failures | Use GitHub releases (fast CDN) | >10k installations/month |
-| Formula in distant tap | `brew update` takes long | Use canonical tap location | >50 formulas in tap |
-
-## Security Mistakes
-
-Domain-specific security issues beyond general web security.
-
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| Personal PAT in repository secrets | Leak exposes all user repos | Use bot account with minimal permissions |
-| PAT with excessive scopes | Unnecessary attack surface | Only grant `contents: write` on tap repo |
-| No PAT rotation policy | Compromised tokens stay valid | Rotate every 90 days, document in runbook |
-| Unsigned macOS binaries | Gatekeeper blocks, users bypass security | Sign and notarize (requires Apple Developer account) |
-| Using `xattr` to bypass Gatekeeper in docs | Users disable security protections | Properly sign binaries instead |
-| Formula downloads over HTTP | MITM attacks possible | Always use HTTPS URLs |
-| No checksum verification | Modified binaries installed | GoReleaser handles this - verify it's enabled |
-
-## UX Pitfalls
-
-Common user experience mistakes in this domain.
-
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| Pre-release in main tap | Users get unstable versions | Use `skip_upload: auto` |
-| No `--version` flag | Can't verify installation | Always implement `--version` |
-| Missing or unclear test block | Users don't know if install worked | Test actual functionality, not just binary existence |
-| No install verification | Silent failures, confusion | Test block should exit non-zero on failure |
-| Formula description missing | Users don't know what they're installing | Write clear description in GoReleaser config |
-| No homepage URL | Users can't find documentation | Include `homepage` in config |
-| Breaking changes without version bump | Unexpected behavior after upgrade | Follow semantic versioning strictly |
 
 ## "Looks Done But Isn't" Checklist
 
-Things that appear complete but are missing critical pieces.
+- [ ] **Race condition check**: Run `go run -race .` in dashboard mode with fast refresh — no races reported
+- [ ] **Resize handling**: Resize terminal while running — layout adapts correctly
+- [ ] **Panic recovery**: Force a panic in a Cmd goroutine — terminal restores to normal state
+- [ ] **Rate limit simulation**: Force 429 response — backoff activates, no retry storm
+- [ ] **202 handling**: Use WakaTime's `all_time` range on first load — shows "calculating" not error
+- [ ] **Goroutine leak**: Run for 30 minutes with auto-refresh — goroutine count stays stable
+- [ ] **Non-TTY mode**: `wakadash --watch | cat` — falls back to static output, no escape codes
+- [ ] **Quit during fetch**: Press `q` while data is loading — exits cleanly, terminal restored
+- [ ] **ticker cleanup**: Change range while refreshing — old ticker cancelled, no duplicate requests
 
-- [ ] **Cross-repo publishing:** Often missing separate HOMEBREW_TOKEN — verify with actual release
-- [ ] **Audit passing:** Often untested — run `brew audit --strict` before first release
-- [ ] **ARM64 support:** Often missing for macOS — test on M1/M2 Mac
-- [ ] **Test block:** Often too simple (just checks binary exists) — verify functional test
-- [ ] **Pre-release handling:** Often missing `skip_upload: auto` — verify RC doesn't overwrite stable
-- [ ] **Workflow permissions:** Often missing required scopes — check `permissions:` block
-- [ ] **Fetch depth:** Often missing `fetch-depth: 0` — verify changelog generation works
-- [ ] **Config deprecations:** Often using old fields — run `goreleaser check`
-- [ ] **Bot account:** Often using personal PAT — verify dedicated account exists
-- [ ] **Formula name:** Often doesn't match project marketing — verify with team
-
-## Recovery Strategies
-
-When pitfalls occur despite prevention, how to recover.
-
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| Wrong token used | LOW | Add correct token to secrets, re-run workflow |
-| Personal PAT exposed | MEDIUM | Create bot account, rotate tokens, update secrets, re-run |
-| Formula naming wrong | MEDIUM | Rename file/class, deprecate old name, update docs, create symlink |
-| Pre-release overwrote stable | LOW | Tag stable version, re-release, communicate to users |
-| Missing architecture | MEDIUM | Update build config, create new release with new tag |
-| Deprecated config used | LOW | Update .goreleaser.yaml, run check, re-release |
-| No test block | LOW | Add test block, push to tap repo, no new release needed |
-| Wrong permissions | LOW | Update workflow permissions, re-run workflow |
-| Shallow clone | LOW | Add fetch-depth: 0, re-run workflow |
-| Formula in wrong tap | HIGH | Create correct tap, deprecate old tap, communicate to users, wait for migration |
-| Unsigned binary causing Gatekeeper issues | HIGH | Get Apple Developer account ($99/year), configure signing, re-release |
-| Config file path wrong | MEDIUM | Update install block, new release, document migration for users |
-
-## Pitfall-to-Phase Mapping
-
-How roadmap phases should address these pitfalls.
-
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| Wrong GitHub token | Phase 1: Initial Setup | Test release to tap repo succeeds |
-| Personal PAT security risk | Phase 1: Initial Setup | Verify bot account exists and owns PAT |
-| Formulas vs Casks confusion | Phase 1: Initial Setup | Verify `homebrew_casks` in config, Casks/ directory in tap |
-| Pre-release overwriting | Phase 2: Release Automation | Tag RC version, verify stable formula unchanged |
-| Multi-arch conflicts | Phase 1: Initial Setup | Build for arm64 and amd64, verify both in dist/ |
-| Missing fetch-depth | Phase 1: Initial Setup | Verify changelog generated correctly |
-| Deprecated config fields | Phase 2: Release Automation | `goreleaser check` passes with no warnings |
-| Insufficient permissions | Phase 1: Initial Setup | All workflow steps succeed including milestone close |
-| Formula naming violations | Phase 1: Initial Setup | `brew audit --strict` passes |
-| Missing test block | Phase 2: Release Automation | Test block executes during `brew install --build-from-source` |
-| Version string handling | Phase 3: Versioned Support | Install both `wakafetch` and `[email protected]` successfully |
-| Config file handling | Phase 2: Release Automation | Reinstall formula, verify config preserved |
+---
 
 ## Sources
 
 ### Official Documentation
-- [GoReleaser Homebrew Taps](https://goreleaser.com/customization/homebrew/)
-- [GoReleaser Homebrew Casks](https://goreleaser.com/customization/homebrew_casks/)
-- [GoReleaser GitHub Actions](https://goreleaser.com/ci/actions/)
-- [GoReleaser Deprecation Notices](https://goreleaser.com/deprecations/)
-- [Homebrew Formula Cookbook](https://docs.brew.sh/Formula-Cookbook)
-- [Homebrew Versions Documentation](https://docs.brew.sh/Versions)
+- [WakaTime API Documentation](https://wakatime.com/developers) — Rate limits, 202 handling, cached_at, pagination
+- [Bubble Tea pkg.go.dev](https://pkg.go.dev/github.com/charmbracelet/bubbletea) — CatchPanics, WithAltScreen, WindowSizeMsg, tea.Tick
+- [Go Race Detector](https://go.dev/doc/articles/race_detector) — Detection methodology
 
-### GitHub Issues & Discussions
-- [Personal Access Token Security Warning - goreleaser/goreleaser#2026](https://github.com/goreleaser/goreleaser/issues/2026)
-- [Homebrew Tokens in GitHub - goreleaser Discussion #4926](https://github.com/orgs/goreleaser/discussions/4926)
-- [Brew packages should be casks - goreleaser Discussion #5563](https://github.com/orgs/goreleaser/discussions/5563)
-- [Brew updating with PR enabled fails - goreleaser/goreleaser#4283](https://github.com/goreleaser/goreleaser/issues/4283)
-- [CI broken due to 404 from Homebrew repo - goreleaser/goreleaser#4634](https://github.com/goreleaser/goreleaser/issues/4634)
-- [Brew Formula Class Name with Version - goreleaser/goreleaser#3116](https://github.com/goreleaser/goreleaser/issues/3116)
-- [Brew audit expectations - Homebrew Discussion #6138](https://github.com/orgs/Homebrew/discussions/6138)
+### Verified Community Sources (MEDIUM confidence)
+- [Tips for Building Bubble Tea Programs](https://leg100.github.io/en/posts/building-bubbletea-programs/) — Event loop pitfalls, layout arithmetic, panic recovery
+- [Bubble Tea on pkg.go.dev](https://pkg.go.dev/github.com/charmbracelet/bubbletea) — Signal handling, ErrInterrupted, WithoutCatchPanics
+- [How to Implement Retry Logic in Go with Exponential Backoff](https://oneuptime.com/blog/post/2026-01-07-go-retry-exponential-backoff/view) — Backoff patterns for 429
 
-### Tutorials & Blog Posts
-- [How to release to Homebrew with GoReleaser, GitHub Actions and Semantic Release - Billy Hadlow](https://billyhadlow.com/blog/how-to-release-to-homebrew/)
-- [Creating Homebrew Formulas with GoReleaser - Bindplane](https://bindplane.com/blog/creating-homebrew-formulas-with-goreleaser)
-- [Creating Homebrew Formulas With GoReleaser - DZone](https://dzone.com/articles/creating-homebrew-formulas-with-goreleaser)
-- [Homebrew Security Best Practices - guessi's blog](https://guessi.github.io/posts/2025/homeberw-tips-security/)
-- [Security and the Homebrew contribution model - Workbrew Blog](https://workbrew.com/blog/security-and-the-homebrew-contribution-model)
+### Project Code Analysis
+- `/workspace/wakafetch/api.go` — Existing sync HTTP client, 10s timeout, 429 handling gap
+- `/workspace/wakafetch/ui/render.go` — stty-based terminal size detection, sync rendering
+- `/workspace/wakafetch/ui/colors.go` — 24-bit true color usage for MidGray
+- `/workspace/wakafetch/main.go` — os.Exit() in help handler, flag package usage
 
-### Source Code
-- [goreleaser/internal/pipe/brew/brew.go](https://github.com/goreleaser/goreleaser/blob/main/internal/pipe/brew/brew.go)
+### Background
+- [ANSI Escape Code Standards (2025)](https://jvns.ca/blog/2025/03/07/escape-code-standards/) — Terminal compatibility landscape
+- [Building Bubbletea Programs (Hacker News)](https://news.ycombinator.com/item?id=41369065) — Community experience with pitfalls
+- [Understanding Goroutine Leaks in Go](https://leapcell.io/blog/understanding-and-debugging-goroutine-leaks-in-go-web-servers) — Ticker and goroutine lifecycle
 
 ---
 
-*Research confidence: MEDIUM - Based on official documentation, multiple GitHub issues, and community resources. Some findings from web search require validation against current GoReleaser versions.*
+*Research confidence: HIGH for concurrency/architecture pitfalls (official Bubble Tea docs + race detector docs + project code analysis). MEDIUM for terminal compatibility (community sources, no single authoritative spec). LOW confidence items are flagged inline.*
