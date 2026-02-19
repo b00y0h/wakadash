@@ -61,9 +61,9 @@ type Model struct {
 	showHeatmap   bool // 4 key
 
 	// State
-	quitting     bool
-	showHelp     bool
-	rateLimited  bool // Visual indicator for rate limit status
+	quitting    bool
+	showHelp    bool
+	rateLimited bool // Visual indicator for rate limit status
 }
 
 // NewModel creates a new Model with the given API client, time range, and refresh interval.
@@ -132,8 +132,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Calculate layout dimensions
 		panelWidth := (msg.Width / 2) - 4 // For side-by-side panels
 		fullWidth := msg.Width - 4        // For full-width panels
-		chartHeight := 8                   // Bar chart height
-		sparklineHeight := 5               // Sparkline height
+		chartHeight := 8                  // Bar chart height
+		sparklineHeight := 5              // Sparkline height
 
 		// Resize all chart models
 		m.languagesChart.Resize(panelWidth, chartHeight)
