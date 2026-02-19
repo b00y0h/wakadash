@@ -21,7 +21,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 **Milestone Goal:** Create a standalone terminal dashboard tool with live updates and rich data visualization, ready for homebrew-core submission.
 
 - [x] **Phase 4: Repository Setup** - Fresh wakadash repo with ported code and release automation (completed 2026-02-19)
-- [ ] **Phase 5: TUI Foundation** - Async bubbletea architecture with basic dashboard
+- [x] **Phase 5: TUI Foundation** - Async bubbletea architecture with basic dashboard (completed 2026-02-19)
 - [ ] **Phase 6: Data Visualization and UX** - Charts, resize handling, panel toggles
 - [ ] **Phase 7: Distribution** - Homebrew tap and homebrew-core submission
 
@@ -55,8 +55,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Create TUI core with bubbletea model and async fetch architecture
-- [ ] 05-02-PLAN.md — Add auto-refresh ticker with countdown and help overlay
+- [x] 05-01-PLAN.md — Create TUI core with bubbletea model and async fetch architecture
+- [x] 05-02-PLAN.md — Add auto-refresh ticker with countdown and help overlay
 
 ### Phase 6: Data Visualization and UX
 **Goal**: Rich data visualization with color-coded charts and responsive terminal handling
@@ -100,7 +100,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 1-3 | v1.0 | 6/6 | Complete | 2026-02-17 |
 | 4. Repository Setup | v2.0 | 2/2 | Complete | 2026-02-19 |
-| 5. TUI Foundation | v2.0 | 0/2 | Planning complete | - |
+| 5. TUI Foundation | v2.0 | 2/2 | Complete | 2026-02-19 |
 | 6. Data Viz + UX | v2.0 | 0/3 | Not started | - |
 | 7. Distribution | v2.0 | 0/2 | Not started | - |
 
