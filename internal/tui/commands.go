@@ -77,3 +77,27 @@ func fetchDurationsCmd(client *api.Client) tea.Cmd {
 		return durationsFetchedMsg{durations: durations}
 	}
 }
+
+// fetchSummaryCmd fetches last 7 days of summaries for heatmap.
+func fetchSummaryCmd(client *api.Client) tea.Cmd {
+	return func() (msg tea.Msg) {
+		defer func() {
+			if r := recover(); r != nil {
+				var err error
+				switch v := r.(type) {
+				case error:
+					err = v
+				default:
+					err = fmt.Errorf("panic in fetchSummaryCmd: %v", r)
+				}
+				msg = fetchErrMsg{err: err}
+			}
+		}()
+
+		summary, err := client.FetchSummary(7) // Last 7 days
+		if err != nil {
+			return fetchErrMsg{err: err}
+		}
+		return summaryFetchedMsg{summary: summary}
+	}
+}

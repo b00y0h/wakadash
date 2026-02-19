@@ -104,6 +104,7 @@ func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		fetchStatsCmd(m.client, m.rangeStr),
 		fetchDurationsCmd(m.client),
+		fetchSummaryCmd(m.client),
 		m.spinner.Tick,
 		tickEverySecond(),
 	)
@@ -137,6 +138,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(
 				fetchStatsCmd(m.client, m.rangeStr),
 				fetchDurationsCmd(m.client),
+				fetchSummaryCmd(m.client),
 				m.spinner.Tick,
 			)
 		}
@@ -157,6 +159,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateSparkline()
 		return m, nil
 
+	case summaryFetchedMsg:
+		m.summaryData = msg.summary
+		return m, nil
+
 	case fetchErrMsg:
 		m.loading = false
 		m.err = msg.err
@@ -169,6 +175,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(
 			fetchStatsCmd(m.client, m.rangeStr),
 			fetchDurationsCmd(m.client),
+			fetchSummaryCmd(m.client),
 			m.spinner.Tick,
 		)
 
@@ -211,10 +218,11 @@ func (m Model) View() string {
 func (m Model) renderDashboard() string {
 	statsContent := m.renderStats()
 	sparklineContent := m.renderSparkline()
+	heatmapContent := m.renderHeatmapPanel()
 	statusBar := m.renderStatusBar()
 
-	// Combine stats and sparkline
-	content := lipgloss.JoinVertical(lipgloss.Left, statsContent, sparklineContent)
+	// Combine stats, sparkline, and heatmap
+	content := lipgloss.JoinVertical(lipgloss.Left, statsContent, sparklineContent, heatmapContent)
 
 	// Account for border (-2) and status bar height.
 	panelHeight := m.height - lipgloss.Height(statusBar) - 4
@@ -351,6 +359,13 @@ func (m *Model) updateSparkline() {
 func (m Model) renderSparkline() string {
 	sparklineTitle := titleStyle.Render("\nHourly Activity (Today)")
 	return lipgloss.JoinVertical(lipgloss.Left, sparklineTitle, m.sparklineChart.View())
+}
+
+// renderHeatmapPanel renders the heatmap section with title.
+func (m Model) renderHeatmapPanel() string {
+	heatmapTitle := titleStyle.Render("\nActivity (Last 7 Days)")
+	heatmapContent := m.renderHeatmap()
+	return lipgloss.JoinVertical(lipgloss.Left, heatmapTitle, heatmapContent)
 }
 
 // updateLanguagesChart updates the languages bar chart with current stats.
