@@ -70,12 +70,12 @@ Plans:
   5. Dashboard reflows layout correctly when terminal is resized
   6. Dashboard shows visual indicator and continues working when API rate-limited
   7. User can toggle panel visibility with number keys (1-4)
-**Plans**: TBD
+**Plans:** 3 plans in 2 waves
 
 Plans:
-- [ ] 06-01: Implement bar charts for languages and projects
-- [ ] 06-02: Implement sparkline and heatmap panels
-- [ ] 06-03: Add resize handling, rate-limit backoff, and panel toggles
+- [ ] 06-01-PLAN.md — Implement bar charts for languages (with Linguist colors) and projects using ntcharts
+- [ ] 06-02-PLAN.md — Add sparkline for hourly activity and heatmap for weekly activity
+- [ ] 06-03-PLAN.md — Add panel toggles (1-4 keys), exponential backoff for rate limits, and resize handling
 
 ### Phase 7: Distribution
 **Goal**: Homebrew distribution via personal tap and homebrew-core submission
@@ -101,7 +101,7 @@ Plans:
 | 1-3 | v1.0 | 6/6 | Complete | 2026-02-17 |
 | 4. Repository Setup | v2.0 | 2/2 | Complete | 2026-02-19 |
 | 5. TUI Foundation | v2.0 | 2/2 | Complete | 2026-02-19 |
-| 6. Data Viz + UX | v2.0 | 0/3 | Not started | - |
+| 6. Data Viz + UX | v2.0 | 0/3 | Planned | - |
 | 7. Distribution | v2.0 | 0/2 | Not started | - |
 
 ---
