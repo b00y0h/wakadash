@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-17)
 
 **Core value:** A beautiful, live-updating terminal dashboard for coding stats — like htop for your coding activity
-**Current focus:** Phase 7 - Distribution
+**Current focus:** v2.0 Milestone Complete
 
 ## Current Position
 
 Phase: 7 of 7 (Distribution)
-Plan: 1 of 2 in current phase
-Status: Complete
-Last activity: 2026-02-19 — 07-01 complete, Homebrew tap distribution with automated cask publishing
+Plan: 2 of 2 in current phase
+Status: MILESTONE COMPLETE
+Last activity: 2026-02-19 — Phase 7 complete, Homebrew tap working, homebrew-core PR submitted (pending popularity)
 
-Progress: [████████░░] 72% (v2.0)
+Progress: [██████████] 100% (v2.0)
 
 ## Performance Metrics
 
@@ -24,9 +24,9 @@ Progress: [████████░░] 72% (v2.0)
 - Total execution time: 0.25 hours
 
 **Velocity (v2.0):**
-- Total plans completed: 8
-- Average duration: 8.9 min
-- Total execution time: 1.2 hours
+- Total plans completed: 9
+- Average duration: 9.8 min
+- Total execution time: 1.5 hours
 
 **By Phase (v2.0):**
 
@@ -35,7 +35,7 @@ Progress: [████████░░] 72% (v2.0)
 | 4 | 2/2 | 20min | 10min |
 | 5 | 2/2 | 8min | 4min |
 | 6 | 3/3 | 18min | 6min |
-| 7 | 1/2 | 29min | 29min |
+| 7 | 2/2 | 44min | 22min |
 
 *Updated after each plan completion*
 
@@ -71,6 +71,9 @@ Recent decisions affecting current work:
 - Add quarantine removal hook for unsigned binaries to prevent Gatekeeper warnings
 - Use fine-grained PAT with Contents permission for tap repository writes
 - Version bump to v0.2.0 to represent Homebrew distribution capability
+- Submit early to homebrew-core with transparency note about popularity thresholds
+- Use std_go_args helper for Go source builds in homebrew-core formula
+- Target main branch (not master) for homebrew-core PRs
 
 ### Pending Todos
 
@@ -78,10 +81,10 @@ None.
 
 ### Blockers/Concerns
 
-None.
+**homebrew-core resubmission:** Formula ready at b00y0h/homebrew-core:wakadash. Resubmit when project reaches ≥30 forks, ≥30 watchers, or ≥75 stars.
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 07-01-PLAN.md - Homebrew tap distribution with automated cask publishing
+Stopped at: v2.0 MILESTONE COMPLETE - All 4 phases shipped
 Resume file: None
