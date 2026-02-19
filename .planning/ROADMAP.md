@@ -36,11 +36,11 @@ See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
   2. Running `wakadash --help` shows usage (wakafetch functionality ported)
   3. Creating a version tag triggers GitHub Actions release workflow
   4. Release artifacts include darwin/linux x amd64/arm64 binaries with checksums
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 04-01: Create fresh repository and port wakafetch code
-- [ ] 04-02: Configure GoReleaser and GitHub Actions workflow
+- [ ] 04-01-PLAN.md — Create GitHub repository and port wakafetch code via clean rewrite
+- [ ] 04-02-PLAN.md — Configure GoReleaser and GitHub Actions for tag-triggered releases
 
 ### Phase 5: TUI Foundation
 **Goal**: Async bubbletea dashboard with basic stats display, keyboard navigation, and proper terminal handling
@@ -99,11 +99,11 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1-3 | v1.0 | 6/6 | Complete | 2026-02-17 |
-| 4. Repository Setup | v2.0 | 0/2 | Not started | - |
+| 4. Repository Setup | v2.0 | 0/2 | Planning complete | - |
 | 5. TUI Foundation | v2.0 | 0/2 | Not started | - |
 | 6. Data Viz + UX | v2.0 | 0/3 | Not started | - |
 | 7. Distribution | v2.0 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-18*
-*Last updated: 2026-02-18*
+*Last updated: 2026-02-19*
