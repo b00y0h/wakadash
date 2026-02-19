@@ -1,13 +1,54 @@
 package tui
 
 import (
+	"context"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/cenkalti/backoff/v5"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/b00y0h/wakadash/internal/api"
+	"github.com/b00y0h/wakadash/internal/types"
 )
+
+// isRetryableError returns true for transient errors that should be retried.
+func isRetryableError(err error) bool {
+	errStr := err.Error()
+	return strings.Contains(errStr, "429") ||
+		strings.Contains(errStr, "502") ||
+		strings.Contains(errStr, "503") ||
+		strings.Contains(errStr, "504") ||
+		strings.Contains(errStr, "timed out")
+}
+
+// fetchWithRetry wraps an operation with exponential backoff for transient errors.
+func fetchWithRetry[T any](operation func() (*T, error)) (*T, error) {
+	op := backoff.Operation[*T](func() (*T, error) {
+		res, err := operation()
+		if err != nil {
+			if isRetryableError(err) {
+				return nil, err // Retry
+			}
+			// Permanent error
+			return nil, backoff.Permanent(err)
+		}
+		return res, nil
+	})
+
+	b := backoff.NewExponentialBackOff()
+	b.InitialInterval = 1 * time.Second
+	b.MaxInterval = 30 * time.Second
+	b.Multiplier = 2.0
+	b.RandomizationFactor = 0.5
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	result, err := backoff.Retry(ctx, op, backoff.WithBackOff(b))
+	return result, err
+}
 
 // fetchStatsCmd returns a tea.Cmd that fetches WakaTime stats asynchronously.
 // The result flows back into Update as statsFetchedMsg or fetchErrMsg.
@@ -28,7 +69,9 @@ func fetchStatsCmd(client *api.Client, rangeStr string) tea.Cmd {
 			}
 		}()
 
-		stats, err := client.FetchStats(rangeStr)
+		stats, err := fetchWithRetry(func() (*types.StatsResponse, error) {
+			return client.FetchStats(rangeStr)
+		})
 		if err != nil {
 			return fetchErrMsg{err: err}
 		}
@@ -70,7 +113,9 @@ func fetchDurationsCmd(client *api.Client) tea.Cmd {
 		}()
 
 		today := time.Now().Format("2006-01-02")
-		durations, err := client.FetchDurations(today)
+		durations, err := fetchWithRetry(func() (*types.DurationsResponse, error) {
+			return client.FetchDurations(today)
+		})
 		if err != nil {
 			return fetchErrMsg{err: err}
 		}
@@ -94,7 +139,9 @@ func fetchSummaryCmd(client *api.Client) tea.Cmd {
 			}
 		}()
 
-		summary, err := client.FetchSummary(7) // Last 7 days
+		summary, err := fetchWithRetry(func() (*types.SummaryResponse, error) {
+			return client.FetchSummary(7) // Last 7 days
+		})
 		if err != nil {
 			return fetchErrMsg{err: err}
 		}

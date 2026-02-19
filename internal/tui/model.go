@@ -61,8 +61,9 @@ type Model struct {
 	showHeatmap   bool // 4 key
 
 	// State
-	quitting bool
-	showHelp bool
+	quitting     bool
+	showHelp     bool
+	rateLimited  bool // Visual indicator for rate limit status
 }
 
 // NewModel creates a new Model with the given API client, time range, and refresh interval.
@@ -170,6 +171,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.loading = false
 		m.stats = msg.stats
 		m.err = nil
+		m.rateLimited = false // Clear rate limit indicator on success
 		m.lastFetch = time.Now()
 		m.nextRefresh = time.Now().Add(m.refreshInterval)
 		m.updateLanguagesChart()
@@ -188,6 +190,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case fetchErrMsg:
 		m.loading = false
 		m.err = msg.err
+		m.rateLimited = strings.Contains(msg.err.Error(), "429")
 		m.nextRefresh = time.Now().Add(m.refreshInterval)
 		return m, scheduleRefresh(m.refreshInterval)
 
@@ -340,7 +343,9 @@ func (m Model) renderStats() string {
 // renderStatusBar renders the bottom status line.
 func (m Model) renderStatusBar() string {
 	var status string
-	if m.loading {
+	if m.rateLimited {
+		status = warningStyle.Render("Rate limited - retrying with backoff...")
+	} else if m.loading {
 		status = m.spinner.View() + " Fetching..."
 	} else if m.err != nil {
 		status = errorStyle.Render("Error: " + m.err.Error())

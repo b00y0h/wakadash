@@ -20,4 +20,8 @@ var (
 	// errorStyle renders error messages in red.
 	errorStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("196"))
+
+	// warningStyle renders rate limit warnings in amber/yellow.
+	warningStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("214"))
 )
