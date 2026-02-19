@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 5 of 7 (TUI Foundation)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-19 — Phase 4 complete, v0.1.0 released
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-19 — 05-01 complete, async bubbletea TUI foundation built
 
-Progress: [██░░░░░░░░] 22% (v2.0)
+Progress: [███░░░░░░░] 29% (v2.0)
 
 ## Performance Metrics
 
@@ -24,16 +24,16 @@ Progress: [██░░░░░░░░] 22% (v2.0)
 - Total execution time: 0.25 hours
 
 **Velocity (v2.0):**
-- Total plans completed: 2
-- Average duration: 10 min
-- Total execution time: 0.33 hours
+- Total plans completed: 3
+- Average duration: 8 min
+- Total execution time: 0.53 hours
 
 **By Phase (v2.0):**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 4 | 2/2 | 20min | 10min |
-| 5 | 0/2 | - | - |
+| 5 | 1/2 | 4min | 4min |
 | 6 | 0/3 | - | - |
 | 7 | 0/2 | - | - |
 
@@ -54,6 +54,9 @@ Recent decisions affecting current work:
 - No brews: in goreleaser config — Homebrew tap is Phase 7 scope
 - ldflags target main.version/commit/date (NOT full module path)
 - GITHUB_TOKEN sufficient for Phase 4 release workflow
+- Use tea.WithAltScreen() ProgramOption (not EnterAltScreen command) to avoid race conditions
+- Initialize width=80, height=24 in NewModel() to prevent blank/panicking first render before WindowSizeMsg
+- Include recover() in fetchStatsCmd to prevent terminal corruption if API client panics
 
 ### Pending Todos
 
@@ -66,5 +69,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Phase 4 complete, ready for Phase 5 planning
+Stopped at: Completed 05-01-PLAN.md - async bubbletea TUI foundation
 Resume file: None
