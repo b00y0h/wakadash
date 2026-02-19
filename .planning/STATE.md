@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 6 of 7 (Data Visualization and UX)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-19 — 06-01 complete, bar charts with GitHub Linguist colors implemented
+Last activity: 2026-02-19 — 06-02 complete, sparkline and heatmap visualizations implemented
 
-Progress: [█████░░░░░] 45% (v2.0)
+Progress: [██████░░░░] 54% (v2.0)
 
 ## Performance Metrics
 
@@ -24,9 +24,9 @@ Progress: [█████░░░░░] 45% (v2.0)
 - Total execution time: 0.25 hours
 
 **Velocity (v2.0):**
-- Total plans completed: 5
-- Average duration: 6.6 min
-- Total execution time: 0.55 hours
+- Total plans completed: 6
+- Average duration: 6.5 min
+- Total execution time: 0.65 hours
 
 **By Phase (v2.0):**
 
@@ -34,7 +34,7 @@ Progress: [█████░░░░░] 45% (v2.0)
 |-------|-------|-------|----------|
 | 4 | 2/2 | 20min | 10min |
 | 5 | 2/2 | 8min | 4min |
-| 6 | 1/3 | 5min | 5min |
+| 6 | 2/3 | 12min | 6min |
 | 7 | 0/2 | - | - |
 
 *Updated after each plan completion*
@@ -60,6 +60,10 @@ Recent decisions affecting current work:
 - Self-loop ticker pattern (scheduleRefresh fires once, statsFetchedMsg schedules next) to avoid ticker drift
 - Schedule refresh only from statsFetchedMsg/fetchErrMsg handlers to prevent double-ticker bug
 - Implement help.KeyMap interface for bubbles/help auto-generation
+- Use simplified heatmap: daily totals from summaries instead of hourly durations per day
+- Fetch durations for today only to minimize API calls
+- Use GitHub Linguist colors for language bars and contribution colors for heatmap
+- Display 7-day heatmap as colored blocks with MM-DD labels
 
 ### Pending Todos
 
@@ -72,5 +76,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 06-01-PLAN.md - bar charts with GitHub Linguist colors
+Stopped at: Completed 06-02-PLAN.md - sparkline and heatmap visualizations
 Resume file: None
