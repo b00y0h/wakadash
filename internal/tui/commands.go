@@ -52,3 +52,28 @@ func tickEverySecond() tea.Cmd {
 		return countdownTickMsg(t)
 	})
 }
+
+// fetchDurationsCmd fetches today's durations for sparkline visualization.
+func fetchDurationsCmd(client *api.Client) tea.Cmd {
+	return func() (msg tea.Msg) {
+		defer func() {
+			if r := recover(); r != nil {
+				var err error
+				switch v := r.(type) {
+				case error:
+					err = v
+				default:
+					err = fmt.Errorf("panic in fetchDurationsCmd: %v", r)
+				}
+				msg = fetchErrMsg{err: err}
+			}
+		}()
+
+		today := time.Now().Format("2006-01-02")
+		durations, err := client.FetchDurations(today)
+		if err != nil {
+			return fetchErrMsg{err: err}
+		}
+		return durationsFetchedMsg{durations: durations}
+	}
+}

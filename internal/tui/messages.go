@@ -22,3 +22,8 @@ type refreshMsg time.Time
 
 // countdownTickMsg is sent every second for countdown display updates.
 type countdownTickMsg time.Time
+
+// durationsFetchedMsg is sent when hourly durations are fetched for sparkline.
+type durationsFetchedMsg struct {
+	durations *types.DurationsResponse
+}
