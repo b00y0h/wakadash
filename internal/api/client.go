@@ -61,6 +61,17 @@ func (c *Client) FetchSummary(days int) (*types.SummaryResponse, error) {
 	return result, nil
 }
 
+// FetchDurations retrieves coding sessions for a specific date (YYYY-MM-DD format).
+// Returns time-stamped durations that can be grouped by hour for sparkline visualization.
+func (c *Client) FetchDurations(date string) (*types.DurationsResponse, error) {
+	url := c.buildURL(fmt.Sprintf("/v1/users/current/durations?date=%s", date))
+	result, err := fetchJSON[types.DurationsResponse](c, url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch durations: %w", err)
+	}
+	return result, nil
+}
+
 // buildURL constructs the full request URL, handling Wakapi's /v1 path prefix.
 func (c *Client) buildURL(path string) string {
 	if strings.HasSuffix(c.APIURL, "/v1") {

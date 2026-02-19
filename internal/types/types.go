@@ -96,3 +96,19 @@ type StatsData struct {
 type StatsResponse struct {
 	Data StatsData `json:"data"`
 }
+
+// Duration represents a single coding session from the /durations endpoint.
+type Duration struct {
+	Time     float64 `json:"time"`     // UNIX timestamp (start of duration)
+	Duration float64 `json:"duration"` // Duration in seconds
+	Project  string  `json:"project"`  // Project name
+	Language string  `json:"language"` // Primary language
+}
+
+// DurationsResponse is the response from /v1/users/current/durations endpoint.
+type DurationsResponse struct {
+	Data     []Duration `json:"data"`
+	Start    string     `json:"start"`
+	End      string     `json:"end"`
+	Timezone string     `json:"timezone"`
+}
