@@ -54,6 +54,12 @@ type Model struct {
 	// Heatmap data
 	summaryData *types.SummaryResponse // For heatmap
 
+	// Panel visibility (toggled by number keys)
+	showLanguages bool // 1 key
+	showProjects  bool // 2 key
+	showSparkline bool // 3 key
+	showHeatmap   bool // 4 key
+
 	// State
 	quitting bool
 	showHelp bool
@@ -96,6 +102,10 @@ func NewModel(client *api.Client, rangeStr string, refreshInterval time.Duration
 		sparklineChart:  sparklineChart,
 		languagesChart:  languagesChart,
 		projectsChart:   projectsChart,
+		showLanguages:   true,
+		showProjects:    true,
+		showSparkline:   true,
+		showHeatmap:     true,
 	}
 }
 
@@ -141,6 +151,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				fetchSummaryCmd(m.client),
 				m.spinner.Tick,
 			)
+		case key.Matches(msg, m.keys.Toggle1):
+			m.showLanguages = !m.showLanguages
+			return m, nil
+		case key.Matches(msg, m.keys.Toggle2):
+			m.showProjects = !m.showProjects
+			return m, nil
+		case key.Matches(msg, m.keys.Toggle3):
+			m.showSparkline = !m.showSparkline
+			return m, nil
+		case key.Matches(msg, m.keys.Toggle4):
+			m.showHeatmap = !m.showHeatmap
+			return m, nil
 		}
 		return m, nil
 
@@ -216,13 +238,30 @@ func (m Model) View() string {
 
 // renderDashboard renders the full stats dashboard.
 func (m Model) renderDashboard() string {
+	var sections []string
+
+	// Add stats section (includes language and project panels)
 	statsContent := m.renderStats()
-	sparklineContent := m.renderSparkline()
-	heatmapContent := m.renderHeatmapPanel()
+	if statsContent != "" {
+		sections = append(sections, statsContent)
+	}
+
+	// Add sparkline if visible
+	if m.showSparkline {
+		sparklineContent := m.renderSparkline()
+		sections = append(sections, sparklineContent)
+	}
+
+	// Add heatmap if visible
+	if m.showHeatmap {
+		heatmapContent := m.renderHeatmapPanel()
+		sections = append(sections, heatmapContent)
+	}
+
 	statusBar := m.renderStatusBar()
 
-	// Combine stats, sparkline, and heatmap
-	content := lipgloss.JoinVertical(lipgloss.Left, statsContent, sparklineContent, heatmapContent)
+	// Combine all visible sections
+	content := lipgloss.JoinVertical(lipgloss.Left, sections...)
 
 	// Account for border (-2) and status bar height.
 	panelHeight := m.height - lipgloss.Height(statusBar) - 4
@@ -262,27 +301,38 @@ func (m Model) renderStats() string {
 		panelWidth = 20
 	}
 
+	// Build visible panels
+	var panels []string
+
 	// Left panel: Languages chart
-	var leftPanel strings.Builder
-	leftPanel.WriteString(titleStyle.Render("Languages") + "\n")
-	if len(data.Languages) > 0 {
-		leftPanel.WriteString(m.languagesChart.View())
-	} else {
-		leftPanel.WriteString("  No data")
+	if m.showLanguages {
+		var leftPanel strings.Builder
+		leftPanel.WriteString(titleStyle.Render("Languages") + "\n")
+		if len(data.Languages) > 0 {
+			leftPanel.WriteString(m.languagesChart.View())
+		} else {
+			leftPanel.WriteString("  No data")
+		}
+		panels = append(panels, leftPanel.String())
 	}
 
 	// Right panel: Projects chart
-	var rightPanel strings.Builder
-	rightPanel.WriteString(titleStyle.Render("Projects") + "\n")
-	if len(data.Projects) > 0 {
-		rightPanel.WriteString(m.projectsChart.View())
-	} else {
-		rightPanel.WriteString("  No data")
+	if m.showProjects {
+		var rightPanel strings.Builder
+		rightPanel.WriteString(titleStyle.Render("Projects") + "\n")
+		if len(data.Projects) > 0 {
+			rightPanel.WriteString(m.projectsChart.View())
+		} else {
+			rightPanel.WriteString("  No data")
+		}
+		panels = append(panels, rightPanel.String())
 	}
 
-	// Join panels horizontally
-	charts := lipgloss.JoinHorizontal(lipgloss.Top, leftPanel.String(), "  ", rightPanel.String())
-	sb.WriteString(charts)
+	// Join panels horizontally if both visible, otherwise just show the one
+	if len(panels) > 0 {
+		charts := lipgloss.JoinHorizontal(lipgloss.Top, panels...)
+		sb.WriteString(charts)
+	}
 
 	return sb.String()
 }
