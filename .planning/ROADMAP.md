@@ -86,11 +86,11 @@ Plans:
   2. Installation works without macOS Gatekeeper warnings
   3. homebrew-core formula PR submitted with source build
   4. Formula appears on brew.sh after homebrew-core acceptance
-**Plans**: TBD
+**Plans:** 2 plans in 2 waves
 
 Plans:
-- [ ] 07-01: Create personal Homebrew tap with working cask
-- [ ] 07-02: Submit homebrew-core formula
+- [ ] 07-01-PLAN.md — Create homebrew-wakadash tap repo, add GoReleaser casks config, create v0.2.0 release
+- [ ] 07-02-PLAN.md — Create homebrew-core formula building from source, submit PR
 
 ## Progress
 
