@@ -22,7 +22,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 
 - [x] **Phase 4: Repository Setup** - Fresh wakadash repo with ported code and release automation (completed 2026-02-19)
 - [x] **Phase 5: TUI Foundation** - Async bubbletea architecture with basic dashboard (completed 2026-02-19)
-- [ ] **Phase 6: Data Visualization and UX** - Charts, resize handling, panel toggles
+- [x] **Phase 6: Data Visualization and UX** - Charts, resize handling, panel toggles (completed 2026-02-19)
 - [ ] **Phase 7: Distribution** - Homebrew tap and homebrew-core submission
 
 ## Phase Details
@@ -73,9 +73,9 @@ Plans:
 **Plans:** 3 plans in 2 waves
 
 Plans:
-- [ ] 06-01-PLAN.md — Implement bar charts for languages (with Linguist colors) and projects using ntcharts
-- [ ] 06-02-PLAN.md — Add sparkline for hourly activity and heatmap for weekly activity
-- [ ] 06-03-PLAN.md — Add panel toggles (1-4 keys), exponential backoff for rate limits, and resize handling
+- [x] 06-01-PLAN.md — Implement bar charts for languages (with Linguist colors) and projects using ntcharts
+- [x] 06-02-PLAN.md — Add sparkline for hourly activity and heatmap for weekly activity
+- [x] 06-03-PLAN.md — Add panel toggles (1-4 keys), exponential backoff for rate limits, and resize handling
 
 ### Phase 7: Distribution
 **Goal**: Homebrew distribution via personal tap and homebrew-core submission
@@ -101,7 +101,7 @@ Plans:
 | 1-3 | v1.0 | 6/6 | Complete | 2026-02-17 |
 | 4. Repository Setup | v2.0 | 2/2 | Complete | 2026-02-19 |
 | 5. TUI Foundation | v2.0 | 2/2 | Complete | 2026-02-19 |
-| 6. Data Viz + UX | v2.0 | 0/3 | Planned | - |
+| 6. Data Viz + UX | v2.0 | 3/3 | Complete | 2026-02-19 |
 | 7. Distribution | v2.0 | 0/2 | Not started | - |
 
 ---
