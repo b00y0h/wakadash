@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-17)
 
 **Core value:** A beautiful, live-updating terminal dashboard for coding stats — like htop for your coding activity
-**Current focus:** Phase 6 - Data Visualization and UX
+**Current focus:** Phase 7 - Distribution
 
 ## Current Position
 
-Phase: 6 of 7 (Data Visualization and UX)
-Plan: 3 of 3 in current phase
+Phase: 7 of 7 (Distribution)
+Plan: 1 of 2 in current phase
 Status: Complete
-Last activity: 2026-02-19 — 06-03 complete, panel toggles, rate limiting, and resize handling implemented
+Last activity: 2026-02-19 — 07-01 complete, Homebrew tap distribution with automated cask publishing
 
-Progress: [███████░░░] 63% (v2.0)
+Progress: [████████░░] 72% (v2.0)
 
 ## Performance Metrics
 
@@ -24,9 +24,9 @@ Progress: [███████░░░] 63% (v2.0)
 - Total execution time: 0.25 hours
 
 **Velocity (v2.0):**
-- Total plans completed: 7
-- Average duration: 6.4 min
-- Total execution time: 0.75 hours
+- Total plans completed: 8
+- Average duration: 8.9 min
+- Total execution time: 1.2 hours
 
 **By Phase (v2.0):**
 
@@ -35,7 +35,7 @@ Progress: [███████░░░] 63% (v2.0)
 | 4 | 2/2 | 20min | 10min |
 | 5 | 2/2 | 8min | 4min |
 | 6 | 3/3 | 18min | 6min |
-| 7 | 0/2 | - | - |
+| 7 | 1/2 | 29min | 29min |
 
 *Updated after each plan completion*
 
@@ -67,6 +67,10 @@ Recent decisions affecting current work:
 - Use cenkalti/backoff/v5 for exponential backoff with jitter (1s-30s, 2min max)
 - Panel visibility as bool flags (not map) for type safety
 - Minimum terminal size: 40x10 to prevent broken layouts
+- Use personal tap (b00y0h/wakadash) before homebrew-core submission
+- Add quarantine removal hook for unsigned binaries to prevent Gatekeeper warnings
+- Use fine-grained PAT with Contents permission for tap repository writes
+- Version bump to v0.2.0 to represent Homebrew distribution capability
 
 ### Pending Todos
 
@@ -79,5 +83,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 06-03-PLAN.md - responsive UX and resilience features (Phase 6 complete)
+Stopped at: Completed 07-01-PLAN.md - Homebrew tap distribution with automated cask publishing
 Resume file: None
