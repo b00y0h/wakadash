@@ -128,12 +128,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.help.Width = msg.Width
-		m.sparklineChart.Resize(msg.Width-6, 5)
-		// Resize bar charts for 2-column layout
-		panelWidth := (msg.Width / 2) - 4
-		chartHeight := 8
+
+		// Calculate layout dimensions
+		panelWidth := (msg.Width / 2) - 4 // For side-by-side panels
+		fullWidth := msg.Width - 4        // For full-width panels
+		chartHeight := 8                   // Bar chart height
+		sparklineHeight := 5               // Sparkline height
+
+		// Resize all chart models
 		m.languagesChart.Resize(panelWidth, chartHeight)
 		m.projectsChart.Resize(panelWidth, chartHeight)
+		m.sparklineChart.Resize(fullWidth, sparklineHeight)
+
+		// Redraw charts with new dimensions
+		if m.stats != nil {
+			m.updateLanguagesChart()
+			m.updateProjectsChart()
+		}
+		if len(m.hourlyData) > 0 {
+			m.updateSparkline()
+		}
+
 		return m, nil
 
 	case tea.KeyMsg:
@@ -222,6 +237,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
 	if m.quitting {
 		return ""
+	}
+
+	// Check minimum terminal size
+	if m.width < 40 || m.height < 10 {
+		return "Terminal too small. Please resize."
 	}
 
 	if m.showHelp {
