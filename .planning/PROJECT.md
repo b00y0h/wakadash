@@ -8,15 +8,15 @@ A terminal dashboard for WakaTime/Wakapi coding stats. Displays live-updating vi
 
 A beautiful, live-updating terminal dashboard that shows your coding stats at a glance — like htop for your coding activity.
 
-## Current Milestone: v2.0 wakadash
+## Current Milestone: v2.1 Visual Overhaul + Themes
 
-**Goal:** Create a standalone terminal dashboard tool with live updates and rich data visualization, ready for homebrew-core submission.
+**Goal:** Enhance dashboard with comprehensive stats panels matching wakafetch visual style, plus configurable color themes.
 
 **Target features:**
-- Live-updating dashboard mode (auto-refresh, persistent window)
-- Color-coded data visualizations (sparklines, bar charts, heatmaps)
-- Fresh standalone repo (ported from wakafetch, not a fork)
-- homebrew-core compatible (original work, proper formula)
+- Full stats panels: Languages, Projects, Categories, Editors, Operating Systems, Machines (top 10 each, horizontal bars with times)
+- Stats summary panel: Last 30 days, Total Time, Daily Avg, Top Project/Editor/Category/OS, counts
+- Built-in theme presets: Dracula, Nord, Gruvbox, Monokai, Solarized, Tokyo Night
+- Theme selection via flag or config
 
 ## Requirements
 
@@ -32,7 +32,7 @@ A beautiful, live-updating terminal dashboard that shows your coding stats at a 
 
 ### Active
 
-(To be defined — running requirements phase)
+(To be defined — running v2.1 requirements phase)
 
 ### Out of Scope
 
@@ -74,4 +74,4 @@ A beautiful, live-updating terminal dashboard that shows your coding stats at a 
 | Dashboard mode with live updates | Differentiates from simple fetch tools | — Pending |
 
 ---
-*Last updated: 2026-02-17 after v2.0 milestone start*
+*Last updated: 2026-02-19 after v2.1 milestone start*
