@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 5 of 7 (TUI Foundation)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-19 — 05-01 complete, async bubbletea TUI foundation built
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-19 — 05-02 complete, auto-refresh and help overlay implemented
 
-Progress: [███░░░░░░░] 29% (v2.0)
+Progress: [████░░░░░░] 36% (v2.0)
 
 ## Performance Metrics
 
@@ -24,16 +24,16 @@ Progress: [███░░░░░░░] 29% (v2.0)
 - Total execution time: 0.25 hours
 
 **Velocity (v2.0):**
-- Total plans completed: 3
-- Average duration: 8 min
-- Total execution time: 0.53 hours
+- Total plans completed: 4
+- Average duration: 7 min
+- Total execution time: 0.60 hours
 
 **By Phase (v2.0):**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 4 | 2/2 | 20min | 10min |
-| 5 | 1/2 | 4min | 4min |
+| 5 | 2/2 | 8min | 4min |
 | 6 | 0/3 | - | - |
 | 7 | 0/2 | - | - |
 
@@ -57,6 +57,9 @@ Recent decisions affecting current work:
 - Use tea.WithAltScreen() ProgramOption (not EnterAltScreen command) to avoid race conditions
 - Initialize width=80, height=24 in NewModel() to prevent blank/panicking first render before WindowSizeMsg
 - Include recover() in fetchStatsCmd to prevent terminal corruption if API client panics
+- Self-loop ticker pattern (scheduleRefresh fires once, statsFetchedMsg schedules next) to avoid ticker drift
+- Schedule refresh only from statsFetchedMsg/fetchErrMsg handlers to prevent double-ticker bug
+- Implement help.KeyMap interface for bubbles/help auto-generation
 
 ### Pending Todos
 
@@ -69,5 +72,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 05-01-PLAN.md - async bubbletea TUI foundation
+Stopped at: Completed 05-02-PLAN.md - auto-refresh and help overlay (Phase 5 complete)
 Resume file: None
