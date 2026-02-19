@@ -7,7 +7,11 @@ import (
 	"os"
 	"runtime"
 
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/b00y0h/wakadash/internal/api"
 	"github.com/b00y0h/wakadash/internal/config"
+	"github.com/b00y0h/wakadash/internal/tui"
 )
 
 // Build-time variables injected by GoReleaser via -ldflags.
@@ -19,6 +23,8 @@ var (
 
 func main() {
 	showVersion := flag.Bool("version", false, "Print version information and exit")
+	rangeFlag := flag.String("range", "last_7_days",
+		"Time range for stats (last_7_days, last_30_days, last_6_months, last_year, all_time)")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: wakadash [options]\n\n")
@@ -45,7 +51,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Phase 5 will replace this stub with the full TUI dashboard.
-	fmt.Printf("wakadash: dashboard launching... (Phase 5)\n")
-	fmt.Printf("  API URL: %s\n", cfg.APIURL)
+	client := api.New(cfg.APIKey, cfg.APIURL)
+	m := tui.NewModel(client, *rangeFlag)
+
+	// tea.WithAltScreen() is the correct approach for full-screen apps.
+	// Per research: "Because commands run asynchronously, EnterAltScreen should
+	// not be used in Init. Use the WithAltScreen ProgramOption instead."
+	p := tea.NewProgram(m, tea.WithAltScreen())
+	if _, err := p.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
 }
