@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 4 of 7 (Repository Setup)
-Plan: 1 of 2 in current phase
-Status: Executing Wave 2
-Last activity: 2026-02-19 — Completed plan 04-01 (repo + ported code)
+Plan: 2 of 2 in current phase (paused at checkpoint:human-verify)
+Status: Awaiting human verification of v0.1.0 GitHub release
+Last activity: 2026-02-19 — Completed tasks 1-3 of 04-02, v0.1.0 tag pushed
 
-Progress: [█░░░░░░░░░] 11% (v2.0)
+Progress: [██░░░░░░░░] 20% (v2.0)
 
 ## Performance Metrics
 
@@ -24,7 +24,7 @@ Progress: [█░░░░░░░░░] 11% (v2.0)
 - Total execution time: 0.25 hours
 
 **Velocity (v2.0):**
-- Total plans completed: 1
+- Total plans completed: 1 (04-01 complete; 04-02 at checkpoint)
 - Average duration: 12 min
 - Total execution time: 0.2 hours
 
@@ -50,10 +50,14 @@ Recent decisions affecting current work:
 - Port and enhance wakafetch: Preserve working API code, build on top
 - Dashboard mode with live updates: Differentiates from simple fetch tools
 - wakadash repo at /workspace/wakadash (root not writable)
+- CGO_ENABLED=0 for fully static binaries (no libc dependency on target systems)
+- No brews: in goreleaser config — Homebrew tap is Phase 7 scope
+- ldflags target main.version/commit/date (NOT full module path)
+- GITHUB_TOKEN sufficient for Phase 4 release workflow
 
 ### Pending Todos
 
-None yet.
+- Human verification: Confirm v0.1.0 release on https://github.com/b00y0h/wakadash/releases
 
 ### Blockers/Concerns
 
@@ -62,5 +66,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 04-01, executing 04-02
+Stopped at: 04-02 Task 4 checkpoint:human-verify — v0.1.0 tag pushed, awaiting release artifact confirmation
 Resume file: None
