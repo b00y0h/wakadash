@@ -52,11 +52,11 @@ Plans:
   3. Dashboard auto-refreshes at configurable interval (visible countdown or last-updated timestamp)
   4. User can quit with `q` key and terminal restores cleanly
   5. User can view keybinding help with `?` key
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 05-01: Implement bubbletea model with async fetch architecture
-- [ ] 05-02: Add auto-refresh ticker and help overlay
+- [ ] 05-01-PLAN.md — Create TUI core with bubbletea model and async fetch architecture
+- [ ] 05-02-PLAN.md — Add auto-refresh ticker with countdown and help overlay
 
 ### Phase 6: Data Visualization and UX
 **Goal**: Rich data visualization with color-coded charts and responsive terminal handling
@@ -100,7 +100,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 1-3 | v1.0 | 6/6 | Complete | 2026-02-17 |
 | 4. Repository Setup | v2.0 | 2/2 | Complete | 2026-02-19 |
-| 5. TUI Foundation | v2.0 | 0/2 | Not started | - |
+| 5. TUI Foundation | v2.0 | 0/2 | Planning complete | - |
 | 6. Data Viz + UX | v2.0 | 0/3 | Not started | - |
 | 7. Distribution | v2.0 | 0/2 | Not started | - |
 
