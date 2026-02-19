@@ -32,6 +32,40 @@ checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
   algorithm: sha256
 
+homebrew_casks:
+  - name: wakadash
+
+    # Tap repository configuration
+    repository:
+      owner: b00y0h
+      name: homebrew-wakadash
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+
+    # Cask metadata
+    homepage: https://github.com/b00y0h/wakadash
+    description: "Live terminal dashboard for WakaTime coding stats"
+    license: MIT
+
+    # Cask file location
+    directory: Casks
+
+    # Git commit configuration
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_msg_template: "Brew cask update for {{ .ProjectName }} version {{ .Tag }}"
+
+    # macOS quarantine removal for unsigned binaries
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/wakadash"]
+          end
+
+    # Skip pre-release versions
+    skip_upload: auto
+
 changelog:
   use: git
   sort: asc
