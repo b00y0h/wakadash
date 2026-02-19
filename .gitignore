@@ -7,5 +7,5 @@ dist/
 # macOS metadata
 .DS_Store
 
-# Built binary
-wakadash
+# Built binary (root-level only)
+/wakadash
