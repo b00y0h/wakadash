@@ -110,25 +110,54 @@ Explicitly excluded. Documented to prevent scope creep.
 
 Which phases cover which requirements. Updated during roadmap creation.
 
+### v2.0 Requirements (Complete)
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STAT-01 | TBD | Pending |
-| STAT-02 | TBD | Pending |
-| STAT-03 | TBD | Pending |
-| STAT-04 | TBD | Pending |
-| STAT-05 | TBD | Pending |
-| THEME-01 | TBD | Pending |
-| THEME-02 | TBD | Pending |
-| THEME-03 | TBD | Pending |
-| THEME-04 | TBD | Pending |
-| LAYOUT-01 | TBD | Pending |
-| LAYOUT-02 | TBD | Pending |
+| REPO-01 | Phase 4 | Complete |
+| REPO-02 | Phase 4 | Complete |
+| REPO-03 | Phase 4 | Complete |
+| REPO-04 | Phase 4 | Complete |
+| DASH-01 | Phase 5 | Complete |
+| DASH-02 | Phase 5 | Complete |
+| DASH-03 | Phase 5 | Complete |
+| DASH-04 | Phase 5 | Complete |
+| DASH-05 | Phase 5 | Complete |
+| VIZ-01 | Phase 6 | Complete |
+| VIZ-02 | Phase 6 | Complete |
+| VIZ-03 | Phase 6 | Complete |
+| VIZ-04 | Phase 6 | Complete |
+| UX-01 | Phase 6 | Complete |
+| UX-02 | Phase 6 | Complete |
+| UX-03 | Phase 6 | Complete |
+| DIST-01 | Phase 7 | Complete |
+| DIST-02 | Phase 7 | Complete |
+| DIST-03 | Phase 7 | Complete |
+| DIST-04 | Phase 7 | Deferred |
+
+### v2.1 Requirements (In Progress)
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| THEME-01 | Phase 8 | Pending |
+| THEME-02 | Phase 8 | Pending |
+| THEME-03 | Phase 8 | Pending |
+| THEME-04 | Phase 8 | Pending |
+| STAT-01 | Phase 9 | Pending |
+| STAT-02 | Phase 9 | Pending |
+| STAT-03 | Phase 9 | Pending |
+| STAT-04 | Phase 9 | Pending |
+| STAT-05 | Phase 9 | Pending |
+| LAYOUT-01 | Phase 9 | Pending |
+| LAYOUT-02 | Phase 9 | Pending |
 
 **Coverage:**
 - v2.1 requirements: 11 total
-- Mapped to phases: 0
-- Unmapped: 11
+- Mapped to phases: 11
+- Unmapped: 0
+- Coverage: 100% ✓
 
 ---
 *Requirements defined: 2026-02-17*
 *v2.1 requirements added: 2026-02-19*
+*v2.1 traceability updated: 2026-02-19*
