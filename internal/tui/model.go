@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -28,43 +30,64 @@ type Model struct {
 	err       error
 	lastFetch time.Time
 
+	// Refresh timer
+	refreshInterval time.Duration
+	nextRefresh     time.Time
+
 	// Dependencies
 	client   *api.Client
 	rangeStr string
 
 	// UI components
 	spinner spinner.Model
+	help    help.Model
+	keys    keymap
 
 	// State
 	quitting bool
+	showHelp bool
 }
 
-// NewModel creates a new Model with the given API client and time range.
+// NewModel creates a new Model with the given API client, time range, and refresh interval.
 // rangeStr defaults to "last_7_days" if empty.
 // Valid values: last_7_days, last_30_days, last_6_months, last_year, all_time.
-func NewModel(client *api.Client, rangeStr string) Model {
+// refreshInterval defaults to 60s if zero.
+func NewModel(client *api.Client, rangeStr string, refreshInterval time.Duration) Model {
 	if rangeStr == "" {
 		rangeStr = "last_7_days"
+	}
+	if refreshInterval == 0 {
+		refreshInterval = 60 * time.Second
 	}
 
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 
+	h := help.New()
+	h.Width = 80
+
 	return Model{
 		// Safe defaults — overridden by WindowSizeMsg before meaningful renders.
-		width:    80,
-		height:   24,
-		loading:  true,
-		client:   client,
-		rangeStr: rangeStr,
-		spinner:  s,
+		width:           80,
+		height:          24,
+		loading:         true,
+		client:          client,
+		rangeStr:        rangeStr,
+		refreshInterval: refreshInterval,
+		spinner:         s,
+		help:            h,
+		keys:            defaultKeymap,
 	}
 }
 
-// Init starts the initial async stats fetch and spinner animation.
+// Init starts the initial async stats fetch, spinner animation, and countdown ticker.
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(fetchStatsCmd(m.client, m.rangeStr), m.spinner.Tick)
+	return tea.Batch(
+		fetchStatsCmd(m.client, m.rangeStr),
+		m.spinner.Tick,
+		tickEverySecond(),
+	)
 }
 
 // Update handles incoming messages and returns an updated model and next command.
@@ -73,13 +96,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		m.help.Width = msg.Width
 		return m, nil
 
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "q", "ctrl+c":
+		switch {
+		case key.Matches(msg, m.keys.Quit):
 			m.quitting = true
 			return m, tea.Quit
+		case key.Matches(msg, m.keys.Help):
+			m.showHelp = !m.showHelp
+			return m, nil
+		case key.Matches(msg, m.keys.Refresh):
+			m.loading = true
+			return m, tea.Batch(fetchStatsCmd(m.client, m.rangeStr), m.spinner.Tick)
 		}
 		return m, nil
 
@@ -88,12 +118,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.stats = msg.stats
 		m.err = nil
 		m.lastFetch = time.Now()
-		return m, nil
+		m.nextRefresh = time.Now().Add(m.refreshInterval)
+		return m, scheduleRefresh(m.refreshInterval)
 
 	case fetchErrMsg:
 		m.loading = false
 		m.err = msg.err
-		return m, nil
+		m.nextRefresh = time.Now().Add(m.refreshInterval)
+		return m, scheduleRefresh(m.refreshInterval)
+
+	case refreshMsg:
+		// Time to refresh - kick off new fetch
+		m.loading = true
+		return m, tea.Batch(fetchStatsCmd(m.client, m.rangeStr), m.spinner.Tick)
+
+	case countdownTickMsg:
+		// Continue countdown ticker (self-loop)
+		return m, tickEverySecond()
 
 	case spinner.TickMsg:
 		var cmd tea.Cmd
@@ -109,6 +150,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
 	if m.quitting {
 		return ""
+	}
+
+	if m.showHelp {
+		return m.renderHelp()
 	}
 
 	if m.loading {
@@ -190,15 +235,32 @@ func (m Model) renderStats() string {
 // renderStatusBar renders the bottom status line.
 func (m Model) renderStatusBar() string {
 	var status string
-	if m.lastFetch.IsZero() {
-		status = "Loading..."
+	if m.loading {
+		status = m.spinner.View() + " Fetching..."
+	} else if m.err != nil {
+		status = errorStyle.Render("Error: " + m.err.Error())
 	} else {
-		status = fmt.Sprintf("Last updated: %s", m.lastFetch.Format("15:04:05"))
+		remaining := time.Until(m.nextRefresh).Round(time.Second)
+		if remaining < 0 {
+			remaining = 0
+		}
+		status = fmt.Sprintf("Updated: %s  Next: %s",
+			m.lastFetch.Format("15:04:05"),
+			remaining,
+		)
 	}
 
-	helpHint := dimStyle.Render("q quit")
-	gap := strings.Repeat(" ", max(0, m.width-lipgloss.Width(status)-lipgloss.Width(helpHint)-2))
+	helpHint := dimStyle.Render("? help  r refresh  q quit")
+	gap := strings.Repeat(" ", max(0, m.width-lipgloss.Width(status)-lipgloss.Width(helpHint)))
 	return dimStyle.Render(status) + gap + helpHint
+}
+
+// renderHelp renders the help overlay showing keyboard shortcuts.
+func (m Model) renderHelp() string {
+	title := titleStyle.Render("Keyboard Shortcuts")
+	helpText := m.help.View(m.keys)
+	hint := dimStyle.Render("\nPress ? to return to dashboard")
+	return lipgloss.JoinVertical(lipgloss.Left, title, "", helpText, hint)
 }
 
 // formatSeconds converts a float64 seconds value to a human-readable string.

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -25,6 +26,7 @@ func main() {
 	showVersion := flag.Bool("version", false, "Print version information and exit")
 	rangeFlag := flag.String("range", "last_7_days",
 		"Time range for stats (last_7_days, last_30_days, last_6_months, last_year, all_time)")
+	refreshFlag := flag.Int("refresh", 60, "Auto-refresh interval in seconds (0 to disable)")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: wakadash [options]\n\n")
@@ -52,7 +54,8 @@ func main() {
 	}
 
 	client := api.New(cfg.APIKey, cfg.APIURL)
-	m := tui.NewModel(client, *rangeFlag)
+	refreshInterval := time.Duration(*refreshFlag) * time.Second
+	m := tui.NewModel(client, *rangeFlag, refreshInterval)
 
 	// tea.WithAltScreen() is the correct approach for full-screen apps.
 	// Per research: "Because commands run asynchronously, EnterAltScreen should
