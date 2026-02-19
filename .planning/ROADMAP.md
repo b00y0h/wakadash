@@ -3,7 +3,7 @@
 ## Milestones
 
 - [x] **v1.0 Homebrew Distribution** - Phases 1-3 (shipped 2026-02-17)
-- [ ] **v2.0 wakadash** - Phases 4-7 (in progress)
+- [x] **v2.0 wakadash** - Phases 4-7 (shipped 2026-02-19)
 
 ## Phases
 
@@ -16,14 +16,14 @@ See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 
 </details>
 
-### v2.0 wakadash (In Progress)
+### v2.0 wakadash (Shipped 2026-02-19)
 
 **Milestone Goal:** Create a standalone terminal dashboard tool with live updates and rich data visualization, ready for homebrew-core submission.
 
 - [x] **Phase 4: Repository Setup** - Fresh wakadash repo with ported code and release automation (completed 2026-02-19)
 - [x] **Phase 5: TUI Foundation** - Async bubbletea architecture with basic dashboard (completed 2026-02-19)
 - [x] **Phase 6: Data Visualization and UX** - Charts, resize handling, panel toggles (completed 2026-02-19)
-- [ ] **Phase 7: Distribution** - Homebrew tap and homebrew-core submission
+- [x] **Phase 7: Distribution** - Homebrew tap and homebrew-core submission (completed 2026-02-19)
 
 ## Phase Details
 
@@ -89,8 +89,8 @@ Plans:
 **Plans:** 2 plans in 2 waves
 
 Plans:
-- [ ] 07-01-PLAN.md — Create homebrew-wakadash tap repo, add GoReleaser casks config, create v0.2.0 release
-- [ ] 07-02-PLAN.md — Create homebrew-core formula building from source, submit PR
+- [x] 07-01-PLAN.md — Create homebrew-wakadash tap repo, add GoReleaser casks config, create v0.2.0 release
+- [x] 07-02-PLAN.md — Create homebrew-core formula building from source, submit PR (closed pending popularity)
 
 ## Progress
 
@@ -102,7 +102,13 @@ Plans:
 | 4. Repository Setup | v2.0 | 2/2 | Complete | 2026-02-19 |
 | 5. TUI Foundation | v2.0 | 2/2 | Complete | 2026-02-19 |
 | 6. Data Viz + UX | v2.0 | 3/3 | Complete | 2026-02-19 |
-| 7. Distribution | v2.0 | 0/2 | Not started | - |
+| 7. Distribution | v2.0 | 2/2 | Complete | 2026-02-19 |
+
+## Distribution Notes
+
+**Personal Tap (Working):** `brew tap b00y0h/wakadash && brew install wakadash`
+
+**homebrew-core (Pending):** PR #268434 submitted and closed — requires ≥30 forks, ≥30 watchers, or ≥75 stars. Formula ready at b00y0h/homebrew-core:wakadash for resubmission when thresholds met.
 
 ---
 *Roadmap created: 2026-02-18*
