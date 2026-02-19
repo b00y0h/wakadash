@@ -1,7 +1,11 @@
 // Package tui implements the bubbletea TUI model for the wakadash dashboard.
 package tui
 
-import "github.com/b00y0h/wakadash/internal/types"
+import (
+	"time"
+
+	"github.com/b00y0h/wakadash/internal/types"
+)
 
 // statsFetchedMsg is sent by fetchStatsCmd when the API call succeeds.
 type statsFetchedMsg struct {
@@ -12,3 +16,9 @@ type statsFetchedMsg struct {
 type fetchErrMsg struct {
 	err error
 }
+
+// refreshMsg is sent when the refresh interval elapses - triggers new stats fetch.
+type refreshMsg time.Time
+
+// countdownTickMsg is sent every second for countdown display updates.
+type countdownTickMsg time.Time

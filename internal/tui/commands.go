@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -33,4 +34,21 @@ func fetchStatsCmd(client *api.Client, rangeStr string) tea.Cmd {
 		}
 		return statsFetchedMsg{stats: stats}
 	}
+}
+
+// scheduleRefresh returns a Cmd that fires refreshMsg after interval.
+// CRITICAL: Only call from statsFetchedMsg/fetchErrMsg handler to avoid double tickers (pitfall #3).
+// The self-loop happens when refreshMsg triggers a new fetch, and statsFetchedMsg schedules the next refresh.
+func scheduleRefresh(interval time.Duration) tea.Cmd {
+	return tea.Tick(interval, func(t time.Time) tea.Msg {
+		return refreshMsg(t)
+	})
+}
+
+// tickEverySecond returns a Cmd that fires countdownTickMsg after 1 second.
+// Used for countdown display; self-loops from countdownTickMsg handler.
+func tickEverySecond() tea.Cmd {
+	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
+		return countdownTickMsg(t)
+	})
 }
