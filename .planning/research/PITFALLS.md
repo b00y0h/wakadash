@@ -1,508 +1,561 @@
-# Domain Pitfalls
+# Pitfalls Research: v2.1 Visual Overhaul + Themes
 
-**Domain:** Live-updating terminal dashboard in Go (TUI milestone for existing CLI)
-**Researched:** 2026-02-17
-**Confidence:** HIGH for concurrency/API pitfalls (official docs + multiple corroborating sources), MEDIUM for terminal compatibility specifics
+**Domain:** Adding theme system and 6+ stats panels to existing wakadash TUI
+**Researched:** 2026-02-19
+**Confidence:** HIGH for Lipgloss integration issues (GitHub issues, maintainer responses), MEDIUM for terminal compatibility (community sources), HIGH for WakaTime API (official docs)
+
+**Focus:** Integration pitfalls when adding features to existing system, not building from scratch.
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites or leave the terminal in unusable state.
+### Pitfall 1: Hardcoded Colors Break Theme System Integration
+
+**What goes wrong:**
+Adding a theme system to code with hardcoded colors (like `lipgloss.Color("62")`, `lipgloss.Color("205")`) creates a maintenance nightmare. Every theme requires manually finding and updating dozens of scattered color values. Missed hardcoded colors cause visual inconsistencies where some elements theme correctly while others remain stuck in the old color scheme.
+
+**Why it happens:**
+Developers start with simple hardcoded values during prototyping, intending to refactor later. When adding themes becomes a requirement, they underestimate the scope of refactoring needed. The existing wakadash codebase has hardcoded ANSI color codes in `internal/tui/styles.go` (Color "62", "205", "241", "196", "214") that will conflict with any theme system.
+
+**Consequences:**
+- Every theme preset requires manual find/replace of color codes across multiple files
+- Visual inconsistencies when 80% of UI themes correctly but 20% uses old hardcoded colors
+- Can't add new themes without full codebase audit each time
+- Regression where adding new UI element with hardcoded color breaks existing theme
+
+**How to avoid:**
+1. **Audit before implementing themes** - Use `grep -r "lipgloss.Color" .` to find all hardcoded colors
+2. **Create theme struct first** - Define `type Theme struct { Primary, Secondary, Accent, Error, Warning lipgloss.Color }` before migration
+3. **Incremental migration strategy** - Convert one component at a time, verify visually after each step
+4. **Use semantic names** - `theme.AccentColor` not `theme.Color62` - semantic names survive theme changes
+5. **Add build-time verification** - Consider linting rules that flag new hardcoded color values in code review
+
+**Warning signs:**
+- Finding color codes during `git grep` that aren't in your theme definition
+- Some UI elements don't change when switching themes
+- Needing to update multiple files to change a single semantic color
+- Code review shows `lipgloss.Color("...")` with literal values
+
+**Phase to address:**
+Phase 1 (Theme Foundation) - Must complete hardcoded color audit and migration before adding new panels
+
+**References:**
+- [Design Tokens & Theming Guide](https://materialui.co/blog/design-tokens-and-theming-scalable-ui-2025) - Migration from hardcoded values
+- wakadash `/workspace/wakadash/internal/tui/styles.go` - Current hardcoded state
 
 ---
 
-### Pitfall 1: Mutating TUI Model State Outside the Event Loop
+### Pitfall 2: AdaptiveColor Terminal Queries Cause Startup Hangs
 
 **What goes wrong:**
-Race conditions corrupt UI state. Data renders partially updated or crashes. The `-race` detector fires, but the crashes are non-deterministic and hard to reproduce. In Bubble Tea, this typically appears as flicker, corrupted display, or panics in `View()`.
+Using `lipgloss.AdaptiveColor` for light/dark terminal detection can cause the application to hang for several seconds or indefinitely on startup. This happens because Lipgloss and BubbleTea both try to query the terminal simultaneously, creating a race condition when `termenv.HasDarkBackground()` attempts to detect terminal capabilities while the framework is initializing.
 
 **Why it happens:**
-When an API fetch goroutine writes directly to a shared model struct while the Bubble Tea event loop is calling `View()`, two goroutines access the same memory concurrently. The pattern "start goroutine, write to model when done" is natural to Go developers but violates Bubble Tea's single-owner model.
+The detection mechanism requires querying the terminal's background color through escape sequences. When this happens during BubbleTea initialization (typically in the second `View()` call after `tea.WindowSizeMsg`), both libraries compete for `stdout` access. As explained by a BubbleTea maintainer: "Bubble Tea and Lip Gloss are both jumping on, and fighting over, stdout at the same time."
 
 **Consequences:**
-- Non-deterministic crashes in production but not in tests
-- Corrupted display output that looks like a rendering bug (but isn't)
-- Full rewrite of state management once the root cause is found
+- Application hangs 3-5 seconds on startup in affected terminals
+- Some terminal types hang indefinitely, requiring Ctrl+C
+- Inconsistent behavior - works on developer's terminal, hangs for users
+- Impossible to debug without understanding the stdout race condition
 
-**Prevention:**
-Never mutate model state from outside `Update()`. All API responses must arrive as `tea.Msg` through the event loop:
+**How to avoid:**
+1. **Force early detection** - Call `_ = lipgloss.HasDarkBackground()` in `main()` BEFORE `program.Run()`
+2. **Use BubbleTea v0.27.1+** - The bug was fixed in v0.27.1, ensure dependencies are up-to-date
+3. **Test on actual terminals** - Some terminals handle queries better than others; test on iTerm2, Alacritty, GNOME Terminal, tmux
+4. **Provide manual override** - Add `--theme-mode=dark|light` flag as fallback when auto-detection fails
+5. **Timeout detection** - Wrap detection in timeout logic to fail gracefully rather than hang indefinitely
 
-```go
-// WRONG: goroutine writes to model directly
-go func() {
-    data, _ := fetchStats()
-    model.data = data  // race condition
-}()
-
-// CORRECT: goroutine sends a message; Update() handles it
-type statsMsg struct{ data *types.StatsResponse }
-
-func fetchStatsCmd() tea.Cmd {
-    return func() tea.Msg {
-        data, err := fetchStats()
-        if err != nil {
-            return errMsg{err}
-        }
-        return statsMsg{data}
-    }
-}
-```
-
-**Detection:**
-- Run with `go run -race .` during development
-- Any non-deterministic display corruption
-- `Update()` not being the only place model fields are assigned
+**Warning signs:**
+- Application hangs for 3-5 seconds on startup
+- Works fine on some terminals but hangs on others
+- Delay happens specifically when first rendering AdaptiveColor styles
+- Memory profiling shows blocking on `HasDarkBackground()` call
+- First `View()` renders fine, second `View()` hangs
 
 **Phase to address:**
-Phase 1 (TUI Foundation) — The architecture decision. Getting this wrong means rewriting state flow later.
+Phase 1 (Theme Foundation) - Must verify AdaptiveColor initialization before implementing theme presets
+
+**References:**
+- [BubbleTea #1036: AdaptiveColor Hanging Bug](https://github.com/charmbracelet/bubbletea/issues/1036) - Official issue with maintainer explanation and fix
+- Fixed in BubbleTea v0.27.1
 
 ---
 
-### Pitfall 2: Blocking the Event Loop with Synchronous API Calls
+### Pitfall 3: Dynamic Width Styles Cause Rendering Corruption on Rerenders
 
 **What goes wrong:**
-The dashboard freezes completely during API fetches. Keyboard input stops responding. The terminal appears hung. Users Ctrl+C to escape and the terminal may be left in raw mode.
+When using `.Width()` with dynamically changing content across multiple styled substrings, text renders incorrectly on subsequent frames. The initial render appears correct, but rerenders show faint/ghosted text, bleeding borders, and escape sequences affecting unintended screen areas. Text that should appear normal renders with the "faint" style applied, and borders from panels appear affected.
 
 **Why it happens:**
-The existing `fetchStats()` and `fetchSummary()` functions in the codebase make synchronous HTTP calls with a 10-second timeout. If these are called directly in `Update()` or `Init()` rather than wrapped in a `tea.Cmd`, they block the single-threaded event loop.
+The renderer unconditionally erases lines when cursor reaches line end, causing escape sequences from styled segments to persist and bleed into subsequent renders. According to the fix commit: "When the cursor reaches the end of the line, any escape sequences that follow will only affect the last cell of the line." When combining `.Width()` constraints with dynamic text that changes between frames (like updating stats panels), line wrap calculations become incorrect and affect rendering outside the intended boundaries.
 
 **Consequences:**
-- Complete UI freeze for the duration of each API call (potentially 10 seconds)
-- No spinner or loading indicator is possible because rendering is also blocked
-- If the network is slow or WakaTime returns a 302 instead of 429, the freeze extends
+- Text appears normal on first render, then becomes faint/ghosted on subsequent renders
+- Borders from one panel bleed into adjacent panels
+- Problem compounds with each rerender (accumulating escape sequences)
+- Difficult to debug - looks like a styling bug, not a rendering engine issue
+- Only manifests with dynamic content that changes values, not static text
 
-**Prevention:**
-Every API call must be a `tea.Cmd` (runs in a goroutine, returns a `tea.Msg`):
+**How to avoid:**
+1. **Separate static and dynamic content** - Apply `.Width()` only to containers, not individual changing text elements
+2. **Use explicit truncation** - `lipgloss.NewStyle().MaxWidth(50)` with manual truncation instead of `.Width()` for dynamic text
+3. **Test rapid rerenders** - If stats update every second, verify rendering doesn't degrade over 5+ minutes
+4. **Prefer fixed-width layouts** - Dashboard panels should have consistent widths, not dynamically sized based on content
+5. **Clear before redraw** - For panels with `.Width()`, explicitly clear the area before rendering new content
+6. **Update dependencies** - Ensure using latest x/ansi and lipgloss versions with rendering fixes
 
-```go
-// WRONG: called synchronously in Init() or Update()
-func (m Model) Init() tea.Cmd {
-    data, _ := fetchStats(m.apiKey, m.apiURL, m.rangeStr)  // blocks
-    m.data = data
-    return nil
-}
-
-// CORRECT: deferred to goroutine via Cmd
-func (m Model) Init() tea.Cmd {
-    return fetchStatsCmd(m.apiKey, m.apiURL, m.rangeStr)
-}
-```
-
-**Detection:**
-- UI freezes when refresh happens
-- No ability to quit with `q` or `Ctrl+C` during data load
+**Warning signs:**
+- Text appears normal on first render, then becomes faint or ghosted
+- Borders from one panel bleed into adjacent panels
+- Problem worsens with each rerender (accumulating escape sequences)
+- Only happens with dynamic content, not static text
+- Disappears when removing `.Width()` constraints
+- Bug manifests after 10-20 seconds of live updates, not immediately
 
 **Phase to address:**
-Phase 1 (TUI Foundation) — The wrapping of existing API calls must be part of initial TUI wiring.
+Phase 2 (Stats Panels) - Critical to address before implementing 6+ dynamic panels with live updates
+
+**References:**
+- [BubbleTea #1225: Width() Rendering Issue](https://github.com/charmbracelet/bubbletea/issues/1225) - Detailed bug report with reproduction steps
+- Fix involved changing line erasure behavior in renderer
 
 ---
 
-### Pitfall 3: Panic Leaves Terminal in Raw Mode
+### Pitfall 4: Viewport Memory Leaks with Multiple Panels
 
 **What goes wrong:**
-Any unrecovered panic in a command goroutine (API call, ticker callback, etc.) leaves the terminal in raw mode. The cursor disappears, typed characters don't echo, the user cannot use the terminal at all. They must run `reset` to restore it.
+Using BubbleTea viewports for multiple scrollable panels causes excessive memory consumption - applications using 20-40 MB for simple content that should consume <1 MB. Memory profiling reveals allocations come from `viewport.SetContent()` and underlying Lipgloss rendering, not from actual data size. With 6+ panels each using viewports, this compounds to 60+ MB baseline memory usage.
 
 **Why it happens:**
-Bubble Tea puts the terminal into raw mode at startup. If a panic occurs in a goroutine that Bubble Tea spawned for a `tea.Cmd`, that goroutine's panic handler is separate from the main program panic handler. Panics in commands are caught individually — but only if Bubble Tea's `WithoutCatchPanics` option has NOT been set.
-
-The existing codebase uses `os.Exit(0)` in `showCustomHelp()`. If similar patterns are used inside TUI commands, the terminal cleanup is bypassed.
+Pre-v0.21.1 Bubbles versions didn't pool ANSI parser instances. Every viewport render created new 4KB parser objects without reuse, causing linear memory growth with panel count and render frequency. With 6+ panels updating every second, this compounds rapidly: 6 panels × 4KB per render × 60 renders/minute = ~1.4 MB per minute memory leak.
 
 **Consequences:**
-- Unusable terminal session requiring `reset`
-- User has to know to run `reset` — many don't
-- Can corrupt ongoing terminal multiplexer sessions (tmux, screen)
+- Memory usage grows 5-10 MB per panel added
+- Baseline memory usage >20 MB for simple dashboard showing text
+- Long-running sessions (hours) consume hundreds of MB
+- GC thrashing causes periodic lag spikes
+- Application slow to exit (GC struggling with accumulated allocations)
 
-**Prevention:**
-1. Never call `os.Exit()` from within a running Bubble Tea program
-2. Keep the default `CatchPanics` behavior enabled (do NOT use `tea.WithoutCatchPanics()`)
-3. Ensure cleanup on SIGINT/SIGTERM: use `tea.WithAltScreen()` so the terminal restores on exit
-4. Test panic recovery explicitly during development
+**How to avoid:**
+1. **Update to Bubbles v0.21.1+** - Implements parser pooling that dramatically reduces allocations
+2. **Limit viewport usage** - Not every panel needs scrolling; use static rendered lists where possible
+3. **Share viewport instances** - For similar content types (e.g., multiple language lists), consider single viewport with tab switching
+4. **Monitor memory growth** - Use `pprof` during development: `go tool pprof -alloc_space ./wakadash`
+5. **Cap content size** - For stats panels showing "top 10", don't load full dataset into viewport
+6. **Disable high-performance mode** - Standard rendering is more memory-efficient for dashboards not using alternate screen buffer full-time
+7. **Profile before and after** - Measure memory baseline with 1 panel, then 3 panels, then 6 panels
 
-**Detection:**
-- Terminal cursor disappears after program exits
-- Typed characters don't appear in the terminal after closing the dashboard
-- `stty -echo` visible in output
+**Warning signs:**
+- Memory usage grows 5-10 MB per panel added
+- Baseline memory usage >20 MB for simple dashboard
+- `pprof` shows `x/ansi.GetParser` as top allocator
+- Memory grows linearly with update frequency
+- Application slow to exit (GC struggling with allocations)
+- `htop` shows memory climbing over 30+ minutes
 
 **Phase to address:**
-Phase 1 (TUI Foundation) — Set up correctly from the start; retrofitting panic safety is error-prone.
+Phase 2 (Stats Panels) - Must verify memory usage after implementing first 2-3 panels, before building all 6+
+
+**References:**
+- [Bubbles #829: Viewport Memory Issue](https://github.com/charmbracelet/bubbles/issues/829) - Detailed analysis with pprof output
+- Fixed in Bubbles v0.21.1 with parser pooling
 
 ---
 
-### Pitfall 4: Ticker-Driven Auto-Refresh Creates Goroutine Leaks
+### Pitfall 5: TERM Variable Incompatibility Breaks Colors Across Terminals
 
 **What goes wrong:**
-Each auto-refresh cycle spawns a goroutine that may not be cleaned up. Over time (especially when the user changes range or pauses/unpauses), leaked goroutines accumulate. Memory grows unboundedly. In extreme cases, multiple goroutines race to update the same model state.
+Dashboard looks perfect in your development terminal but shows broken colors, missing styles, or no colors at all in other users' terminals. This happens because TERM variable values (`xterm`, `xterm-256color`, `tmux-256color`, `screen`) declare different color capabilities through the terminfo database. Users report "all the colors are too dark" or "borders don't appear" or "no colors at all."
 
 **Why it happens:**
-The typical implementation uses `time.NewTicker` inside a goroutine and sends messages on each tick. If the Bubble Tea program quits, exits, or the ticker is recreated (e.g., user changes refresh interval), the old ticker goroutine keeps running — Go's GC does not collect running goroutines.
+TUI applications rely on the terminfo database to look up terminal capabilities based on `$TERM`. If the system lacks a terminfo entry for the user's `$TERM` value, or if `$TERM` is set incorrectly, the application can't determine supported colors. According to terminal color research: "By setting TERM to xterm-256color, you're effectively telling whatever is running that the terminal supports all the features of xterm. This does get you pretty colors usually but you will also sacrifice some modern features."
+
+Colors also fail when SSHing if `TERM` isn't forwarded or when inside tmux without proper configuration. The wakadash codebase currently uses GitHub Linguist colors (hex codes like "#00ADD8" for Go) which require true color support - not available in all terminals.
 
 **Consequences:**
-- Memory leak in long-running dashboard sessions
-- Multiple simultaneous API requests when ticker restarts accumulate
-- Hitting WakaTime's rate limit (10 req/s avg over 5 minutes) from leaked refresh goroutines
+- "Works on my machine" but users report broken rendering
+- Colors work locally but fail over SSH
+- Some terminals show colors, others don't
+- Color issues only in tmux/screen sessions without proper config
+- True color hex codes fallback to wrong colors instead of gracefully degrading
 
-**Prevention:**
-Use Bubble Tea's built-in ticker pattern with context cancellation:
+**How to avoid:**
+1. **Test across common TERM values** - Verify on `xterm`, `xterm-256color`, `tmux-256color`, `screen-256color`, `alacritty`, `kitty`
+2. **Use AdaptiveColor for core UI** - Falls back gracefully when true color unavailable
+3. **Provide monochrome fallback** - Add `--no-color` flag that disables all color styling
+4. **Detect color support explicitly** - Check `termenv.ColorProfile()` and adjust rendering accordingly
+5. **Document TERM requirements** - Specify minimum recommended TERM values in README
+6. **Test in SSH sessions** - Many users will run over SSH where TERM forwarding may fail
+7. **Never rely on true color exclusively** - Ensure 256-color degradation looks acceptable
+8. **Verify language colors degrade** - Test that GitHub Linguist hex codes look reasonable in 256-color mode
 
-```go
-// Bubble Tea's built-in approach: return a Cmd that fires once,
-// then requeue after data arrives
-func tickCmd(interval time.Duration) tea.Cmd {
-    return tea.Tick(interval, func(t time.Time) tea.Msg {
-        return tickMsg(t)
-    })
-}
-
-// In Update(), after handling tickMsg, return the next tick:
-case tickMsg:
-    return m, tea.Batch(fetchStatsCmd(...), tickCmd(m.refreshInterval))
-```
-
-Always cancel contexts and stop tickers in the `quit` message handler.
-
-**Detection:**
-- Increasing memory usage over time (visible with `htop`)
-- More API calls than expected (exceeding 1 per refresh interval)
-- `-race` detector firing after range changes
+**Warning signs:**
+- "Works on my machine" but users report broken rendering
+- Colors work locally but fail over SSH
+- Some terminals show colors, others don't
+- Color issues only in tmux/screen sessions
+- User bug reports mentioning TERM value or "colors don't work"
+- Language bar colors look completely different in some terminals
 
 **Phase to address:**
-Phase 2 (Live Refresh) — This pitfall is specific to implementing the auto-refresh loop.
+Phase 1 (Theme Foundation) - Must establish terminal compatibility baseline before choosing color approaches
+
+**References:**
+- [Terminal Colours Are Tricky](https://jvns.ca/blog/2024/10/01/terminal-colours/) - Comprehensive TERM variable explanation
+- [Why Terminal Emacs Requires TERM=xterm-256color](https://www.w3tutorials.net/blog/terminal-emacs-colors-only-work-with-term-xterm-256color/) - TERM compatibility details
+- wakadash `/workspace/wakadash/internal/tui/colors.go` - Current language color implementation using hex codes
 
 ---
 
-### Pitfall 5: WakaTime 202 Response Treated as Error or Success
+### Pitfall 6: Runtime Theme Switching Triggers Full Model Rerender
 
 **What goes wrong:**
-The `/stats` endpoint returns HTTP 202 (Accepted) when stats are still being calculated. The existing code only checks for `StatusOK`. A 202 response causes a JSON decode failure or is treated as an unknown error, crashing the dashboard or displaying "server error" to the user.
+Implementing runtime theme switching (e.g., keyboard shortcut to toggle themes) requires rebuilding all styled components, causing noticeable UI lag or flicker. Every panel must recreate its styles from the new theme, recompute layouts, and redraw completely. For dashboards with 6+ panels and live-updating data, this creates 100-500ms lag spikes. Users see the entire screen flicker or freeze briefly.
 
 **Why it happens:**
-WakaTime processes stats asynchronously. For free plan users and for time ranges >= 1 year, stats may not be immediately available. The API explicitly returns 202 with a `percent_calculated` field indicating background processing progress. This is documented behavior, not an error.
+Lipgloss styles are immutable value types, not references. Changing theme requires creating new style objects and re-rendering all components. The BubbleTea model must propagate theme changes through the entire component tree, triggering every component's `View()` method. With complex layouts, this cascades into expensive recalculations. Material-UI (web framework) has similar issues: "Switching the theme causes that virtually all component must be recomputed, it's really slow in dev mode, and noticeable in prod mode."
 
 **Consequences:**
-- Dashboard shows error to user when stats are legitimately still computing
-- User assumes the dashboard is broken when WakaTime is working correctly
-- Aggressive retry logic (to "fix" the apparent error) hammers the API unnecessarily
+- Visible lag/flicker when switching themes (100-500ms freeze)
+- CPU spike during theme change visible in profilers
+- Multiple theme switches cause compounding slowdown
+- Panel updates pause during theme switch
+- Poor UX - users avoid using theme switching because it's jarring
+- In live-updating dashboard, data updates conflict with theme updates causing corruption
 
-**Prevention:**
-Handle 202 explicitly as a "loading" state with retry:
+**How to avoid:**
+1. **Consider restart-based themes** - Select theme via flag/config, require restart to change (simpler, zero runtime cost)
+2. **Lazy theme propagation** - Don't rebuild all panels immediately; rebuild each panel on next update
+3. **Cache calculated layouts** - Store panel dimensions/positions; only recalculate styles, not layouts
+4. **Debounce theme changes** - Prevent rapid theme toggling (e.g., 500ms cooldown)
+5. **Memoize style creation** - Create theme styles once, store in model, reference rather than recreate
+6. **Progressive redraw** - Mark panels dirty, redraw over 3-4 frames instead of synchronously
+7. **Measure performance** - Benchmark `View()` execution time; target <50ms for theme switch
+8. **Document restart requirement** - If choosing restart-based approach, show "Theme changed, restart to apply" message
 
-```go
-case http.StatusAccepted:  // 202: stats still computing
-    return nil, ErrStatsNotReady  // special sentinel error
-// Caller: show "Calculating..." and retry after delay
-```
-
-Check `is_up_to_date` and `percent_calculated` fields in the response body when available.
-
-**Detection:**
-- "Stats not available" or JSON decode errors on first launch
-- Works fine after waiting and refreshing manually
+**Warning signs:**
+- Visible lag/flicker when switching themes
+- CPU spike during theme change
+- `View()` methods recreating styles instead of using theme references
+- Multiple theme switches cause compounding slowdown
+- Panel updates pause during theme switch
+- Users reporting "laggy" theme switching
 
 **Phase to address:**
-Phase 2 (Live Refresh) — Handle during API client enhancement for dashboard use.
+Phase 3 (Theme Switching) - Only if implementing runtime switching; Phase 1 if restart-based
+
+**References:**
+- [Material-UI #25018: Theme Switching Performance](https://github.com/mui/material-ui/issues/25018) - Similar performance issues in web UI framework
+- [OpenTUI #3731: System Theme Support](https://github.com/anomalyco/opencode/issues/3731) - Implementation discussion for theme systems
 
 ---
 
-### Pitfall 6: Terminal Width Detection Breaks Layout on Resize
+### Pitfall 7: API Rate Limiting Triggers with Multiple Panel Data Fetches
 
 **What goes wrong:**
-The existing `getTerminalCols()` in `render.go` calls `stty` via `exec.Command` and has no Windows support (returns `fallback = 9999`). In TUI mode, the terminal size must be known at every render, and terminal resize events (SIGWINCH) must update the layout. Without this, the dashboard overflows or mis-aligns on resize.
+Loading data for 6+ stats panels (Languages, Projects, Categories, Editors, OS, Machines) simultaneously hits WakaTime's rate limit of "fewer than 10 requests per second averaged over 5 minutes." App shows incomplete dashboards or rate limit errors because each panel independently fetches its dataset. Dashboard loads with some panels showing data and others showing "Loading..." indefinitely.
 
 **Why it happens:**
-The current stty-based approach is a one-shot measurement during static rendering. For a live dashboard, the terminal can be resized at any time. Bubble Tea sends a `tea.WindowSizeMsg` whenever the terminal is resized, but the layout logic must be wired to consume it. If the old `getTerminalCols()` approach is reused, it won't receive resize events.
+Naive implementation treats each panel as independent, issuing separate API requests. Six panels requesting data on startup = 6 requests in <1 second, already at 60% of rate limit. Add periodic refresh every 30 seconds, and you'll average >10 req/sec within 5 minutes: (6 requests × 10 refreshes) / 300 seconds = 12 req/5min average. WakaTime returns HTTP 429 when rate limited.
 
 **Consequences:**
-- Cards overflow terminal width after resize
-- Layout doesn't adapt to narrow vs wide terminals
-- `stty` subprocess calls on every render are expensive (measured in milliseconds)
+- HTTP 429 errors after 3-5 dashboard loads within 5 minutes
+- Dashboard shows "Loading..." indefinitely for some panels
+- Works on first run, fails after several refreshes
+- Some panels load, others timeout
+- Error messages mentioning rate limits
+- Auto-refresh makes problem worse (continued requests while rate limited)
 
-**Prevention:**
-Replace `getTerminalCols()` with Bubble Tea's `WindowSizeMsg` approach:
+**How to avoid:**
+1. **Single API request, fan-out data** - WakaTime's `/users/current/stats` returns all stats in one response; parse and distribute to panels
+2. **Batch fetches with delays** - If multiple endpoints needed, space requests 200ms apart to stay under 10/sec
+3. **Cache aggressively** - Don't refetch data that updates infrequently (e.g., all-time stats)
+4. **Implement exponential backoff** - On 429, wait 60s before retry, doubling on each subsequent 429
+5. **Show rate limit warnings** - Display "Rate limited, retrying in 60s" with countdown instead of silent failure
+6. **Respect Retry-After header** - WakaTime may include this; honor it
+7. **Local caching** - Store last successful response, continue showing while waiting for rate limit to clear
+8. **Test with rapid refreshes** - Run dashboard with 30s refresh interval for 10 minutes, verify no 429s
 
-```go
-case tea.WindowSizeMsg:
-    m.width = msg.Width
-    m.height = msg.Height
-    return m, nil
-```
-
-Use `m.width` in all layout calculations. The stty-based approach must not be used inside the TUI render loop.
-
-**Detection:**
-- Resize terminal while dashboard is running — layout breaks
-- `stty` subprocess calls appearing in `strace`/`dtruss` output during rendering
+**Warning signs:**
+- HTTP 429 errors in logs
+- Dashboard shows "Loading..." indefinitely for some panels
+- Works on first run, fails after several refreshes
+- Error messages mentioning rate limits
+- Some panels load, others time out
+- Problem gets worse with faster refresh intervals
 
 **Phase to address:**
-Phase 1 (TUI Foundation) — Layout must use `WindowSizeMsg` from the start; retrofitting is a rewrite of the layout layer.
+Phase 2 (Stats Panels) - Critical during API integration when adding multiple data fetches
+
+**References:**
+- [WakaTime API Docs: Rate Limiting](https://wakatime.com/developers) - "fewer than 10 requests per second on average over any 5 minute period"
+- [WakaTime FAQ](https://wakatime.com/faq) - Rate limit details and backoff strategies
+
+---
+
+### Pitfall 8: Border Calculations Break Multi-Panel Layouts
+
+**What goes wrong:**
+When calculating available space for panel content, forgetting to account for borders causes content to overflow panel boundaries, misaligned layouts, or panels that don't fit within terminal window. Classic mistake: using `m.height` directly instead of `m.height - 2` (top + bottom border). With 6 panels in a grid, these 2-character offsets compound, causing 12+ characters of miscalculation in layout calculations.
+
+**Why it happens:**
+Developers think in terms of "available space" but borders consume that space. A panel with `lipgloss.RoundedBorder()` needs 2 characters vertical (top/bottom) and 2 horizontal (left/right). When laying out 6 panels in a 2×3 grid, forgetting borders means 6 panels × 2 chars each = 12 characters of overflow. At terminal height 24, this means panels try to occupy 36 lines - doesn't fit.
+
+**Consequences:**
+- Content overflows panel borders (text visible outside borders)
+- Panels don't fit in terminal window (bottom panels cut off)
+- Bottom panels cut off at small terminal sizes
+- Layout breaks when adding 6th panel but works with 5
+- Horizontal scrolling appears unexpectedly
+- Panels overlap each other in grid layouts
+
+**How to avoid:**
+1. **Always subtract borders FIRST** - Calculate `contentHeight = m.height - 2` before any panel rendering
+2. **Create layout calculator function** - Centralize logic:
+   ```go
+   func calculatePanelLayout(totalHeight, borderChars, numPanels int) int {
+       return (totalHeight - (borderChars * numPanels)) / numPanels
+   }
+   ```
+3. **Document border constants** - `const BorderHeightCost = 2` with comments explaining usage
+4. **Test at minimum terminal size** - Verify 80×24 terminal doesn't cause overflow
+5. **Explicit truncation over wrapping** - In bordered panels, always truncate text rather than auto-wrap
+6. **Account for titles** - If panels have title bars, subtract those too: `contentHeight - 2 (borders) - 1 (title)`
+7. **Use golden rule** - "Always Account for Borders - Subtract 2 from height calculations BEFORE rendering panels"
+
+**Warning signs:**
+- Content overflows panel borders
+- Panels don't fit in terminal window
+- Bottom panels cut off at small terminal sizes
+- Layout breaks when adding 6th panel but works with 5
+- Horizontal scrolling appears unexpectedly
+- Math doesn't add up: terminal height 24, but panels try to use 30 lines
+
+**Phase to address:**
+Phase 2 (Stats Panels) - Must establish correct layout calculations before implementing multi-panel grid
+
+**References:**
+- [Tips for Building BubbleTea Programs: Layout Rules](https://leg100.github.io/en/posts/building-bubbletea-programs/) - "Always Account for Borders - Subtract 2 from height calculations BEFORE rendering panels"
 
 ---
 
 ## Moderate Pitfalls
 
----
-
-### Pitfall 7: WakaTime Rate Limit (429) Not Handled Gracefully in Dashboard Mode
+### Pitfall 9: Theme Config and API Key in Same File
 
 **What goes wrong:**
-In dashboard mode with frequent auto-refresh, a 429 response causes the existing error handler to surface an error to the user on every tick. The dashboard shows "Rate limit exceeded" repeatedly. The auto-refresh continues hammering the API despite getting 429 responses (no backoff).
+Storing theme selection in the same config file as the WakaTime API key (`~/.wakatime.cfg`) causes users to accidentally share API keys when sharing theme configurations in dotfiles repos, screenshots, or screen shares. Theme configs are intended to be shareable, but API keys must remain secret.
 
 **Why it happens:**
-The current `fetchApi()` converts 429 to an error string and returns it. In a one-shot CLI, this is correct. In a live dashboard, the refresh ticker keeps firing regardless of previous errors. Without exponential backoff, the dashboard makes the rate limit worse.
+Single config file pattern is simpler to implement. Developers add new settings to existing config without considering security boundaries. Users copy entire config files when sharing customizations.
 
-**Prevention:**
-1. Implement exponential backoff with jitter on 429 responses
-2. Check `Retry-After` header before next retry
-3. Show "Rate limited — retrying in Xs" in the dashboard status bar instead of an error
-4. Minimum refresh interval of 60 seconds (well under 10 req/s averaged over 5 minutes)
-
-**Detection:**
-- Console logs showing repeated 429 errors at fixed intervals
-- No "retry after" delay between requests
+**How to avoid:**
+1. **Separate config files** - API key in `~/.wakatime.cfg`, theme in `~/.config/wakadash/theme.toml`
+2. **Document separation** - README explains why configs are separate
+3. **Default to safe sharing** - Theme config should be safe to commit to dotfiles repo
 
 **Phase to address:**
-Phase 2 (Live Refresh) — Implement alongside the refresh ticker.
+Phase 1 (Theme Foundation) - Establish config file structure before implementation
 
 ---
 
-### Pitfall 8: ANSI Escape Codes in Non-TTY Output After Adding TUI
+### Pitfall 10: Creating New Styles in View() on Every Render
 
 **What goes wrong:**
-When output is piped (e.g., `wakadash | grep ...`) or redirected, raw ANSI escape codes appear in the output. The existing code already handles this with `colorsShouldBeEnabled()` TTY check. But if the TUI framework is used without the alt-screen buffer, escape sequences appear in the shell history and pipe output.
+Creating Lipgloss style objects inside `View()` method on every render causes CPU spikes and 50-200ms render times. With 6+ panels each recreating 5-10 styles per render, this compounds to thousands of allocations per second. Users experience UI lag on updates.
 
 **Why it happens:**
-Adding a TUI framework changes output mode. The existing color guard (`NO_COLOR`, TTY check) only applies to the static render path. If the dashboard accidentally starts in a non-TTY context (e.g., piped, inside scripts), Bubble Tea still emits escape codes.
+Straightforward implementation creates styles where they're used. Developers don't realize Lipgloss style creation has measurable performance cost when done thousands of times per second.
 
-**Prevention:**
-1. Detect non-TTY at startup and fall back to static output mode (existing behavior)
-2. Use `tea.WithAltScreen()` so TUI output doesn't pollute the scrollback buffer
-3. Preserve the existing `--no-colors` and `NO_COLOR` honor path for the static mode
-
-**Detection:**
-- `wakadash --watch | cat` shows escape codes
+**How to avoid:**
+1. **Create styles once in Init()** - Store in model struct, reference in View()
+2. **Recreate only on theme change** - In Update() when theme changes, rebuild styles once
+3. **Memoize by theme** - Cache styles per theme, lookup instead of recreate
+4. **Profile before optimizing** - Measure View() execution time; target <50ms per frame
 
 **Phase to address:**
-Phase 1 (TUI Foundation) — Mode detection must be in the entry point before Bubble Tea starts.
+Phase 1 (Theme Foundation) - Establish style creation patterns before building panels
 
 ---
 
-### Pitfall 9: ANSI Color Code Compatibility Across Terminal Emulators
+### Pitfall 11: No Minimum Terminal Size Check
 
 **What goes wrong:**
-The existing code uses `\x1b[38;2;128;128;128m` (24-bit RGB true color for `MidGray`). This works in modern terminals (iTerm2, Windows Terminal, Kitty) but not in older terminals (some SSH clients, older macOS Terminal.app versions, tmux without `terminal-overrides`). In unsupported terminals, the color code renders as literal text or breaks surrounding formatting.
+Dashboard attempts to render in 80×24 terminal, panels overlap, text truncated mid-word, borders broken. Users see corrupted display and don't understand why.
 
-**Why it happens:**
-24-bit true color (`\x1b[38;2;R;G;Bm`) is not universally supported. The existing colors.go uses it for `MidGray` but falls back to standard 256-color or 8-color codes for all other colors. This inconsistency can cause visible artifacts in degraded terminals.
-
-**Prevention:**
-1. Use 256-color or 8-color codes as the primary palette (already done for most colors)
-2. For `MidGray`, fall back to `\x1b[90m` (bright black / dark gray) when true color is unsupported
-3. Check `COLORTERM=truecolor` env var before using 24-bit codes
-4. Bubble Tea's Lip Gloss handles color degradation automatically — use it instead of manual ANSI strings
-
-**Detection:**
-- Test in `tmux` without `set -g terminal-overrides`
-- Test with `TERM=xterm` explicitly set
-- Literal characters appearing where colors should be
+**How to avoid:**
+1. **Set minimum size** - Require 100×30 or similar based on panel layout
+2. **Show friendly message** - "Terminal too small (80×24), need at least 100×30" with current size
+3. **Test at 80×24** - Verify graceful degradation or clear error message
 
 **Phase to address:**
-Phase 3 (Polish) — Acceptable to address after core dashboard works. Use Lip Gloss early to avoid retroactive replacement.
+Phase 2 (Stats Panels) - Test with final layout to determine minimum size
 
 ---
 
-### Pitfall 10: Adding Cobra Breaks Existing Flag Parsing
+### Pitfall 12: All Panels Update Simultaneously
 
 **What goes wrong:**
-The existing codebase uses the standard `flag` package directly with short (`-r`) and long (`--range`) flag variants registered manually. If Cobra is introduced for the new `--watch` or `--interval` flags, the two flag systems conflict. Cobra's `pflag` library does not coexist cleanly with stdlib `flag` without explicit bridging.
+All 6 panels redraw simultaneously every refresh interval, causing CPU spike, brief freeze, and distracting full-screen flash. Users see periodic lag spikes every 30-60 seconds.
 
-**Why it happens:**
-Cobra uses `pflag` (POSIX-compliant flags) while the existing code uses stdlib `flag`. When both are registered, the same flag name can be parsed by either, leading to silently ignored flags or panics on duplicate registration.
-
-**Prevention:**
-Two safe paths:
-1. Add new flags to the existing stdlib `flag` system (no Cobra introduction)
-2. Migrate entirely to `pflag`/Cobra in a single refactor (not incrementally)
-
-Do not mix `flag` and `pflag` in the same binary without a bridge layer.
-
-**Detection:**
-- Existing `-r` short flag stops working after Cobra added
-- `flag redefined: range` panic at startup
+**How to avoid:**
+1. **Stagger panel updates** - Update panels 5 seconds apart, or
+2. **Update only focused panel** - Full refresh only on user request
+3. **Differential rendering** - Only redraw panels with changed data
 
 **Phase to address:**
-Phase 1 (TUI Foundation) — Decision on flag system must precede adding any new flags.
+Phase 2 (Stats Panels) - Implement during refresh logic
 
 ---
 
-### Pitfall 11: State Management Complexity Explosion
+## Technical Debt Patterns
 
-**What goes wrong:**
-The dashboard state grows to include: current data, loading state, error state, refresh timer, selected range, selected tab, terminal size, color mode, refresh interval — all in one model. `Update()` becomes an unmaintainable switch statement with hundreds of cases. Bugs in one state transition corrupt another.
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|----------------|-----------------|
+| Hardcode colors directly in components | Fast prototyping, no abstraction needed | Every theme change requires finding/updating dozens of color codes | Only for throwaway proofs-of-concept, never for production |
+| Skip theme system, use flag for preset selection only | Simpler implementation, no runtime switching complexity | User must restart to change theme, limits flexibility | Acceptable for v1.0 if runtime switching not critical UX requirement |
+| Fetch all panel data simultaneously without batching | Simpler code, all panels populate at once | Rate limiting on every dashboard load, poor UX at scale | Never acceptable with known rate limits - design with batching from start |
+| Use High Performance Rendering for all viewports | Potentially smoother rendering in some terminals | Higher memory usage, deprecated feature, may break in future versions | Only when profiling proves standard rendering insufficient for use case |
+| Manual style creation in each View() call | Straightforward, no state management | Performance penalty on every render, noticeable lag with 6+ panels | Never - always create styles once in Init() or on theme change |
+| Set .Width() on all dynamic text elements | Consistent visual alignment | Rendering corruption bugs on rerenders, hard to debug | Only for static text; use containers with MaxWidth() for dynamic content |
+| Store theme config with API key | Single file, simpler to manage | API key leaks when sharing theme configs | Never - always separate security-sensitive from shareable configs |
 
-**Why it happens:**
-Bubble Tea's single-model pattern is clean for simple apps but requires discipline for multi-screen dashboards. Without deliberate component boundaries, the model struct and Update() function accrete state without structure.
+## Integration Gotchas
 
-**Prevention:**
-1. Define explicit state machine states (`Loading`, `Ready`, `Error`, `Paused`)
-2. Separate viewport/tab models as sub-components with their own `Update()` methods
-3. Keep the top-level model as an orchestrator, not a data store
-4. Use typed messages, not booleans: `type loadingMsg struct{}` not `m.isLoading = true`
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| WakaTime API | Separate request per panel (6+ simultaneous requests) | Single `/stats` request, distribute data to panels |
+| Lipgloss AdaptiveColor | Using in View() without pre-initialization | Call `lipgloss.HasDarkBackground()` in main() before BubbleTea starts |
+| BubbleTea viewports | Creating viewport per panel without pooling | Update to Bubbles v0.21.1+ with parser pooling, limit viewport usage |
+| Terminal detection | Assuming TERM=xterm-256color always available | Test across TERM values, provide 256-color degradation, add --no-color flag |
+| Theme switching | Rebuilding all styles synchronously on theme change | Cache theme styles in model, use lazy/progressive redraw, or restart-based |
+| Language colors | Using GitHub Linguist hex codes without fallback | Verify 256-color degradation looks acceptable, test in degraded terminals |
+| Border calculations | Using total height directly for panel content | Always subtract border chars first: `contentHeight = total - 2` |
 
-**Detection:**
-- Model struct has more than ~8 fields
-- `Update()` function longer than ~60 lines
-- Bug fixes in one feature break another unrelated feature
+## Performance Traps
 
-**Phase to address:**
-Phase 1 (TUI Foundation) — Define the state machine before writing display logic.
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| Creating new styles in View() on every render | CPU spikes, 50-200ms render times, UI lag on updates | Create styles once in Init() or Update() on theme change, store in model | Becomes noticeable with 3+ panels, unacceptable at 6+ panels |
+| Viewport without content limits | Memory grows from 5 MB to 40+ MB over time | Cap content size (e.g., "top 10" not full dataset), update x/ansi dependency to v0.21.1+ | Breaks when multiple viewports × frequent updates × long-running session |
+| Synchronous theme rebuild | 100-500ms lag spike, visible flicker, frozen UI | Lazy rebuild (mark dirty, rebuild on next update), or restart-based themes | Noticeable with 4+ panels, unacceptable with 6+ panels updating live |
+| Auto-wrap in bordered panels | Layout corruption, text bleeding outside borders, misaligned panels | Explicit truncation with lipgloss.NewStyle().MaxWidth(), never rely on auto-wrap | Breaks immediately when content exceeds panel width |
+| Simultaneous API requests | HTTP 429 after 3-5 dashboard loads within 5 minutes | Batch requests with 200ms delays, single aggregate API call preferred | Hits rate limit after <5 minutes of normal usage with 30s refresh |
+| Dynamic .Width() styles | Rendering corruption, faint text, bleeding borders after 10-20s of updates | Use .MaxWidth() on containers, explicit truncation for dynamic text | Manifests after 10-20 seconds of live updates, compounds over time |
 
----
+## Security Mistakes
 
-## Minor Pitfalls
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| Storing API key in theme config | API key leaked in dotfiles repos, screenshots, screen shares | Separate config files: api-key in ~/.wakatime.cfg, theme in ~/.config/wakadash/theme.toml |
+| Exposing full API errors in UI | Leaks API endpoint structure, rate limit details useful for abuse | Sanitize error messages: show "API request failed" not full response body |
+| No timeout on background color detection | User holds Ctrl+C, terminal query hangs, process unkillable | 5-second timeout on all terminal queries with graceful fallback |
+| Logging sensitive data during API calls | API keys in log files, stats data in crash reports | Strip Authorization headers before logging, redact numeric stats in debug mode |
 
----
+## UX Pitfalls
 
-### Pitfall 12: Hardcoded Refresh Intervals Hit API Unexpectedly
-
-**What goes wrong:**
-A default refresh interval of 30 seconds seems reasonable, but with 10 req/s averaged over 5 minutes (300 seconds), the budget is 3,000 requests per 5-minute window. However, if the user opens multiple terminal windows running the dashboard, or if the dashboard makes multiple API calls per refresh (stats + summary), the combined load approaches the limit.
-
-**Prevention:**
-- Default refresh interval: minimum 60 seconds
-- Make interval configurable via `--interval` flag
-- Count API calls per refresh: if more than 2 endpoints are called, increase the default interval proportionally
-- Display the next-refresh countdown in the status bar so users understand the cadence
-
-**Phase to address:**
-Phase 2 (Live Refresh) — Set the default during implementation.
-
----
-
-### Pitfall 13: WakaTime 302 Redirect Treated as Rate Limit
-
-**What goes wrong:**
-WakaTime sometimes returns HTTP 302 instead of 429 when rate limiting. The existing error handler catches only 429 explicitly. A 302 causes the HTTP client to follow the redirect, potentially hitting a different endpoint or timing out.
-
-**Prevention:**
-Configure the HTTP client to not follow redirects automatically:
-
-```go
-client := &http.Client{
-    Timeout: timeout,
-    CheckRedirect: func(req *http.Request, via []*http.Request) error {
-        return http.ErrUseLastResponse  // don't follow redirects
-    },
-}
-// Then handle 302 the same as 429 with backoff
-```
-
-**Phase to address:**
-Phase 2 (Live Refresh) — Handle during API client enhancement.
-
----
-
-### Pitfall 14: WakaTime `cached_at` Staleness in Status Bar Endpoints
-
-**What goes wrong:**
-The `/status_bar/today` endpoint is backed only by cached data. During dashboard display, this endpoint returns an empty `{"data":{"chart_data":[]}}` response while the cache updates. If the dashboard shows this data without checking `cached_at`, it displays empty charts during the cache refresh window.
-
-**Prevention:**
-Always check `cached_at` timestamp. If older than the expected update interval, show "Updating..." state instead of empty charts.
-
-**Phase to address:**
-Phase 2 (Live Refresh) — Handle during data display implementation.
-
----
-
-### Pitfall 15: Emoji/Unicode Characters Break Layout in Some Terminals
-
-**What goes wrong:**
-The existing `render.go` uses `🬋` (BLOCK SEXTANT character, U+1FB0B) as the bar character. This is a Unicode 13.0 character not supported in all terminal fonts. When the character is unsupported, it renders as a replacement character (□) with different width, breaking bar chart alignment.
-
-**Why it happens:**
-The code already acknowledges this with the comment `// ❙ 🬋 ▆ ❘ ❚ █ ━ ▭ ╼ ━ 🬋`. When the character isn't available in the user's font, the fallback is invisible but the byte width still takes space.
-
-**Prevention:**
-- Detect terminal Unicode support via `LANG` env var or `TERM` capabilities
-- Provide an ASCII fallback (`=`, `-`, `|`) when Unicode is not available
-- Use `--no-unicode` flag or auto-detect
-
-**Phase to address:**
-Phase 3 (Polish) — Low priority; existing users already see this in static mode.
-
----
-
-## Phase-Specific Warnings
-
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| TUI Foundation | Model state mutation from goroutines | Use tea.Cmd for all async work; no direct model writes |
-| TUI Foundation | Blocking event loop with sync API calls | Wrap all existing fetch functions as tea.Cmd immediately |
-| TUI Foundation | Panic leaving terminal in raw mode | Keep CatchPanics enabled; use WithAltScreen |
-| TUI Foundation | Terminal width using stty subprocess | Replace getTerminalCols() with WindowSizeMsg handler |
-| TUI Foundation | Flag system conflict (flag vs pflag) | Decide: stay on stdlib flag or migrate to Cobra fully |
-| Live Refresh | Goroutine leak from ticker | Use tea.Tick pattern; cancel on quit; one ticker at a time |
-| Live Refresh | 429 rate limit from aggressive polling | 60s minimum interval; exponential backoff; show retry status |
-| Live Refresh | 202 treated as error | Handle StatusAccepted as "computing" sentinel, retry with delay |
-| Live Refresh | 302 redirect from WakaTime rate limiting | Disable redirect following; treat 302 same as 429 |
-| Live Refresh | cached_at staleness showing empty charts | Check cached_at; show "Updating..." not empty state |
-| Polish | True color codes in degraded terminals | Use Lip Gloss adaptive colors or check COLORTERM |
-| Polish | Unicode bar chars in limited fonts | Provide ASCII fallback; auto-detect or --no-unicode flag |
-
----
-
-## Integration Pitfalls: Adding TUI to This Specific Codebase
-
-The existing wakafetch codebase has specific patterns that create integration risk:
-
-| Existing Pattern | Risk When Adding TUI | Correct Migration |
-|-----------------|---------------------|-------------------|
-| `ui.Errorln(err.Error())` calls `os.Exit(1)` | Will exit inside running TUI, no cleanup | Return errors; display via TUI error state |
-| `getTerminalCols()` spawns `stty` subprocess | Slow, breaks on resize, Windows returns 9999 | Replace with Bubble Tea `WindowSizeMsg` |
-| Global `var Clr Colors` package state | Safe in static mode; unsafe if TUI modifies it | Keep static mode path; TUI uses Lip Gloss directly |
-| `fetchApi[T]()` uses sync HTTP with 10s timeout | Will block event loop if called directly | Wrap in `tea.Cmd` — function body stays the same |
-| `flag` package for CLI flags | Conflicts with Cobra/pflag if introduced | Add `--watch` and `--interval` to existing `flag` setup |
-| `main()` directly calls display functions | No separation between data and render layers | Introduce model layer before TUI integration |
-
----
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| Silent rate limit failures | Dashboard shows "Loading..." forever, no explanation | Display "Rate limited, retrying in 60s" with countdown |
+| Theme change requires restart without explanation | User toggles theme shortcut, nothing happens, confusion | If restart-required: show "Theme changed, restart to apply" message |
+| No visual feedback during API fetch | User sees blank panels, thinks app frozen | Show skeleton loaders or "Fetching data..." in each panel |
+| Broken rendering on unknown terminals | Colors missing, borders wrong, unusable on user's terminal | Detect terminal capabilities, fall back to monochrome gracefully, test on 5+ TERM values |
+| Panels overflow small terminals | Dashboard unusable on 80×24 terminals, horizontal scroll needed | Set minimum terminal size (100×30), show "Terminal too small" message with dimensions below threshold |
+| All panels update simultaneously | CPU spike every 30s, brief freeze, distracting refresh | Stagger panel updates 5s apart, or refresh only focused panel |
+| Language colors don't degrade well | In 256-color mode, colors indistinguishable or jarring | Test GitHub Linguist hex codes in 256-color mode, adjust if needed |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Race condition check**: Run `go run -race .` in dashboard mode with fast refresh — no races reported
-- [ ] **Resize handling**: Resize terminal while running — layout adapts correctly
-- [ ] **Panic recovery**: Force a panic in a Cmd goroutine — terminal restores to normal state
-- [ ] **Rate limit simulation**: Force 429 response — backoff activates, no retry storm
-- [ ] **202 handling**: Use WakaTime's `all_time` range on first load — shows "calculating" not error
-- [ ] **Goroutine leak**: Run for 30 minutes with auto-refresh — goroutine count stays stable
-- [ ] **Non-TTY mode**: `wakadash --watch | cat` — falls back to static output, no escape codes
-- [ ] **Quit during fetch**: Press `q` while data is loading — exits cleanly, terminal restored
-- [ ] **ticker cleanup**: Change range while refreshing — old ticker cancelled, no duplicate requests
+- [ ] **Theme system:** Verified NO hardcoded lipgloss.Color() values remain in codebase (grep audit passed)
+- [ ] **Terminal compatibility:** Tested on xterm, xterm-256color, tmux, screen, alacritty, kitty (not just development terminal)
+- [ ] **Rate limiting:** Confirmed single API request or batched with delays (not 6+ simultaneous requests)
+- [ ] **Memory profiling:** Verified <10 MB baseline memory, stable over 30+ minutes of updates
+- [ ] **Border calculations:** All panel heights subtract border characters (contentHeight = total - 2)
+- [ ] **AdaptiveColor initialization:** Called HasDarkBackground() in main() before program.Run()
+- [ ] **Dynamic width styles:** No .Width() on dynamic text, only on containers or static text
+- [ ] **Error handling:** API failures show user-friendly messages, not raw error dumps
+- [ ] **Minimum terminal size:** Tested at 80×24, 100×30 - shows graceful message if too small
+- [ ] **Theme persistence:** Selected theme saved to config, loaded correctly on restart
+- [ ] **Color fallback:** Verified --no-color flag disables all styling, still usable
+- [ ] **Render performance:** Measured View() execution <50ms per frame (100ms at absolute max)
+- [ ] **Language color degradation:** Tested GitHub Linguist colors in 256-color mode, look acceptable
+- [ ] **Bubbles version:** Updated to v0.21.1+ for viewport memory fix
+- [ ] **BubbleTea version:** Updated to v0.27.1+ for AdaptiveColor hang fix
+- [ ] **Style creation:** Styles created once in Init/Update, not in View() on every render
 
----
+## Recovery Strategies
+
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|---------------|----------------|
+| Hardcoded colors discovered after implementing 3 themes | MEDIUM | 1. Grep all lipgloss.Color() calls, 2. Create theme.Colors struct, 3. Mass find/replace with theme references, 4. Visual regression test each theme |
+| Memory leak from viewports | LOW | 1. Update x/ansi dependency to latest, 2. Verify Bubbles v0.21.1+, 3. Run pprof to confirm fix |
+| AdaptiveColor startup hang | LOW | 1. Add `_ = lipgloss.HasDarkBackground()` before program.Run(), 2. Update BubbleTea to v0.27.1+ |
+| Hit WakaTime rate limit | MEDIUM | 1. Implement exponential backoff (60s, 120s, 240s), 2. Add caching layer, 3. Refactor to single API call if possible |
+| Layout breaks with 6 panels | MEDIUM | 1. Create layout calculator utility, 2. Audit all height calculations, 3. Add border constants, 4. Test at 80×24 |
+| Width() rendering corruption | HIGH | 1. Identify all .Width() usage on dynamic text, 2. Replace with .MaxWidth() on containers, 3. Add explicit truncation, 4. Regression test rapid rerenders |
+| Theme switch performance lag | MEDIUM-HIGH | 1. Profile View() execution times, 2. Move style creation to Init()/Update(), 3. Implement lazy rebuild or switch to restart-based themes |
+| Terminal incompatibility | LOW-MEDIUM | 1. Add termenv.ColorProfile() detection, 2. Implement 256-color fallback, 3. Add --no-color flag, 4. Test on 5+ terminal types |
+
+## Pitfall-to-Phase Mapping
+
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| Hardcoded colors | Phase 1: Theme Foundation | Grep returns zero lipgloss.Color() with hex/ANSI literals |
+| AdaptiveColor hangs | Phase 1: Theme Foundation | App starts <1s on all test terminals, no hanging |
+| Dynamic width corruption | Phase 2: Stats Panels | Run dashboard for 5 minutes, no rendering degradation |
+| Viewport memory leaks | Phase 2: Stats Panels | Memory stable after 30 minutes, <10 MB baseline |
+| TERM incompatibility | Phase 1: Theme Foundation | Test matrix passes: xterm, xterm-256color, tmux, screen, kitty, alacritty |
+| Runtime theme switching lag | Phase 3: Theme Switching | Theme switch completes <100ms, no visible flicker (if runtime switching implemented) |
+| API rate limiting | Phase 2: Stats Panels | Run dashboard for 10 minutes with 30s refresh, zero HTTP 429 errors |
+| Border calculation errors | Phase 2: Stats Panels | All panels fit at 100×30 terminal size, no overflow |
+| Style creation in View() | Phase 1: Theme Foundation | Profile shows View() execution <50ms |
+| Language color degradation | Phase 1: Theme Foundation | Visual test in 256-color terminal, colors distinguishable |
+| Config file separation | Phase 1: Theme Foundation | Theme config separate from API key config |
+| Minimum terminal size | Phase 2: Stats Panels | Clear error message at 80×24, works at 100×30 |
 
 ## Sources
 
 ### Official Documentation
-- [WakaTime API Documentation](https://wakatime.com/developers) — Rate limits, 202 handling, cached_at, pagination
-- [Bubble Tea pkg.go.dev](https://pkg.go.dev/github.com/charmbracelet/bubbletea) — CatchPanics, WithAltScreen, WindowSizeMsg, tea.Tick
-- [Go Race Detector](https://go.dev/doc/articles/race_detector) — Detection methodology
+- [WakaTime API Docs](https://wakatime.com/developers) - Rate limiting: <10 req/sec averaged over 5 minutes
+- [Lipgloss GitHub](https://github.com/charmbracelet/lipgloss) - Style definitions and adaptive colors
+- [BubbleTea GitHub](https://github.com/charmbracelet/bubbletea) - Elm Architecture TUI framework
+- [Bubbles GitHub](https://github.com/charmbracelet/bubbles) - TUI components including viewport
 
-### Verified Community Sources (MEDIUM confidence)
-- [Tips for Building Bubble Tea Programs](https://leg100.github.io/en/posts/building-bubbletea-programs/) — Event loop pitfalls, layout arithmetic, panic recovery
-- [Bubble Tea on pkg.go.dev](https://pkg.go.dev/github.com/charmbracelet/bubbletea) — Signal handling, ErrInterrupted, WithoutCatchPanics
-- [How to Implement Retry Logic in Go with Exponential Backoff](https://oneuptime.com/blog/post/2026-01-07-go-retry-exponential-backoff/view) — Backoff patterns for 429
+### Critical GitHub Issues (PRIMARY SOURCES)
+- [BubbleTea #1036](https://github.com/charmbracelet/bubbletea/issues/1036) - AdaptiveColor hanging on startup - FIXED v0.27.1
+- [BubbleTea #1225](https://github.com/charmbracelet/bubbletea/issues/1225) - Width() rendering corruption on rerenders
+- [Bubbles #829](https://github.com/charmbracelet/bubbles/issues/829) - Viewport memory usage - FIXED v0.21.1
+
+### Theme System References
+- [Lipgloss Theme Package](https://pkg.go.dev/github.com/purpleclay/lipgloss-theme) - Adaptive color palette example
+- [Glitter UI Library](https://github.com/brittonhayes/glitter) - Theme components for Lipgloss/BubbleTea
+- [Design Tokens & Theming](https://materialui.co/blog/design-tokens-and-theming-scalable-ui-2025) - Migration from hardcoded values
+- [Material-UI #25018](https://github.com/mui/material-ui/issues/25018) - Theme switching performance issues
+- [OpenTUI #3731](https://github.com/anomalyco/opencode/issues/3731) - System theme support implementation
+
+### Terminal Compatibility
+- [Terminal Colours Are Tricky](https://jvns.ca/blog/2024/10/01/terminal-colours/) - Comprehensive TERM variable explanation
+- [So You Want to Make a TUI](https://p.janouch.name/article-tui.html) - True color vs 256-color, terminal compatibility
+- [Why Terminal Emacs Requires TERM=xterm-256color](https://www.w3tutorials.net/blog/terminal-emacs-colors-only-work-with-term-xterm-256color/) - TERM compatibility details
+- [Ratatui Color Discussion](https://github.com/ratatui/ratatui/discussions/877) - Choosing colors for terminal emulators
+
+### Best Practices & Performance
+- [Tips for Building BubbleTea Programs](https://leg100.github.io/en/posts/building-bubbletea-programs/) - Layout calculations, receiver types, golden rules
+- [Phoenix TUI Framework](https://github.com/phoenix-tui/phoenix) - Differential rendering, emoji width issues in Lipgloss
+- [BubbleLayout Package](https://pkg.go.dev/github.com/winder/bubblelayout) - Declarative layout management
+- [Dashboard Design Best Practices](https://www.sisense.com/blog/4-design-principles-creating-better-dashboards/) - Layout complexity management
+- [Dashboard UX Patterns](https://www.pencilandpaper.io/articles/ux-pattern-analysis-data-dashboards) - Multi-panel complexity
 
 ### Project Code Analysis
-- `/workspace/wakafetch/api.go` — Existing sync HTTP client, 10s timeout, 429 handling gap
-- `/workspace/wakafetch/ui/render.go` — stty-based terminal size detection, sync rendering
-- `/workspace/wakafetch/ui/colors.go` — 24-bit true color usage for MidGray
-- `/workspace/wakafetch/main.go` — os.Exit() in help handler, flag package usage
-
-### Background
-- [ANSI Escape Code Standards (2025)](https://jvns.ca/blog/2025/03/07/escape-code-standards/) — Terminal compatibility landscape
-- [Building Bubbletea Programs (Hacker News)](https://news.ycombinator.com/item?id=41369065) — Community experience with pitfalls
-- [Understanding Goroutine Leaks in Go](https://leapcell.io/blog/understanding-and-debugging-goroutine-leaks-in-go-web-servers) — Ticker and goroutine lifecycle
+- `/workspace/wakadash/internal/tui/styles.go` - Current hardcoded colors (Color "62", "205", "241", "196", "214")
+- `/workspace/wakadash/internal/tui/colors.go` - Language colors using GitHub Linguist hex codes
+- `/workspace/wakafetch/ui/colors.go` - Legacy ANSI color implementation for reference
 
 ---
 
-*Research confidence: HIGH for concurrency/architecture pitfalls (official Bubble Tea docs + race detector docs + project code analysis). MEDIUM for terminal compatibility (community sources, no single authoritative spec). LOW confidence items are flagged inline.*
+*Pitfalls research for: wakadash v2.1 Visual Overhaul + Themes*
+*Researched: 2026-02-19*
+*Primary focus: Integration pitfalls when adding theme system and multi-panel layouts to existing TUI application*
+*Confidence: HIGH for Lipgloss/BubbleTea issues (official GitHub issues with maintainer responses), MEDIUM for terminal compatibility (community sources), HIGH for WakaTime API (official documentation)*

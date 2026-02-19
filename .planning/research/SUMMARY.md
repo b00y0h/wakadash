@@ -1,207 +1,348 @@
 # Project Research Summary
 
-**Project:** wakadash — Live Dashboard Milestone (added to wakafetch)
-**Domain:** Live-updating terminal dashboard (TUI) for WakaTime/Wakapi coding statistics
-**Researched:** 2026-02-17
-**Confidence:** HIGH (stack + architecture + core pitfalls) / MEDIUM (ntcharts maturity, terminal compatibility)
+**Project:** wakadash v2.1 — Visual Overhaul + Themes
+**Domain:** Terminal dashboard TUI with theme system and comprehensive stats panels
+**Researched:** 2026-02-19
+**Confidence:** HIGH
 
 ## Executive Summary
 
-wakadash is a live-refresh terminal dashboard mode added to the existing wakafetch Go CLI. The pattern is well-established — htop, btop, and k9s define user expectations. The charmbracelet ecosystem (bubbletea + lipgloss + bubbles) is the clear standard for Go TUI development in 2026, with bubbletea v1.3.10 being production-stable (v2 is alpha and must be avoided). The existing wakafetch codebase is well-structured for this extension: api.go is pure and reusable, ui/ functions already return composable []string slices, and config loading is already decoupled. The recommended approach is to add a new `dashboard/` package that wraps existing code rather than rewriting it, activated by a `--dashboard` / `-w` flag.
+wakadash v2.1 extends the existing live WakaTime dashboard (built with Bubble Tea + Lipgloss) with a professional theme system and comprehensive stats panels. The research indicates this is a **low-risk enhancement** to an established foundation — not building from scratch, but systematically adding features to working code.
 
-The primary architectural decision is to adopt the Elm Architecture (Model-Update-View) from bubbletea, which solves the live-refresh problem cleanly via tea.Tick and async tea.Cmd for HTTP calls. The most dangerous mistakes are concurrency-related: mutating model state outside Update(), blocking the event loop with synchronous API calls, and goroutine leaks from mismanaged tickers. All three are prevented by consistently using tea.Cmd for async work — this is the single most important pattern to enforce from day one. ntcharts is the only bubbletea-native charting library but has no tagged releases; the existing handwritten graph/heatmap code in ui/ is a viable fallback if ntcharts proves problematic.
+The recommended approach uses **centralized theme abstraction** via a Theme struct with 6 pre-built presets (Dracula, Nord, Gruvbox, Monokai, Solarized, Tokyo Night) sourced from github.com/willyv3/gogh-themes/lipgloss v1.2.0. Stats panels (Categories, Editors, OS, Machines) reuse the existing ntcharts barchart pattern established for Languages/Projects panels — zero new chart dependencies needed. Theme selection persists via ~/.wakatime.cfg extension with simple key=value format.
 
-For features, the research identifies a clear MVP boundary: a full-screen TUI with auto-refresh, summary header, languages and projects bar charts, visible refresh status, keyboard quit, help overlay, graceful resize, and non-crashing error display. This set differentiates wakadash from a fancier wakafetch without overreaching. The sparkline for hourly activity, panel toggles, runtime range switching, and color themes are confirmed differentiators that belong in a second phase after the dashboard foundation is solid. Mouse interaction, real-time streaming, in-app config editing, and interactive sorting are explicitly out of scope and should not be built.
+The **critical risks** are integration pitfalls from mixing new and old code: hardcoded colors breaking the theme system, Lipgloss AdaptiveColor causing startup hangs (fixed in BubbleTea v0.27.1+), and dynamic .Width() styles triggering rendering corruption. These are all preventable with systematic migration: audit hardcoded colors first, force early terminal detection, use .MaxWidth() instead of .Width() for dynamic content. The architecture research provides clear patterns: create theme struct before migration, compute summary stats in Update (not View), calculate responsive layouts in WindowSizeMsg handler.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The existing wakafetch codebase has zero external dependencies — a deliberate design choice. This milestone is the first point where external libraries are introduced, making the choice consequential. The charmbracelet ecosystem is the right call: bubbletea v1.3.10 for the event loop, lipgloss v1.1.0 for layout composition, and bubbles v1.0.0 for loading spinners and help components. These three form a coherent, actively maintained suite (last releases: Sep 2025, Mar 2025, Feb 2025 respectively) with 18,200+ dependent projects on bubbletea alone. They are the first external dependencies added via go.mod.
+The stack additions for v2.1 are minimal — **one new dependency** plus systematic refactoring of existing code. The existing v2.0 foundation (Bubble Tea v1.3.10, Lipgloss v1.1.0, ntcharts v0.4.0) remains unchanged and stable. No framework upgrades needed (v2 versions still in beta).
 
-ntcharts (NimbleMarkets/ntcharts) provides the only purpose-built charting for bubbletea: sparklines, bar charts, and heatmaps. The risk is its lack of tagged releases — pin by commit hash. If ntcharts becomes unmaintained, the existing graphStr() and heatmap() functions in ui/ are a direct fallback since they already produce []string slices that compose into bubbletea View() methods. Do not use bubbletea v2 (alpha, breaking API, import path changed); do not introduce Cobra/pflag (conflicts with existing stdlib flag setup).
+**Add one dependency:**
+- **github.com/willyv3/gogh-themes/lipgloss v1.2.0** — 361 professional terminal color schemes including all 6 required themes (Dracula, Nord, Gruvbox, Monokai, Solarized, Tokyo Night). Colors pre-wrapped as lipgloss.Color, zero manual conversion needed. Released Oct 2025, zero dependencies, themes compiled into binary.
 
-**Core technologies:**
-- charmbracelet/bubbletea v1.3.10: TUI event loop, Elm Architecture, auto-refresh via tea.Tick — the only Go TUI framework with production stability and ecosystem depth at this scale
-- charmbracelet/lipgloss v1.1.0: Layout composition, borders, responsive column sizing — replaces handwritten ANSI layout code; handles color degradation automatically
-- charmbracelet/bubbles v1.0.0: Spinner, help component — pre-built components that match bubbletea's model/update/view cycle
-- NimbleMarkets/ntcharts (pin by commit): Sparklines, bar charts, heatmaps native to bubbletea — the only library supporting all three required chart types in a bubbletea context
+**No updates needed:**
+- charmbracelet/bubbletea v1.3.10 (stable, v2 still beta)
+- charmbracelet/lipgloss v1.1.0 (stable, v2 still alpha)
+- charmbracelet/bubbles v1.0.0 (stable, v2 still beta)
+- NimbleMarkets/ntcharts v0.4.0 (latest stable)
+
+**Config mechanism:**
+- Standard library `flag` package for CLI override (--theme dracula)
+- Extend existing ~/.wakatime.cfg parser with `theme=` key
+- Zero heavy config libraries needed (spf13/viper, gookit/config rejected as overkill)
+
+**Stats panels implementation:**
+- API data already fetched: Categories, Editors, OperatingSystems, Machines exist in types.StatsData struct
+- Rendering uses existing ntcharts barchart.Model (same as Languages/Projects panels)
+- Summary stats use existing lipgloss layout (no table libraries needed)
 
 ### Expected Features
 
-The research identifies what users expect from a "live dashboard" versus what differentiates wakadash from both wakafetch and browser-based WakaTime dashboards. See FEATURES.md for the full comparison table against existing tools.
+Research indicates **8 must-have features** (table stakes users expect) and **6 differentiators** (competitive advantages). The anti-features section identifies 8 commonly requested but problematic features to explicitly avoid.
 
 **Must have (table stakes):**
-- Auto-refresh loop (configurable interval, default 60s; +/- keys to adjust) — the defining characteristic of a live dashboard
-- Full-screen TUI layout (AltScreen mode, not inline scrolling) — users expect dedicated terminal occupation
-- Keyboard quit (q / Ctrl-C) with clean terminal restore — absence is jarring; bubbletea handles this
-- Visible refresh indicator (last-updated timestamp in footer) — users must know if data is live or stale
-- Graceful terminal resize without crashing — mandatory for any tool used in resizable terminals
-- Color-coded bar chart for top languages — core visual requirement; every WakaTime dashboard shows this
-- Summary header panel (today total, week total, daily average, best day) — always-visible glanceable stats
-- Top N projects bar chart panel — second most-watched metric after languages
-- Error state display (friendly, non-crashing) — API failures must not surface Go stack traces
-- Help overlay (? key) — all serious TUI tools provide in-app keybinding reference
+- Multiple stat panels — All competitors (WTF, Sampler) show multiple data categories, not just Languages/Projects
+- Top 10 lists — Industry standard for stats dashboards, WakaTime web dashboard shows this
+- Summary metrics panel — Dashboard users expect at-a-glance totals (Grafana, WakaTime patterns)
+- Time labels on bars — Users need to see actual durations ("5h 23m"), not just relative lengths
+- Color coding — Terminal users expect visual distinction between categories
+- Responsive layout — TUI must adapt to terminal size changes
+- Panel toggles — Users need to hide panels in small terminals or for focus
+- Horizontal bar charts — Universal pattern for ranked data visualization
 
-**Should have (competitive):**
-- Sparkline for today's hourly activity — answers "when am I most productive?" — requires separate durations API endpoint
-- Multi-panel layout (side-by-side on wide terminals, stacked on narrow) — information density matching btop
-- Configurable refresh interval at runtime (+/- keys) — btop pattern; users control data staleness
-- Panel toggle (show/hide editors, OSs, machines panels) — btop region-toggle UX
-- Time range switcher at runtime (r key cycles today/week/month) — eliminates restart-to-change-range workflow
-- Color themes (--theme flag, 2-3 presets: dark/light/high-contrast) — differentiates from all existing WakaTime CLI tools
-- Editors panel (toggleable bar chart) — valuable for polyglot developers
+**Should have (competitive advantages):**
+- Named theme presets — Familiar themes (Dracula, Nord, Gruvbox, etc.) reduce cognitive load vs custom colors, cult followings
+- Theme flag + config — Flexibility via --theme dracula CLI flag OR persistent config file
+- Automatic theme persistence — Selected theme remembered across sessions
+- Smart 2-column fallback — Panels arrange intelligently: <80 cols = stack vertical, ≥80 = 2 columns
+- Visual stats summary — At-a-glance panel showing Last 30d, Totals, Averages, Top items
+- Activity heatmap integration — GitHub-style heatmap already implemented, extend theming to it
 
-**Defer (v2+):**
-- Goals and streak display (Wakapi may not support goals API; endpoint availability is uncertain)
-- Operating systems panel (low user interest relative to adding another panel)
-- Machines panel (niche — only useful for multi-device developers)
-- Dependencies breakdown (rarely the first developer dashboard check)
-- Mouse interaction, real-time heartbeat streaming, in-app config editing, interactive sorting (all explicitly anti-features for this milestone)
+**Defer (explicitly avoid — anti-features):**
+- Custom theme editor in TUI — Complex UI, error-prone, bloats codebase. Config file editing simpler.
+- Animated theme transitions — Terminal rendering limitations, flicker, poor UX. Instant switch cleaner.
+- Auto-theme by time of day — Assumes user preferences, hard to debug, annoying. Explicit control better.
+- 100+ theme pack — Maintenance burden, decision paralysis. 6 curated popular themes optimal.
+- Gradient/RGB terminal colors — Terminal compatibility issues, poor accessibility. Stick to 256-color.
+- Infinite scrolling panels — Breaks dashboard at-a-glance value. Top 10 with clear cutoff better.
 
 ### Architecture Approach
 
-The recommended architecture introduces a new `dashboard/` package (model.go, messages.go, fetch.go, layout.go) that wraps existing code. The existing api.go, config.go, types/, and ui/ packages require zero logic changes — only ui/ function export visibility needs updating (lowercase graphStr → exported GraphStr, etc.). The entry point (main.go, flags.go) adds the --dashboard/-w flag branch and launches tea.NewProgram with AltScreen. This is the minimum-change strategy: the static CLI mode remains entirely unchanged.
+The architecture builds on Bubble Tea's Model-View-Update pattern with **centralized theme abstraction** and **modular panel components**. Key decision: **style registry pattern** with static theme presets (not runtime-switchable) to avoid state management complexity.
 
-The data flow is: Init() returns tea.Batch(fetchStatsCmd(), tickCmd()) to kick off initial fetch and schedule the first tick concurrently. The tick fires after the configured interval; Update() checks elapsed time and issues a new fetch command. All HTTP calls run in goroutines managed by bubbletea via tea.Cmd — never called synchronously in Update(). View() calls layout.RenderDashboard(m), which uses lipgloss.JoinVertical/Horizontal to compose ui/ function outputs into panels.
+**Theme system architecture:**
+1. **Centralized Theme struct** — Groups all lipgloss styles (Border, Title, Dim, Error, Warning, chart colors)
+2. **Adaptive colors for UI, fixed for charts** — UI elements use lipgloss.AdaptiveColor for light/dark terminal detection; chart colors use fixed palette (assume dark terminal)
+3. **Static theme presets** — Themes selected at startup via config/flag, immutable during session (avoids runtime switching complexity)
+4. **Config extension** — Add `theme=dracula` to existing ~/.wakatime.cfg (simple key=value format)
+5. **No runtime switching** — Avoid theme mutation during session (causes performance lag, state complexity)
 
 **Major components:**
-1. `dashboard/model.go` — Root bubbletea model: holds all dashboard state, routes all messages to panels
-2. `dashboard/messages.go` — Typed Msg definitions: TickMsg, StatsDataMsg, SummaryDataMsg, ErrMsg
-3. `dashboard/fetch.go` — tea.Cmd wrappers around existing api.go calls; no HTTP logic duplicated
-4. `dashboard/layout.go` — Lipgloss composition of ui/ []string returns into joined panel view string + status bar
-5. `ui/*.go` (existing, minimally modified) — Export visibility changes only; logic unchanged
-6. `api.go` / `config.go` / `types/` (existing, unchanged) — Reused directly as-is
+1. **Theme Registry** (internal/tui/theme.go) — Theme struct definition, GetTheme() function, preset registry
+2. **Individual Theme Definitions** (internal/tui/themes_*.go) — One file per theme (Dracula, Nord, Gruvbox, Monokai, Solarized, Tokyo Night)
+3. **Stats Panel Components** — Reuse existing barchart.Model pattern for Categories, Editors, OS, Machines
+4. **Summary Stats Computation** — SummaryStats struct computed in Update (not View), maintains pure render function
+5. **Responsive Layout** — Grid-based layout adapts to terminal width: 3-column (≥120 cols), 2-column (80-119 cols), 1-column (<80 cols)
+
+**Integration points:**
+- `config.go` — Add Theme string field, parse `theme=` key from ~/.wakatime.cfg
+- `main.go` — Add --theme flag, load theme via GetTheme(), pass to Model
+- `model.go` — Add theme field, new chart instances, summaryStats, visibility toggles (extend 1-4 keys to 5-9)
+- `styles.go` — DELETE (move to theme.go for centralization)
+
+**Data flow:**
+```
+main.go → config.Load() → (APIURL, APIKey, Theme)
+       → tui.GetTheme(cfg.Theme) → Theme struct
+       → tui.NewModel(client, range, refresh, theme)
+       → Model with theme-based styles
+```
 
 ### Critical Pitfalls
 
-The pitfall research is unusually strong because the codebase was analyzed directly. All pitfalls are traced to specific existing code patterns. Six critical pitfalls were identified; five must be addressed in Phase 1 (TUI Foundation) before any feature work begins.
+Research identified **8 critical pitfalls** and **4 moderate pitfalls** with specific prevention strategies. The critical ones are all integration issues from adding features to existing code.
 
-1. **Mutating model state outside Update()** — Never write model.field = value from a goroutine. All API responses must arrive as tea.Msg through the event loop. Enforce with `go run -race .` throughout development. Getting this wrong causes non-deterministic crashes that masquerade as rendering bugs.
+**Top 5 critical pitfalls to avoid:**
 
-2. **Blocking the event loop with synchronous API calls** — The existing fetchStats() and fetchSummary() use synchronous HTTP with a 10-second timeout. Calling these directly in Init() or Update() freezes the entire UI. Wrap every API call in tea.Cmd from the start — this cannot be retrofitted cleanly.
+1. **Hardcoded Colors Break Theme System Integration** — Existing wakadash code has hardcoded ANSI colors (Color "62", "205", "241", "196", "214") in styles.go that will conflict with themes. **Prevention:** Audit all lipgloss.Color() calls with grep before implementing themes, create Theme struct first, migrate incrementally, use semantic names (theme.AccentColor not theme.Color62).
 
-3. **Panic leaves terminal in raw mode** — Any unrecovered panic in a bubbletea Cmd goroutine can leave the terminal unusable. Do not use tea.WithoutCatchPanics(). Never call os.Exit() from within a running bubbletea program (the existing showCustomHelp() does this — it must not be reused inside TUI paths).
+2. **AdaptiveColor Terminal Queries Cause Startup Hangs** — Using lipgloss.AdaptiveColor can cause 3-5 second hangs or indefinite freezes due to Bubble Tea and Lipgloss racing for stdout during terminal background detection. **Prevention:** Call `_ = lipgloss.HasDarkBackground()` in main() BEFORE program.Run(), ensure BubbleTea v0.27.1+ (bug fixed), provide --theme-mode=dark|light flag as fallback.
 
-4. **Terminal width via stty subprocess** — The existing getTerminalCols() spawns a stty subprocess. In AltScreen TUI mode this is slow, breaks on resize, and returns 9999 on Windows. Replace with bubbletea's WindowSizeMsg handler from the start. This cannot be retrofitted without rewriting the layout layer.
+3. **Dynamic Width Styles Cause Rendering Corruption** — Using .Width() on dynamically changing content causes text to render faint/ghosted on subsequent frames, borders bleed between panels. **Prevention:** Use .MaxWidth() on containers (not .Width() on dynamic text), explicit truncation for changing values, test rapid rerenders over 5+ minutes.
 
-5. **Flag system conflict** — The existing codebase uses stdlib flag package. Introducing Cobra/pflag creates silent conflicts or panics on duplicate registration. Add --dashboard and --interval to the existing stdlib flag setup. Do not introduce Cobra in this milestone.
+4. **API Rate Limiting Triggers with Multiple Panel Data Fetches** — Naive implementation with 6 separate API requests per panel hits WakaTime's <10 req/sec limit within 5 minutes. **Prevention:** Single /stats API request that returns all data, distribute to panels. API already returns Categories, Editors, OS, Machines in one response.
 
-6. **Goroutine leaks from ticker** — Using time.NewTicker directly creates goroutines that never clean up when the ticker is recreated (e.g., user changes refresh interval). Use bubbletea's tea.Tick pattern exclusively — one-shot per tick, requeued after each data arrival, cancelled on quit.
+5. **Border Calculations Break Multi-Panel Layouts** — Forgetting to subtract border characters causes panels to overflow. 6 panels × 2 chars each = 12 characters miscalculation. **Prevention:** Always calculate `contentHeight = total - 2` before rendering, create layout calculator function, test at 80×24 terminal size.
+
+**Other critical pitfalls:**
+- **Viewport Memory Leaks** — Pre-v0.21.1 Bubbles creates new 4KB parser objects per render. With 6+ panels updating every second, compounds rapidly. **Prevention:** Update to Bubbles v0.21.1+ with parser pooling.
+- **TERM Variable Incompatibility** — Dashboard looks perfect in dev terminal but broken colors in users' terminals (xterm vs xterm-256color vs tmux). **Prevention:** Test across TERM values, use AdaptiveColor for UI, verify 256-color degradation looks acceptable.
+- **Runtime Theme Switching Lag** — Changing themes requires rebuilding all styles, causes 100-500ms lag spikes. **Prevention:** Use restart-based themes (simpler, zero runtime cost) OR implement lazy/progressive redraw if runtime switching critical.
 
 ## Implications for Roadmap
 
-All four research sources converge on a 3-phase structure with a clear dependency ordering. The architecture research provides the build sequence directly, validated by the pitfall research showing which decisions must come first.
+Based on research, recommended **3-phase structure** with clear boundaries and dependencies.
 
-### Phase 1: TUI Foundation
+### Phase 1: Theme Foundation
 
-**Rationale:** Five of six critical pitfalls must be addressed before any feature work begins. Architectural decisions made here (state model, message types, async patterns, flag system, terminal width handling) cannot be changed later without rewriting the dashboard layer. The dependency graph in ARCHITECTURE.md confirms that messages.go and fetch.go must exist before model.go, which must exist before layout.go, which must exist before any feature panels.
+**Rationale:** Must establish theme system foundation before adding new panels. Migrating existing 4 panels to themes validates the pattern before scaling to 10+ panels. Critical pitfalls (hardcoded colors, AdaptiveColor hangs, TERM compatibility) must be addressed before expanding UI surface area.
 
-**Delivers:** A running but minimal bubbletea dashboard — full-screen AltScreen mode, initial data fetch (async), loading state, basic stats display, keyboard quit, terminal resize handling. No auto-refresh yet; no fancy layout. Proves the integration works end-to-end before adding complexity.
+**Delivers:**
+- Theme struct with semantic color fields
+- 6 theme presets (Dracula, Nord, Gruvbox, Monokai, Solarized, Tokyo Night)
+- Config extension (theme= key in ~/.wakatime.cfg)
+- CLI flag override (--theme dracula)
+- Migration of existing panels to theme-based styling
+- TERM compatibility verified (test on 6+ terminal types)
 
-**Addresses (from FEATURES.md):** Full-screen TUI layout, keyboard quit (q/Ctrl-C), graceful terminal resize, error state display, summary header panel, visible refresh indicator
+**Addresses features:**
+- Named theme presets (differentiator)
+- Theme flag + config (differentiator)
+- Automatic theme persistence (differentiator)
 
-**Avoids (from PITFALLS.md):** Model state mutation outside Update() (#1), blocking event loop (#2), panic leaving raw mode (#3), stty subprocess (#6), flag system conflict (#10), state complexity explosion (#11)
+**Avoids pitfalls:**
+- Hardcoded colors breaking theme system (audit with grep, incremental migration)
+- AdaptiveColor startup hangs (call HasDarkBackground() in main() first)
+- TERM incompatibility (test xterm, xterm-256color, tmux, screen, alacritty, kitty)
+- Style creation in View() (create once in Init/Update, not every render)
 
-**Stack elements:** bubbletea v1.3.10, lipgloss v1.1.0; bubbles optional at this phase
+**Technical debt paid:**
+- Delete styles.go (5 global variables with hardcoded colors)
+- Centralize all styling in theme.go
+- Establish semantic color naming convention
 
-**Architecture components:** dashboard/messages.go, dashboard/fetch.go, dashboard/model.go, dashboard/layout.go (minimal), ui/ export visibility changes, main.go + flags.go entry point
+### Phase 2: Stats Panels + Summary
 
-**Research flag:** Standard patterns — bubbletea Elm Architecture is thoroughly documented in official docs and tutorials. ARCHITECTURE.md provides the complete build sequence. No additional research-phase needed; follow ARCHITECTURE.md build sequence directly.
+**Rationale:** With theme foundation established, add new panels using proven patterns. API data already fetched (Categories, Editors, OS, Machines in StatsData), just need rendering. Summary panel requires all stats panels to exist first (aggregates top items from each).
 
-### Phase 2: Live Refresh and Data Panels
+**Delivers:**
+- 4 new stat panels (Categories, Editors, Operating Systems, Machines) using existing barchart.Model pattern
+- Stats summary panel (Last 30d, Daily avg, Top items, counts)
+- Responsive 2-column layout (side-by-side on ≥80 cols, stack on <80)
+- Panel toggles extended (keys 1-4 to 5-9)
+- Time labels on all bars ("5h 23m" formatting)
+- Top 10 lists for all panels
 
-**Rationale:** With the TUI foundation proven, all remaining table-stakes features can be implemented. The auto-refresh loop is the defining characteristic of the dashboard; the bar chart panels are the primary visual differentiator from wakafetch. Three API-level pitfalls (goroutine leaks, 429 rate limiting, 202 computing state) are specific to the refresh loop and must be addressed here, not deferred.
+**Addresses features:**
+- Multiple stat panels (table stakes)
+- Top 10 lists (table stakes)
+- Summary metrics panel (table stakes)
+- Time labels on bars (table stakes)
+- Responsive layout (table stakes)
+- Panel toggles (table stakes)
+- Visual stats summary (differentiator)
 
-**Delivers:** The complete MVP dashboard — auto-refresh ticker, languages bar chart panel, projects bar chart panel, configurable refresh interval (--interval flag and +/- keys), help overlay (? key), last-updated footer with countdown, rate-limit handling with exponential backoff, 202 "calculating" state display. This is the shippable milestone.
+**Uses stack:**
+- Existing ntcharts barchart.Model (no new chart libraries)
+- Existing lipgloss layout (no table libraries)
+- Existing types.StatsData (API already fetches all data)
 
-**Addresses (from FEATURES.md):** Auto-refresh loop, color-coded bar chart for top languages, top N projects panel, help overlay, configurable refresh interval at runtime, best day callout in header
+**Implements architecture:**
+- SummaryStats struct computed in Update (pure View functions)
+- Responsive layout helpers (calculatePanelWidth() based on terminal size)
+- Unified panel renderer (renderStatsPanel() pattern)
 
-**Avoids (from PITFALLS.md):** Goroutine leaks from ticker (#4), WakaTime 202 response treated as error (#5), 429 rate limit without backoff (#7), ANSI codes in non-TTY output (#8), hardcoded intervals hitting API (#12), 302 redirect treated as rate limit (#13), cached_at staleness (#14)
+**Avoids pitfalls:**
+- API rate limiting (single /stats request, distribute data to panels)
+- Border calculation errors (contentHeight = total - 2, test at 80×24)
+- Dynamic width corruption (use .MaxWidth() on containers, explicit truncation)
+- Viewport memory leaks (update to Bubbles v0.21.1+, limit viewport usage)
+- All panels updating simultaneously (consider staggered updates 5s apart)
 
-**Stack elements:** ntcharts (bar chart component) or existing graphStr() as fallback; bubbles spinner for loading state
+### Phase 3: Polish + Edge Cases
 
-**Architecture components:** Auto-refresh tick loop in model.go, ntcharts BarChart in layout.go, status bar with countdown, enhanced fetch.go with backoff and 202/302 handling
+**Rationale:** With core functionality complete, address edge cases and polish. Minimum terminal size check prevents confusing broken layouts. Theme validation ensures graceful degradation on invalid theme names.
 
-**Research flag:** ntcharts integration needs validation before this phase begins — no tagged releases, heatmap quality vs existing custom renderer needs comparison. Validate ntcharts bar chart output quality before committing to it; the existing graphStr() is a full fallback.
+**Delivers:**
+- Minimum terminal size enforcement (100×30 recommended based on panel layout)
+- Theme validation with fallback (invalid theme → default to Dracula)
+- Error message polish (rate limiting, API failures, terminal too small)
+- 3-column layout for ultra-wide terminals (optional, if ≥120 cols common)
+- Panel size optimization based on actual usage patterns
 
-### Phase 3: Enhanced Visualization and Polish
+**Addresses features:**
+- Smart 2-column fallback (differentiator) — extends to 3-column
+- Activity heatmap integration (differentiator) — apply theme colors to existing heatmap
 
-**Rationale:** With a solid, correct dashboard in place, the differentiating features (sparkline, panel toggles, runtime range switching, color themes) can be added incrementally. These are all model-state additions — new keys update model fields, new renders respond to them. The architecture is already set up for this; they are additive. Terminal compatibility polish (true color degradation, Unicode fallbacks) belongs here as well.
-
-**Delivers:** The full differentiated dashboard — sparkline for hourly activity (hourly rhythm view), panel toggle keybindings (e/o/m), runtime time range switcher (r key), multi-column layout on wide terminals, editors panel, color theme support (--theme flag), terminal compatibility hardening.
-
-**Addresses (from FEATURES.md):** Sparkline for today's hourly activity, panel toggle, time range switcher, color themes, multi-panel side-by-side layout, editors panel
-
-**Avoids (from PITFALLS.md):** True color in degraded terminals (#9), Unicode bar chars in limited fonts (#15)
-
-**Stack elements:** ntcharts Sparkline/StreamlineChart for hourly activity; lipgloss adaptive colors for theme system
-
-**Architecture components:** Durations API endpoint integration in fetch.go, sparkline panel in layout.go, panel visibility state in model, theme configuration via lipgloss style config
-
-**Research flag:** Wakapi durations endpoint availability needs validation — not all Wakapi versions are confirmed to support the hourly activity endpoint needed for the sparkline. Design Phase 3 sparkline with a capability check — if endpoint returns 404, hide the sparkline panel silently rather than showing an error.
+**Avoids pitfalls:**
+- No minimum terminal size check (friendly error at 80×24)
+- Theme config and API key in same file (acceptable for v2.1, separate in v2.2+)
+- All panels update simultaneously (implement staggered updates)
 
 ### Phase Ordering Rationale
 
-- Pitfall research is unambiguous that concurrency/event-loop correctness must come first — five critical pitfalls are Phase 1 concerns that cannot be retrofitted after feature work begins
-- Feature dependency graph from FEATURES.md confirms ordering: full-screen TUI layout must exist before panels, panels before toggles, all before themes
-- Architecture build sequence from ARCHITECTURE.md maps directly to Phase 1: messages.go → fetch.go → layout.go → model.go → entry point
-- Sparkline (Phase 3) requires the durations API endpoint, a separate HTTP call with uncertain Wakapi support — correctness gate before adding that complexity
-- Color themes (Phase 3) require lipgloss to be established across all panels — must come after all panels exist in Phase 2
+**Why this order:**
+1. **Theme foundation must come first** — Can't add 6+ new panels with hardcoded colors, migration becomes impossible. Validating theme system with existing 4 panels (Languages, Projects, Sparkline, Heatmap) before scaling to 10+ panels reduces risk.
+
+2. **Stats panels build on proven patterns** — Theme system established, ntcharts barchart.Model pattern proven with Languages/Projects, API data already fetched. Just rendering, no new dependencies or architecture patterns.
+
+3. **Polish after validation** — Can't determine minimum terminal size until panel layout finalized. Edge case handling (invalid themes, terminal too small) makes sense after core functionality working.
+
+**Grouping based on dependencies:**
+- Phase 1: Zero dependencies on new panels (works with existing 4 panels)
+- Phase 2: Depends on theme system existing (new panels use theme colors)
+- Phase 3: Depends on panel layout finalized (need actual dimensions to set minimums)
+
+**How this avoids pitfalls:**
+- Hardcoded color audit happens in Phase 1 before scaling UI surface area
+- TERM compatibility testing in Phase 1 with smaller UI validates before expansion
+- API rate limiting addressed in Phase 2 when adding data-dependent panels
+- Memory profiling in Phase 2 after implementing 2-3 panels, before building all 6+
+- Border calculation patterns established in Phase 2, applied consistently
 
 ### Research Flags
 
-Phases needing deeper research during planning:
-- **Phase 2:** Validate ntcharts bar chart output quality vs existing graphStr() before choosing ntcharts vs the existing code. The existing heatmap renderer uses a custom 5-level green RGB gradient that ntcharts may not replicate exactly — determine early whether to use ntcharts or keep the existing chart renderers.
-- **Phase 3:** Confirm Wakapi durations endpoint availability across common Wakapi versions before designing the sparkline panel. Design for graceful absence (hide panel, not error).
+**Phases likely needing deeper research during planning:**
+- **Phase 2 (Stats Panels):** Responsive layout calculations for 2-column → 3-column grid. Research indicates patterns exist (lipgloss.JoinHorizontal, calculatePanelWidth()) but may need experimentation for optimal panel sizing at different terminal widths.
 
-Phases with standard patterns (skip research-phase):
-- **Phase 1:** bubbletea Elm Architecture is thoroughly documented. ARCHITECTURE.md provides the exact build sequence and all code patterns needed.
-- **Phase 2 (refresh loop):** tea.Tick pattern is official API with clear documentation. PITFALLS.md provides the exact code patterns for backoff and 202 handling.
+**Phases with standard patterns (skip research-phase):**
+- **Phase 1 (Theme Foundation):** Well-documented theme struct pattern from charmbracelet/huh theme.go and purpleclay/lipgloss-theme. Config extension follows existing ~/.wakatime.cfg parser pattern.
+- **Phase 3 (Polish):** Standard error handling and validation patterns.
+
+**Additional research recommendations:**
+- **Before Phase 1:** Audit current codebase for all lipgloss.Color() usage (grep -r "lipgloss.Color" .) to understand hardcoded color scope
+- **During Phase 2:** Profile memory usage after implementing 2-3 panels before building all 6+ (verify <10 MB baseline, stable over 30 minutes)
+- **After Phase 2:** Visual regression testing with all 6 themes across 6 terminal types (xterm, xterm-256color, tmux, screen, alacritty, kitty)
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | bubbletea/lipgloss/bubbles all have official docs and stable releases. ntcharts is MEDIUM — no tagged releases, small team (4 contributors); fallback to existing ui/ code is viable and confirmed composable. |
-| Features | HIGH | WakaTime API confirmed for all data fields. Existing codebase confirmed as baseline. Feature set validated against btop/k9s/lazygit UX patterns. Wakapi compatibility is MEDIUM for optional endpoints. |
-| Architecture | HIGH | Official bubbletea pkg.go.dev docs verified all patterns (WindowSizeMsg, tea.Cmd, tea.Tick, AltScreen). Existing codebase read directly to confirm reuse path and identify specific files/functions. |
-| Pitfalls | HIGH (concurrency), MEDIUM (terminal compat) | Concurrency pitfalls verified against official Go race detector docs and bubbletea API docs. Terminal compatibility from community sources only — no single authoritative spec for degradation behavior. |
+| Stack | HIGH | Single new dependency (gogh-themes/lipgloss v1.2.0) with official pkg.go.dev docs, Oct 2025 release. Existing dependencies stable (v1.x releases), v2 betas explicitly avoided. Config via standard library flag package. |
+| Features | HIGH | Feature research cross-referenced WTF, Sampler, Grafana, WakaTime web dashboard patterns. Table stakes vs differentiators vs anti-features clearly categorized. MVP definition (v2.1 scope) extracted from existing FEATURES.md milestone. |
+| Architecture | HIGH | Theme struct pattern verified from charmbracelet/huh theme.go and purpleclay/lipgloss-theme official implementations. Bubble Tea Model-View-Update pattern well-documented. Integration points clearly defined with specific file changes needed. |
+| Pitfalls | HIGH | Critical pitfalls sourced from official GitHub issues with maintainer responses (BubbleTea #1036 AdaptiveColor hang, BubbleTea #1225 Width() corruption, Bubbles #829 viewport memory). Terminal compatibility from comprehensive TERM variable analysis. WakaTime rate limiting from official API docs. |
 
 **Overall confidence:** HIGH
 
+All four research areas backed by primary sources (official documentation, verified GitHub issues with maintainer confirmations, established codebase patterns from wakadash v2.0). Architecture approach validated by multiple BubbleTea applications (charmbracelet/huh, purpleclay/lipgloss-theme, OpenCode TUI). Pitfalls extracted from actual bug reports with confirmed fixes in specific versions.
+
 ### Gaps to Address
 
-- **ntcharts heatmap fidelity:** The existing heatmap uses a custom 5-level green RGB gradient with specific color values. ntcharts heatmap may not match visually. Validate before Phase 2 — if the custom gradient is important to the project, keep the existing heatmap renderer and only use ntcharts for bar charts and sparklines.
-- **Wakapi durations endpoint:** MEDIUM confidence that all Wakapi versions support the hourly activity durations endpoint needed for the sparkline. Design Phase 3 sparkline with a capability check — if endpoint returns 404, hide the panel silently rather than showing an error.
-- **Refresh interval default:** Research suggests 60s minimum to stay well under WakaTime's rate limit (10 req/s averaged over 5 minutes) when making 2 API calls per refresh. Validate the actual call count per refresh cycle and adjust the default accordingly during Phase 2 implementation.
-- **WakaTime free plan stats lag:** Free plan users may regularly see 202 responses on first load. The "Calculating..." state needs clear UX — not an error, but a distinguishable waiting state. Confirm this is common enough to warrant a polished UI treatment before Phase 2 ships.
+Minor gaps that need validation during implementation:
+
+**Gap 1: Optimal panel sizing for responsive layout**
+- **Issue:** Research indicates patterns (2-column at ≥80 cols, 3-column at ≥120 cols) but actual optimal widths depend on content. Top 10 lists with time labels need minimum width for readability.
+- **Handling:** Implement initial layout with 2-column focus (80-119 cols), measure actual content widths with longest language/project/category names. 3-column layout (≥120 cols) can be added in Phase 3 if testing shows benefit.
+- **Validation:** Test with real WakaTime data (not mock data) at 80, 100, 120, 160 cols to verify panel widths work.
+
+**Gap 2: GitHub Linguist color degradation in 256-color mode**
+- **Issue:** Existing wakadash uses GitHub Linguist hex codes for language colors. Research indicates these should degrade gracefully in 256-color terminals, but actual degradation quality unknown.
+- **Handling:** Test language panel rendering in terminals with TERM=xterm-256color (not true color). If colors indistinguishable or jarring, implement 256-color palette mapping for common languages.
+- **Validation:** Visual test of top 10 languages in 256-color mode. Colors must be distinguishable.
+
+**Gap 3: Summary stats "Last 30 Days" calculation**
+- **Issue:** Architecture research recommends using existing stats.HumanReadableTotal if range is last_30_days, but unclear if WakaTime API always provides 30-day summary or if separate endpoint fetch needed.
+- **Handling:** If current range matches, use TotalTime directly. Otherwise, show "Range: [actual range]" instead of "Last 30 Days" label. Don't fetch separate summaries endpoint (avoids rate limiting complexity).
+- **Validation:** Test with --range last_30_days vs --range last_7_days to verify label accuracy.
+
+**Gap 4: Heatmap theme color integration**
+- **Issue:** Features research suggests theme-specific heatmap gradients (Dracula = purple gradient, Nord = blue gradient) but unclear if users prefer consistent GitHub-style green gradient across themes.
+- **Handling:** Phase 1 implements universal GitHub-style green gradient for all themes (simpler, familiar). Phase 3 can add theme-specific gradients if user feedback requests it.
+- **Validation:** User testing with 2-3 beta testers — ask "Would you prefer heatmap colors match theme, or stay GitHub green?"
+
+**Non-gaps (research conclusive):**
+- Theme struct pattern — Multiple verified implementations (charmbracelet/huh, purpleclay/lipgloss-theme)
+- API rate limiting prevention — Official WakaTime docs confirm single /stats endpoint returns all data
+- AdaptiveColor hang fix — BubbleTea v0.27.1+ confirmed fix with maintainer response
+- Viewport memory leak fix — Bubbles v0.21.1+ confirmed fix with parser pooling
+- Border calculation pattern — Golden rule documented in BubbleTea best practices
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [charmbracelet/bubbletea v1.3.10](https://github.com/charmbracelet/bubbletea) — Elm Architecture, tea.Tick, tea.Every, tea.Batch, tea.Cmd, WithAltScreen, WindowSizeMsg
-- [pkg.go.dev bubbletea](https://pkg.go.dev/github.com/charmbracelet/bubbletea) — CatchPanics, ErrInterrupted, WithoutCatchPanics behavior
-- [charmbracelet/lipgloss v1.1.0](https://github.com/charmbracelet/lipgloss) — JoinHorizontal, JoinVertical, Border styles, adaptive colors
-- [charmbracelet/bubbles v1.0.0](https://github.com/charmbracelet/bubbles/releases) — Spinner, help components
-- [WakaTime API Documentation](https://wakatime.com/developers) — Rate limits, 202 handling, cached_at, all data fields confirmed
-- [Existing codebase: /workspace/wakafetch](https://github.com/sahaj-b/wakafetch) — api.go, ui/*.go, types/types.go, main.go — read directly for integration analysis
-- [Go Race Detector](https://go.dev/doc/articles/race_detector) — Race condition detection methodology
-- [Bubbletea Commands Tutorial](https://github.com/charmbracelet/bubbletea/blob/main/tutorials/commands/README.md) — Official async command patterns
+
+**Official Documentation:**
+- [gogh-themes/lipgloss pkg.go.dev](https://pkg.go.dev/github.com/willyv3/gogh-themes/lipgloss) — v1.2.0 API, Oct 2025 release, 361 themes verified
+- [WakaTime API Docs](https://wakatime.com/developers) — Rate limiting, /stats endpoint structure
+- [charmbracelet/lipgloss GitHub](https://github.com/charmbracelet/lipgloss) — v1.1.0, AdaptiveColor usage
+- [charmbracelet/bubbletea GitHub](https://github.com/charmbracelet/bubbletea) — v1.3.10, Model-View-Update pattern
+- [NimbleMarkets/ntcharts](https://github.com/NimbleMarkets/ntcharts) — v0.4.0, barchart API
+
+**GitHub Issues (Confirmed Bugs/Fixes):**
+- [BubbleTea #1036](https://github.com/charmbracelet/bubbletea/issues/1036) — AdaptiveColor startup hang, FIXED v0.27.1, maintainer response
+- [BubbleTea #1225](https://github.com/charmbracelet/bubbletea/issues/1225) — Width() rendering corruption, detailed reproduction steps
+- [Bubbles #829](https://github.com/charmbracelet/bubbles/issues/829) — Viewport memory leak, FIXED v0.21.1, pprof analysis
+
+**Reference Implementations:**
+- [charmbracelet/huh theme.go](https://github.com/charmbracelet/huh/blob/main/theme.go) — Theme struct pattern, adaptive colors
+- [purpleclay/lipgloss-theme](https://pkg.go.dev/github.com/purpleclay/lipgloss-theme) — Theme palette example
 
 ### Secondary (MEDIUM confidence)
-- [NimbleMarkets/ntcharts](https://github.com/NimbleMarkets/ntcharts) — Chart types confirmed: Sparkline, BarChart, HeatMap, StreamlineChart. No tagged releases — pin by commit.
-- [Tips for Building Bubble Tea Programs](https://leg100.github.io/en/posts/building-bubbletea-programs/) — Event loop pitfalls, state management patterns, layout arithmetic
-- [Build a System Monitor TUI in Go](https://penchev.com/posts/create-tui-with-go/) — htop-style dashboard pattern with bubbletea, tea.Every refresh
-- [Handling Polling in BubbleTea for Go](https://m3talsmith.medium.com/handling-polling-in-bubbletea-for-go-b17185835549) — tea.Batch + tick pattern validation
-- [Wakapi](https://wakapi.dev/) — WakaTime API compatibility scope, supported endpoints
-- [btop++ feature analysis](https://linuxblog.io/btop-the-htop-alternative/) — +/- refresh adjustment, region toggle, keyboard-first UX reference
 
-### Tertiary (LOW confidence, needs validation)
-- ntcharts maintenance trajectory — 4 contributors, no tagged releases. Validate heatmap output quality and long-term maintenance before committing.
-- Wakapi durations endpoint availability across versions — not all Wakapi deployments confirmed. Design for graceful absence.
-- ANSI escape code terminal compatibility specifics — community sources only; no single authoritative spec for degradation behavior.
+**Theme System Patterns:**
+- [Design Tokens & Theming Guide](https://materialui.co/blog/design-tokens-and-theming-scalable-ui-2025) — Migration from hardcoded values
+- [Material-UI #25018](https://github.com/mui/material-ui/issues/25018) — Theme switching performance issues (web framework, analogous to TUI)
+
+**Terminal Compatibility:**
+- [Terminal Colours Are Tricky](https://jvns.ca/blog/2024/10/01/terminal-colours/) — Comprehensive TERM variable explanation
+- [Ratatui Color Discussion](https://github.com/ratatui/ratatui/discussions/877) — Color palette best practices
+
+**TUI Best Practices:**
+- [Tips for Building BubbleTea Programs](https://leg100.github.io/en/posts/building-bubbletea-programs/) — Layout calculations, border handling, golden rules
+- [Shifoo: Multi View Interfaces](https://shi.foo/weblog/multi-view-interfaces-in-bubble-tea) — Component composition patterns
+
+**Dashboard Design:**
+- [9 Dashboard Design Principles (2026)](https://www.designrush.com/agency/ui-ux-design/dashboard/trends/dashboard-design-principles) — Visual hierarchy, S.M.A.R.T framework
+- [Grafana Dashboard Best Practices](https://grafana.com/docs/grafana/latest/visualizations/dashboards/build-dashboards/best-practices/) — Multi-panel complexity management
+
+**Theme Color Specifications:**
+- [Dracula Theme Official](https://draculatheme.com/spec) — Official Dracula color specification
+- [Nord Theme Colors and Palettes](https://www.nordtheme.com/docs/colors-and-palettes/) — Nord color system documentation
+- [Gruvbox GitHub](https://github.com/morhetz/gruvbox) — Gruvbox color scheme
+- [Tokyo Night GitHub](https://github.com/folke/tokyonight.nvim) — Tokyo Night color definitions
+
+### Tertiary (Project-Specific Context)
+
+**Existing Codebase:**
+- `/workspace/wakadash/internal/tui/styles.go` — Current hardcoded colors (Color "62", "205", "241", "196", "214")
+- `/workspace/wakadash/internal/tui/colors.go` — Language colors using GitHub Linguist hex codes
+- `/workspace/wakadash/internal/types/types.go` — StatsData struct confirming Categories, Editors, OS, Machines available
+- `/workspace/wakadash/internal/config/config.go` — Existing ~/.wakatime.cfg parser (api_url, api_key)
 
 ---
-*Research completed: 2026-02-17*
+
+*Research completed: 2026-02-19*
 *Ready for roadmap: yes*
