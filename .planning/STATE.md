@@ -2,19 +2,17 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-17)
+See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** A beautiful, live-updating terminal dashboard for coding stats — like htop for your coding activity
-**Current focus:** v2.0 Milestone Complete
+**Current focus:** v2.1 Visual Overhaul + Themes
 
 ## Current Position
 
-Phase: 7 of 7 (Distribution)
-Plan: 2 of 2 in current phase
-Status: MILESTONE COMPLETE
-Last activity: 2026-02-19 — Phase 7 complete, Homebrew tap working, homebrew-core PR submitted (pending popularity)
-
-Progress: [██████████] 100% (v2.0)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-19 — Milestone v2.1 started
 
 ## Performance Metrics
 
