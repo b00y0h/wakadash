@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NimbleMarkets/ntcharts/sparkline"
 	"github.com/NimbleMarkets/ntcharts/barchart"
+	"github.com/NimbleMarkets/ntcharts/sparkline"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -50,6 +50,9 @@ type Model struct {
 
 	// Sparkline data
 	hourlyData []float64 // 24 hours of activity
+
+	// Heatmap data
+	summaryData *types.SummaryResponse // For heatmap
 
 	// State
 	quitting bool
@@ -418,4 +421,43 @@ func (m *Model) updateProjectsChart() {
 	}
 
 	m.projectsChart.Draw()
+}
+
+// renderHeatmap renders a GitHub-style activity heatmap for the last 7 days.
+func (m Model) renderHeatmap() string {
+	if m.summaryData == nil || len(m.summaryData.Data) == 0 {
+		return dimStyle.Render("No activity data")
+	}
+
+	var blocks []string
+	for _, day := range m.summaryData.Data {
+		hours := day.GrandTotal.TotalSeconds / 3600.0
+		color := getActivityColor(hours)
+		// Unicode block character with day label
+		label := day.Range.Date[5:] // MM-DD format
+		block := lipgloss.NewStyle().
+			Background(color).
+			Foreground(lipgloss.Color("#fff")).
+			Padding(0, 1).
+			Render(label)
+		blocks = append(blocks, block)
+	}
+
+	return lipgloss.JoinHorizontal(lipgloss.Top, blocks...)
+}
+
+// getActivityColor returns a GitHub-style contribution color based on hours coded.
+func getActivityColor(hours float64) lipgloss.Color {
+	switch {
+	case hours < 0.5:
+		return lipgloss.Color("#2d2d2d") // Very dark gray
+	case hours < 2:
+		return lipgloss.Color("#0e4429") // Dark green
+	case hours < 4:
+		return lipgloss.Color("#006d32") // Medium green
+	case hours < 6:
+		return lipgloss.Color("#26a641") // Bright green
+	default:
+		return lipgloss.Color("#39d353") // Very bright green (GitHub-style)
+	}
 }

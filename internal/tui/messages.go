@@ -27,3 +27,8 @@ type countdownTickMsg time.Time
 type durationsFetchedMsg struct {
 	durations *types.DurationsResponse
 }
+
+// summaryFetchedMsg is sent when daily summaries are fetched for heatmap.
+type summaryFetchedMsg struct {
+	summary *types.SummaryResponse
+}
