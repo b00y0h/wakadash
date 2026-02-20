@@ -101,7 +101,7 @@ Plans:
 Plans:
 - [x] 08-01-PLAN.md - Theme package with struct, 6 presets, and config persistence
 - [x] 08-02-PLAN.md - Theme-aware styles migration and Model integration
-- [ ] 08-03-PLAN.md - Full-screen theme picker with preview and first-run detection
+- [x] 08-03-PLAN.md - Full-screen theme picker with preview and first-run detection
 
 #### Phase 9: Stats Panels + Summary
 **Goal**: Dashboard displays comprehensive stats with responsive layout
@@ -142,7 +142,7 @@ Plans:
 | 5. TUI Foundation | v2.0 | 2/2 | Complete | 2026-02-19 |
 | 6. Data Viz + UX | v2.0 | 3/3 | Complete | 2026-02-19 |
 | 7. Distribution | v2.0 | 2/2 | Complete | 2026-02-19 |
-| 8. Theme Foundation | v2.1 | 2/3 | In progress | - |
+| 8. Theme Foundation | v2.1 | 3/3 | Complete | 2026-02-20 |
 | 9. Stats Panels + Summary | v2.1 | 0/TBD | Not started | - |
 | 10. Polish + Edge Cases | v2.1 | 0/TBD | Not started | - |
 
@@ -154,4 +154,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-02-18*
-*Last updated: 2026-02-20 (08-02 complete)*
+*Last updated: 2026-02-20 (Phase 8 complete)*
