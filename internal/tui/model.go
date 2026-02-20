@@ -64,6 +64,10 @@ type Model struct {
 	showSparkline bool // 3 key
 	showHeatmap   bool // 4 key
 
+	// Theme picker
+	showPicker bool             // True when showing theme picker
+	picker     ThemePickerModel // Theme picker model
+
 	// State
 	quitting    bool
 	showHelp    bool
@@ -135,6 +139,37 @@ func (m Model) Init() tea.Cmd {
 
 // Update handles incoming messages and returns an updated model and next command.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// Delegate to picker when in picker mode
+	if m.showPicker {
+		switch msg := msg.(type) {
+		case tea.WindowSizeMsg:
+			m.picker.width = msg.Width
+			m.picker.height = msg.Height
+			m.width = msg.Width
+			m.height = msg.Height
+		case tea.KeyMsg:
+			var cmd tea.Cmd
+			newPicker, _ := m.picker.Update(msg)
+			m.picker = newPicker.(ThemePickerModel)
+			if m.picker.IsConfirmed() {
+				// Picker done - apply theme (already saved to config by picker)
+				themeName := m.picker.SelectedTheme()
+				m.theme = theme.GetTheme(themeName)
+				m.showPicker = false
+				// Update spinner style with new theme
+				m.spinner.Style = lipgloss.NewStyle().Foreground(m.theme.Primary)
+				return m, cmd
+			}
+			if m.picker.IsCancelled() {
+				// User cancelled - return to dashboard with existing theme unchanged
+				m.showPicker = false
+				return m, cmd
+			}
+			return m, cmd
+		}
+		return m, nil
+	}
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -190,6 +225,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case key.Matches(msg, m.keys.Toggle4):
 			m.showHeatmap = !m.showHeatmap
+			return m, nil
+		case key.Matches(msg, m.keys.ChangeTheme):
+			m.showPicker = true
+			m.picker = NewThemePicker(false) // false = not first run, cancel allowed
+			// Pre-select current theme in picker
+			for i, name := range theme.AllThemes() {
+				if name == m.theme.Name || strings.ToLower(m.theme.Name) == name {
+					m.picker.selectedIdx = i
+					break
+				}
+			}
 			return m, nil
 		}
 		return m, nil
@@ -249,6 +295,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
 	if m.quitting {
 		return ""
+	}
+
+	// Show picker if active
+	if m.showPicker {
+		return m.picker.View()
 	}
 
 	// Check minimum terminal size

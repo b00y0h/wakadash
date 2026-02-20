@@ -4,6 +4,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"runtime"
 	"time"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/b00y0h/wakadash/internal/api"
 	"github.com/b00y0h/wakadash/internal/config"
+	"github.com/b00y0h/wakadash/internal/theme"
 	"github.com/b00y0h/wakadash/internal/tui"
 )
 
@@ -55,6 +57,24 @@ func main() {
 
 	client := api.New(cfg.APIKey, cfg.APIURL)
 	refreshInterval := time.Duration(*refreshFlag) * time.Second
+
+	// Check if first run (no theme configured)
+	themeName, _ := theme.LoadThemeFromConfig()
+	isFirstRun := themeName == ""
+
+	if isFirstRun {
+		// Show theme picker on first run
+		// isFirstRun=true means Esc/Q are ignored (user MUST select a theme)
+		picker := tui.NewThemePicker(true)
+		pickerProgram := tea.NewProgram(picker, tea.WithAltScreen())
+		_, err := pickerProgram.Run()
+		if err != nil {
+			log.Fatalf("theme picker error: %v", err)
+		}
+		// Note: picker.SaveThemeToConfig() already called on Enter (see picker.go)
+		// No need to save again here — theme is persisted when user confirms in picker
+	}
+
 	m := tui.NewModel(client, *rangeFlag, refreshInterval)
 
 	// tea.WithAltScreen() is the correct approach for full-screen apps.
