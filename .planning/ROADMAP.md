@@ -147,7 +147,7 @@ Plans:
 | 7. Distribution | v2.0 | 2/2 | Complete | 2026-02-19 |
 | 8. Theme Foundation | v2.1 | 3/3 | Complete | 2026-02-20 |
 | 9. Stats Panels + Summary | v2.1 | 3/4 | In Progress | - |
-| 10. Polish + Edge Cases | v2.1 | 0/1 | Not started | - |
+| 10. Polish + Edge Cases | v2.1 | Complete    | 2026-02-20 | - |
 
 ## Distribution Notes
 
