@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 8 of 10 (Theme Foundation)
-Plan: 1 of TBD
+Plan: 2 of TBD
 Status: Executing
-Last activity: 2026-02-20 — Completed 08-01 (Theme Package Foundation)
+Last activity: 2026-02-20 — Completed 08-02 (Theme Integration)
 
-Progress: [█████████████░░░░░] 71% (10 of 14 total plans complete)
+Progress: [█████████████░░░░░] 79% (11 of 14 total plans complete)
 
 ## Performance Metrics
 
@@ -24,9 +24,9 @@ Progress: [█████████████░░░░░] 71% (10 of 14
 - Total execution time: 0.25 hours
 
 **Velocity (v2.0):**
-- Total plans completed: 10
-- Average duration: 9.2 min
-- Total execution time: 1.54 hours
+- Total plans completed: 11
+- Average duration: 8.5 min
+- Total execution time: 1.58 hours
 
 **By Phase (v2.0):**
 
@@ -36,7 +36,7 @@ Progress: [█████████████░░░░░] 71% (10 of 14
 | 5 | 2/2 | 8min | 4min |
 | 6 | 3/3 | 18min | 6min |
 | 7 | 2/2 | 44min | 22min |
-| 8 | 1/TBD | 2.5min | 2.5min |
+| 8 | 2/TBD | 5min | 2.5min |
 
 *Updated after each plan completion*
 
@@ -59,13 +59,15 @@ Recent decisions affecting current work:
 - Version at v0.2.0 representing Homebrew distribution capability
 
 **v2.1 context:**
-- Theme system must address hardcoded colors in existing code
+- Theme system must address hardcoded colors in existing code ✓ (completed in 08-02)
 - Research flags AdaptiveColor startup hang risk (fixed in BubbleTea v0.27.1+)
 - Single /stats API request returns all data (Categories, Editors, OS, Machines)
 - ntcharts barchart.Model pattern proven for Languages/Projects, reuse for new panels
 - Use hex colors for themes (lipgloss auto-handles terminal downsampling)
 - 5-level heatmap gradient per theme (None, Low, Medium, High, VeryHigh)
 - Persist theme to ~/.wakatime.cfg (reuses existing config file)
+- Theme-aware style functions pattern: func StyleName(t theme.Theme) lipgloss.Style
+- Theme loaded from config in NewModel(), falls back to DefaultTheme if not set
 
 ### Pending Todos
 
@@ -76,12 +78,12 @@ None.
 **homebrew-core resubmission:** Formula ready at b00y0h/homebrew-core:wakadash. Resubmit when project reaches ≥30 forks, ≥30 watchers, or ≥75 stars.
 
 **v2.1 integration risks (from research):**
-- Hardcoded colors in styles.go must be migrated to theme system
+- Hardcoded colors in styles.go must be migrated to theme system ✓ (resolved in 08-02)
 - AdaptiveColor terminal detection needs early call in main() to prevent hangs
 - Dynamic .Width() styles can cause rendering corruption (use .MaxWidth() instead)
 
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 08-01-PLAN.md (Theme Package Foundation)
+Stopped at: Completed 08-02-PLAN.md (Theme Integration)
 Resume file: None
