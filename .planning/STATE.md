@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 Phase: 9 of 10 (Stats Panels Summary)
 Plan: 2 of 4
 Status: In Progress
-Last activity: 2026-02-20 — Completed 09-02 (Summary Panel)
+Last activity: 2026-02-20 — Completed 09-01 (Stats Panels Foundation)
 
 Progress: [███████████████░░░] 93% (13 of 14 total plans complete)
 
@@ -75,6 +75,9 @@ Recent decisions affecting current work:
 - Summary panel uses accent border (theme.Primary) for visual distinction
 - Streak calculation limited to 7-day window from heatmap data
 - Panel style functions accept (theme, width) for consistent styling
+- Stats panels (Categories, Editors, OS, Machines) limit to top 10 items with "Other" aggregation
+- formatTimeWithPercent helper for consistent "2h 15m (65%)" label formatting
+- All stat panel bars use theme.Primary color for consistent styling
 
 ### Pending Todos
 
@@ -92,5 +95,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 09-02-PLAN.md (Summary Panel) — Phase 9 in progress
+Stopped at: Completed 09-01-PLAN.md (Stats Panels Foundation) — Phase 9 in progress
 Resume file: None
