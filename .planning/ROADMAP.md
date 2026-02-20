@@ -2,14 +2,14 @@
 
 ## Milestones
 
-- ✅ **v1.0 Homebrew Distribution** - Phases 1-3 (shipped 2026-02-17)
-- ✅ **v2.0 wakadash** - Phases 4-7 (shipped 2026-02-19)
-- 🚧 **v2.1 Visual Overhaul + Themes** - Phases 8-10 (in progress)
+- v1.0 Homebrew Distribution - Phases 1-3 (shipped 2026-02-17)
+- v2.0 wakadash - Phases 4-7 (shipped 2026-02-19)
+- v2.1 Visual Overhaul + Themes - Phases 8-10 (in progress)
 
 ## Phases
 
 <details>
-<summary>✅ v1.0 Homebrew Distribution (Phases 1-3) - SHIPPED 2026-02-17</summary>
+<summary>v1.0 Homebrew Distribution (Phases 1-3) - SHIPPED 2026-02-17</summary>
 
 See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 
@@ -18,7 +18,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 </details>
 
 <details>
-<summary>✅ v2.0 wakadash (Phases 4-7) - SHIPPED 2026-02-19</summary>
+<summary>v2.0 wakadash (Phases 4-7) - SHIPPED 2026-02-19</summary>
 
 ### Phase 4: Repository Setup
 **Goal**: Fresh standalone repository with ported wakafetch code and working release automation
@@ -83,7 +83,7 @@ Plans:
 
 </details>
 
-### 🚧 v2.1 Visual Overhaul + Themes (In Progress)
+### v2.1 Visual Overhaul + Themes (In Progress)
 
 **Milestone Goal:** Enhance dashboard with comprehensive stats panels matching wakafetch visual style, plus configurable color themes
 
@@ -110,7 +110,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User sees Categories, Editors, Operating Systems, and Machines panels with top 10 items and time labels
   2. User sees Summary panel showing Last 30d total, daily avg, top items, and counts
-  3. Dashboard panels arrange in 2-column layout on terminals ≥80 cols, stacking on smaller terminals
+  3. Dashboard panels arrange in 2-column layout on terminals >=80 cols, stacking on smaller terminals
   4. User can toggle each panel's visibility with keyboard shortcuts
   5. All panels use consistent visual styling with selected theme
 **Plans**: 3 plans
@@ -129,14 +129,14 @@ Plans:
   1. User sees friendly error message when terminal is too small for dashboard
   2. Invalid theme names fallback to default theme gracefully
   3. Dashboard handles missing data categories without crashing
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 10-01: TBD
+- [ ] 10-01-PLAN.md - Terminal size errors, theme fallback logging, and division-by-zero protection
 
 ## Progress
 
-**Execution Order:** Phases execute in numeric order: 8 → 9 → 10
+**Execution Order:** Phases execute in numeric order: 8 -> 9 -> 10
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -147,14 +147,14 @@ Plans:
 | 7. Distribution | v2.0 | 2/2 | Complete | 2026-02-19 |
 | 8. Theme Foundation | v2.1 | 3/3 | Complete | 2026-02-20 |
 | 9. Stats Panels + Summary | v2.1 | 3/4 | In Progress | - |
-| 10. Polish + Edge Cases | v2.1 | 0/TBD | Not started | - |
+| 10. Polish + Edge Cases | v2.1 | 0/1 | Not started | - |
 
 ## Distribution Notes
 
 **Personal Tap (Working):** `brew tap b00y0h/wakadash && brew install wakadash`
 
-**homebrew-core (Pending):** PR #268434 submitted and closed — requires ≥30 forks, ≥30 watchers, or ≥75 stars. Formula ready at b00y0h/homebrew-core:wakadash for resubmission when thresholds met.
+**homebrew-core (Pending):** PR #268434 submitted and closed — requires >=30 forks, >=30 watchers, or >=75 stars. Formula ready at b00y0h/homebrew-core:wakadash for resubmission when thresholds met.
 
 ---
 *Roadmap created: 2026-02-18*
-*Last updated: 2026-02-20 (Phase 9: 3/4 complete)*
+*Last updated: 2026-02-20 (Phase 10 planned)*
