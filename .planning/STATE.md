@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 8 of 10 (Theme Foundation)
-Plan: 0 of TBD
-Status: Ready to plan
-Last activity: 2026-02-19 — v2.1 roadmap created
+Plan: 1 of TBD
+Status: Executing
+Last activity: 2026-02-20 — Completed 08-01 (Theme Package Foundation)
 
-Progress: [████████████░░░░░░] 64% (9 of 14 total plans complete)
+Progress: [█████████████░░░░░] 71% (10 of 14 total plans complete)
 
 ## Performance Metrics
 
@@ -24,9 +24,9 @@ Progress: [████████████░░░░░░] 64% (9 of 14 
 - Total execution time: 0.25 hours
 
 **Velocity (v2.0):**
-- Total plans completed: 9
-- Average duration: 9.8 min
-- Total execution time: 1.5 hours
+- Total plans completed: 10
+- Average duration: 9.2 min
+- Total execution time: 1.54 hours
 
 **By Phase (v2.0):**
 
@@ -36,6 +36,7 @@ Progress: [████████████░░░░░░] 64% (9 of 14 
 | 5 | 2/2 | 8min | 4min |
 | 6 | 3/3 | 18min | 6min |
 | 7 | 2/2 | 44min | 22min |
+| 8 | 1/TBD | 2.5min | 2.5min |
 
 *Updated after each plan completion*
 
@@ -62,6 +63,9 @@ Recent decisions affecting current work:
 - Research flags AdaptiveColor startup hang risk (fixed in BubbleTea v0.27.1+)
 - Single /stats API request returns all data (Categories, Editors, OS, Machines)
 - ntcharts barchart.Model pattern proven for Languages/Projects, reuse for new panels
+- Use hex colors for themes (lipgloss auto-handles terminal downsampling)
+- 5-level heatmap gradient per theme (None, Low, Medium, High, VeryHigh)
+- Persist theme to ~/.wakatime.cfg (reuses existing config file)
 
 ### Pending Todos
 
@@ -78,6 +82,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-19
-Stopped at: v2.1 roadmap created, ready to plan Phase 8
+Last session: 2026-02-20
+Stopped at: Completed 08-01-PLAN.md (Theme Package Foundation)
 Resume file: None
