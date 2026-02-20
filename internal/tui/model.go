@@ -256,6 +256,43 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Toggle4):
 			m.showHeatmap = !m.showHeatmap
 			return m, nil
+		case key.Matches(msg, m.keys.Toggle5):
+			m.showCategories = !m.showCategories
+			return m, nil
+		case key.Matches(msg, m.keys.Toggle6):
+			m.showEditors = !m.showEditors
+			return m, nil
+		case key.Matches(msg, m.keys.Toggle7):
+			m.showOS = !m.showOS
+			return m, nil
+		case key.Matches(msg, m.keys.Toggle8):
+			m.showMachines = !m.showMachines
+			return m, nil
+		case key.Matches(msg, m.keys.Toggle9):
+			m.showSummary = !m.showSummary
+			return m, nil
+		case key.Matches(msg, m.keys.ShowAll):
+			m.showLanguages = true
+			m.showProjects = true
+			m.showSparkline = true
+			m.showHeatmap = true
+			m.showCategories = true
+			m.showEditors = true
+			m.showOS = true
+			m.showMachines = true
+			m.showSummary = true
+			return m, nil
+		case key.Matches(msg, m.keys.HideAll):
+			m.showLanguages = false
+			m.showProjects = false
+			m.showSparkline = false
+			m.showHeatmap = false
+			m.showCategories = false
+			m.showEditors = false
+			m.showOS = false
+			m.showMachines = false
+			m.showSummary = false
+			return m, nil
 		case key.Matches(msg, m.keys.ChangeTheme):
 			m.showPicker = true
 			m.picker = NewThemePicker(false) // false = not first run, cancel allowed
@@ -358,30 +395,10 @@ func (m Model) View() string {
 
 // renderDashboard renders the full stats dashboard.
 func (m Model) renderDashboard() string {
-	var sections []string
-
-	// Add stats section (includes language and project panels)
-	statsContent := m.renderStats()
-	if statsContent != "" {
-		sections = append(sections, statsContent)
-	}
-
-	// Add sparkline if visible
-	if m.showSparkline {
-		sparklineContent := m.renderSparkline()
-		sections = append(sections, sparklineContent)
-	}
-
-	// Add heatmap if visible
-	if m.showHeatmap {
-		heatmapContent := m.renderHeatmapPanel()
-		sections = append(sections, heatmapContent)
-	}
-
 	statusBar := m.renderStatusBar()
 
-	// Combine all visible sections
-	content := lipgloss.JoinVertical(lipgloss.Left, sections...)
+	// Use renderDashboardLayout for all content
+	content := m.renderDashboardLayout()
 
 	// Account for border (-2) and status bar height.
 	panelHeight := m.height - lipgloss.Height(statusBar) - 4
@@ -477,7 +494,7 @@ func (m Model) renderStatusBar() string {
 		)
 	}
 
-	helpHint := DimStyle(m.theme).Render("? help  r refresh  q quit")
+	helpHint := DimStyle(m.theme).Render("? help  1-9 panels  a/h all  r refresh  q quit")
 	gap := strings.Repeat(" ", max(0, m.width-lipgloss.Width(status)-lipgloss.Width(helpHint)))
 	return DimStyle(m.theme).Render(status) + gap + helpHint
 }
