@@ -113,10 +113,12 @@ Plans:
   3. Dashboard panels arrange in 2-column layout on terminals ≥80 cols, stacking on smaller terminals
   4. User can toggle each panel's visibility with keyboard shortcuts
   5. All panels use consistent visual styling with selected theme
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 09-01: TBD
+- [ ] 09-01-PLAN.md - Stats panels (Categories, Editors, OS, Machines) with horizontal bars
+- [ ] 09-02-PLAN.md - Summary panel with streak calculation and visual distinction
+- [ ] 09-03-PLAN.md - Responsive 2-column layout and extended keyboard toggles
 
 #### Phase 10: Polish + Edge Cases
 **Goal**: Dashboard handles edge cases gracefully
