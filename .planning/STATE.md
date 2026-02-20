@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 8 of 10 (Theme Foundation)
-Plan: 3 of 3
-Status: Complete
-Last activity: 2026-02-20 — Completed 08-03 (Theme Picker UI)
+Phase: 9 of 10 (Stats Panels Summary)
+Plan: 2 of 4
+Status: In Progress
+Last activity: 2026-02-20 — Completed 09-02 (Summary Panel)
 
-Progress: [██████████████░░░░] 86% (12 of 14 total plans complete)
+Progress: [███████████████░░░] 93% (13 of 14 total plans complete)
 
 ## Performance Metrics
 
@@ -24,9 +24,9 @@ Progress: [██████████████░░░░] 86% (12 of 14
 - Total execution time: 0.25 hours
 
 **Velocity (v2.0):**
-- Total plans completed: 12
-- Average duration: 8.1 min
-- Total execution time: 1.62 hours
+- Total plans completed: 13
+- Average duration: 7.6 min
+- Total execution time: 1.65 hours
 
 **By Phase (v2.0):**
 
@@ -37,6 +37,7 @@ Progress: [██████████████░░░░] 86% (12 of 14
 | 6 | 3/3 | 18min | 6min |
 | 7 | 2/2 | 44min | 22min |
 | 8 | 3/3 | 9min | 3min |
+| 9 | 2/4 | 6min | 3min |
 
 *Updated after each plan completion*
 
@@ -71,6 +72,9 @@ Recent decisions affecting current work:
 - Theme picker pattern: isFirstRun parameter controls cancel behavior (first-run ignores Esc/Q)
 - BubbleTea model composition: Model contains ThemePickerModel for modal UI pattern
 - Phase 8 (Theme Foundation) complete ✓ — full theme system with picker, persistence, and live preview
+- Summary panel uses accent border (theme.Primary) for visual distinction
+- Streak calculation limited to 7-day window from heatmap data
+- Panel style functions accept (theme, width) for consistent styling
 
 ### Pending Todos
 
@@ -88,5 +92,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 08-03-PLAN.md (Theme Picker UI) — Phase 8 complete
+Stopped at: Completed 09-02-PLAN.md (Summary Panel) — Phase 9 in progress
 Resume file: None
