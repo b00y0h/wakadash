@@ -1,7 +1,12 @@
 // Package theme provides theming support for wakadash.
 package theme
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"log"
+	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+)
 
 // DefaultTheme is the default theme name.
 const DefaultTheme = "dracula"
@@ -38,10 +43,13 @@ type Theme struct {
 	HeatmapColors [5]lipgloss.Color
 }
 
-// GetTheme returns a Theme by name.
+// GetTheme returns a Theme by name (case-insensitive).
 // Returns the Dracula theme if the name is not recognized.
+// Logs a warning for non-empty invalid names to help users debug config typos.
 func GetTheme(name string) Theme {
-	switch name {
+	normalizedName := strings.ToLower(strings.TrimSpace(name))
+
+	switch normalizedName {
 	case "dracula":
 		return Dracula
 	case "nord":
@@ -55,6 +63,11 @@ func GetTheme(name string) Theme {
 	case "tokyonight":
 		return TokyoNight
 	default:
+		// Log warning for non-empty invalid names (empty = first run, expected)
+		if normalizedName != "" {
+			log.Printf("Warning: unknown theme %q, using 'dracula' instead. Available: %v",
+				name, strings.Join(AllThemes(), ", "))
+		}
 		return Dracula
 	}
 }
