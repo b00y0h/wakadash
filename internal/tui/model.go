@@ -48,9 +48,13 @@ type Model struct {
 	spinner        spinner.Model
 	help           help.Model
 	keys           keymap
-	sparklineChart sparkline.Model
-	languagesChart barchart.Model
-	projectsChart  barchart.Model
+	sparklineChart  sparkline.Model
+	languagesChart  barchart.Model
+	projectsChart   barchart.Model
+	categoriesChart barchart.Model
+	editorsChart    barchart.Model
+	osChart         barchart.Model
+	machinesChart   barchart.Model
 
 	// Sparkline data
 	hourlyData []float64 // 24 hours of activity
@@ -59,10 +63,15 @@ type Model struct {
 	summaryData *types.SummaryResponse // For heatmap
 
 	// Panel visibility (toggled by number keys)
-	showLanguages bool // 1 key
-	showProjects  bool // 2 key
-	showSparkline bool // 3 key
-	showHeatmap   bool // 4 key
+	showSummary    bool // Summary panel visibility
+	showLanguages  bool // 1 key
+	showProjects   bool // 2 key
+	showSparkline  bool // 3 key
+	showHeatmap    bool // 4 key
+	showCategories bool // 5 key (will be mapped in plan 09-03)
+	showEditors    bool // 6 key
+	showOS         bool // 7 key
+	showMachines   bool // 8 key
 
 	// Theme picker
 	showPicker bool             // True when showing theme picker
@@ -103,6 +112,10 @@ func NewModel(client *api.Client, rangeStr string, refreshInterval time.Duration
 	sparklineChart := sparkline.New(70, 5)
 	languagesChart := barchart.New(35, 8)
 	projectsChart := barchart.New(35, 8)
+	categoriesChart := barchart.New(35, 10)
+	editorsChart := barchart.New(35, 10)
+	osChart := barchart.New(35, 10)
+	machinesChart := barchart.New(35, 10)
 
 	return Model{
 		// Safe defaults — overridden by WindowSizeMsg before meaningful renders.
@@ -119,10 +132,19 @@ func NewModel(client *api.Client, rangeStr string, refreshInterval time.Duration
 		sparklineChart:  sparklineChart,
 		languagesChart:  languagesChart,
 		projectsChart:   projectsChart,
+		categoriesChart: categoriesChart,
+		editorsChart:    editorsChart,
+		osChart:         osChart,
+		machinesChart:   machinesChart,
+		showSummary:     true,
 		showLanguages:   true,
 		showProjects:    true,
 		showSparkline:   true,
 		showHeatmap:     true,
+		showCategories:  true,
+		showEditors:     true,
+		showOS:          true,
+		showMachines:    true,
 	}
 }
 
@@ -185,12 +207,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Resize all chart models
 		m.languagesChart.Resize(panelWidth, chartHeight)
 		m.projectsChart.Resize(panelWidth, chartHeight)
+		m.categoriesChart.Resize(panelWidth, 10)
+		m.editorsChart.Resize(panelWidth, 10)
+		m.osChart.Resize(panelWidth, 10)
+		m.machinesChart.Resize(panelWidth, 10)
 		m.sparklineChart.Resize(fullWidth, sparklineHeight)
 
 		// Redraw charts with new dimensions
 		if m.stats != nil {
 			m.updateLanguagesChart()
 			m.updateProjectsChart()
+			m.updateCategoriesChart()
+			m.updateEditorsChart()
+			m.updateOSChart()
+			m.updateMachinesChart()
 		}
 		if len(m.hourlyData) > 0 {
 			m.updateSparkline()
@@ -249,6 +279,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.nextRefresh = time.Now().Add(m.refreshInterval)
 		m.updateLanguagesChart()
 		m.updateProjectsChart()
+		m.updateCategoriesChart()
+		m.updateEditorsChart()
+		m.updateOSChart()
+		m.updateMachinesChart()
 		return m, scheduleRefresh(m.refreshInterval)
 
 	case durationsFetchedMsg:
