@@ -374,8 +374,26 @@ func (m Model) View() string {
 	}
 
 	// Check minimum terminal size
-	if m.width < 40 || m.height < 10 {
-		return "Terminal too small. Please resize."
+	const minWidth = 40
+	const minHeight = 10
+	if m.width < minWidth || m.height < minHeight {
+		errorStyle := lipgloss.NewStyle().
+			Foreground(m.theme.Error).
+			Bold(true)
+		dimStyle := lipgloss.NewStyle().
+			Foreground(m.theme.Dim)
+
+		var sb strings.Builder
+		sb.WriteString("\n")
+		sb.WriteString(errorStyle.Render("Terminal Too Small") + "\n\n")
+		sb.WriteString(dimStyle.Render(fmt.Sprintf(
+			"Current size:  %d cols x %d rows\n"+
+				"Required:      %d cols x %d rows\n\n"+
+				"Please resize your terminal window.\n"+
+				"The dashboard will adjust automatically.",
+			m.width, m.height, minWidth, minHeight,
+		)))
+		return sb.String()
 	}
 
 	if m.showHelp {
