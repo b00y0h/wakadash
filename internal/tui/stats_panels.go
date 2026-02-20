@@ -35,6 +35,12 @@ func (m *Model) updateCategoriesChart() {
 		total += cat.TotalSeconds
 	}
 
+	// Protect against division by zero (all items have 0 seconds)
+	if total == 0 {
+		m.categoriesChart.Draw()
+		return
+	}
+
 	// Add top 10 categories
 	var otherSeconds float64
 	for i, cat := range data.Categories {
@@ -98,6 +104,12 @@ func (m *Model) updateEditorsChart() {
 	var total float64
 	for _, ed := range data.Editors {
 		total += ed.TotalSeconds
+	}
+
+	// Protect against division by zero (all items have 0 seconds)
+	if total == 0 {
+		m.editorsChart.Draw()
+		return
 	}
 
 	// Add top 10 editors
@@ -165,6 +177,12 @@ func (m *Model) updateOSChart() {
 		total += os.TotalSeconds
 	}
 
+	// Protect against division by zero (all items have 0 seconds)
+	if total == 0 {
+		m.osChart.Draw()
+		return
+	}
+
 	// Add top 10 operating systems
 	var otherSeconds float64
 	for i, os := range data.OperatingSystems {
@@ -228,6 +246,12 @@ func (m *Model) updateMachinesChart() {
 	var total float64
 	for _, mach := range data.Machines {
 		total += mach.TotalSeconds
+	}
+
+	// Protect against division by zero (all items have 0 seconds)
+	if total == 0 {
+		m.machinesChart.Draw()
+		return
 	}
 
 	// Add top 10 machines
