@@ -14,6 +14,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/b00y0h/wakadash/internal/api"
+	"github.com/b00y0h/wakadash/internal/theme"
 	"github.com/b00y0h/wakadash/internal/types"
 )
 
@@ -39,6 +40,9 @@ type Model struct {
 	// Dependencies
 	client   *api.Client
 	rangeStr string
+
+	// Theme
+	theme theme.Theme // Active color theme
 
 	// UI components
 	spinner        spinner.Model
@@ -78,9 +82,16 @@ func NewModel(client *api.Client, rangeStr string, refreshInterval time.Duration
 		refreshInterval = 60 * time.Second
 	}
 
+	// Load theme from config
+	themeName, _ := theme.LoadThemeFromConfig()
+	if themeName == "" {
+		themeName = theme.DefaultTheme
+	}
+	activeTheme := theme.GetTheme(themeName)
+
 	s := spinner.New()
 	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	s.Style = lipgloss.NewStyle().Foreground(activeTheme.Primary)
 
 	h := help.New()
 	h.Width = 80
@@ -97,6 +108,7 @@ func NewModel(client *api.Client, rangeStr string, refreshInterval time.Duration
 		client:          client,
 		rangeStr:        rangeStr,
 		refreshInterval: refreshInterval,
+		theme:           activeTheme,
 		spinner:         s,
 		help:            h,
 		keys:            defaultKeymap,
@@ -253,7 +265,7 @@ func (m Model) View() string {
 	}
 
 	if m.err != nil {
-		return errorStyle.Render(fmt.Sprintf("\n  Error: %v\n\n  Press q to quit.", m.err))
+		return ErrorStyle(m.theme).Render(fmt.Sprintf("\n  Error: %v\n\n  Press q to quit.", m.err))
 	}
 
 	return m.renderDashboard()
@@ -292,7 +304,7 @@ func (m Model) renderDashboard() string {
 		panelHeight = 1
 	}
 
-	statsPanel := borderStyle.
+	statsPanel := BorderStyle(m.theme).
 		Width(m.width - 2).
 		Height(panelHeight).
 		Render(content)
@@ -310,7 +322,7 @@ func (m Model) renderStats() string {
 	var sb strings.Builder
 
 	// Title
-	title := titleStyle.Render(fmt.Sprintf("WakaTime Stats (%s)", m.rangeStr))
+	title := TitleStyle(m.theme).Render(fmt.Sprintf("WakaTime Stats (%s)", m.rangeStr))
 	sb.WriteString(title + "\n\n")
 
 	// Totals
@@ -330,7 +342,7 @@ func (m Model) renderStats() string {
 	// Left panel: Languages chart
 	if m.showLanguages {
 		var leftPanel strings.Builder
-		leftPanel.WriteString(titleStyle.Render("Languages") + "\n")
+		leftPanel.WriteString(TitleStyle(m.theme).Render("Languages") + "\n")
 		if len(data.Languages) > 0 {
 			leftPanel.WriteString(m.languagesChart.View())
 		} else {
@@ -342,7 +354,7 @@ func (m Model) renderStats() string {
 	// Right panel: Projects chart
 	if m.showProjects {
 		var rightPanel strings.Builder
-		rightPanel.WriteString(titleStyle.Render("Projects") + "\n")
+		rightPanel.WriteString(TitleStyle(m.theme).Render("Projects") + "\n")
 		if len(data.Projects) > 0 {
 			rightPanel.WriteString(m.projectsChart.View())
 		} else {
@@ -364,11 +376,11 @@ func (m Model) renderStats() string {
 func (m Model) renderStatusBar() string {
 	var status string
 	if m.rateLimited {
-		status = warningStyle.Render("Rate limited - retrying with backoff...")
+		status = WarningStyle(m.theme).Render("Rate limited - retrying with backoff...")
 	} else if m.loading {
 		status = m.spinner.View() + " Fetching..."
 	} else if m.err != nil {
-		status = errorStyle.Render("Error: " + m.err.Error())
+		status = ErrorStyle(m.theme).Render("Error: " + m.err.Error())
 	} else {
 		remaining := time.Until(m.nextRefresh).Round(time.Second)
 		if remaining < 0 {
@@ -380,16 +392,16 @@ func (m Model) renderStatusBar() string {
 		)
 	}
 
-	helpHint := dimStyle.Render("? help  r refresh  q quit")
+	helpHint := DimStyle(m.theme).Render("? help  r refresh  q quit")
 	gap := strings.Repeat(" ", max(0, m.width-lipgloss.Width(status)-lipgloss.Width(helpHint)))
-	return dimStyle.Render(status) + gap + helpHint
+	return DimStyle(m.theme).Render(status) + gap + helpHint
 }
 
 // renderHelp renders the help overlay showing keyboard shortcuts.
 func (m Model) renderHelp() string {
-	title := titleStyle.Render("Keyboard Shortcuts")
+	title := TitleStyle(m.theme).Render("Keyboard Shortcuts")
 	helpText := m.help.View(m.keys)
-	hint := dimStyle.Render("\nPress ? to return to dashboard")
+	hint := DimStyle(m.theme).Render("\nPress ? to return to dashboard")
 	return lipgloss.JoinVertical(lipgloss.Left, title, "", helpText, hint)
 }
 
@@ -432,13 +444,13 @@ func (m *Model) updateSparkline() {
 
 // renderSparkline renders the sparkline chart showing hourly activity.
 func (m Model) renderSparkline() string {
-	sparklineTitle := titleStyle.Render("\nHourly Activity (Today)")
+	sparklineTitle := TitleStyle(m.theme).Render("\nHourly Activity (Today)")
 	return lipgloss.JoinVertical(lipgloss.Left, sparklineTitle, m.sparklineChart.View())
 }
 
 // renderHeatmapPanel renders the heatmap section with title.
 func (m Model) renderHeatmapPanel() string {
-	heatmapTitle := titleStyle.Render("\nActivity (Last 7 Days)")
+	heatmapTitle := TitleStyle(m.theme).Render("\nActivity (Last 7 Days)")
 	heatmapContent := m.renderHeatmap()
 	return lipgloss.JoinVertical(lipgloss.Left, heatmapTitle, heatmapContent)
 }
@@ -516,18 +528,18 @@ func (m *Model) updateProjectsChart() {
 // renderHeatmap renders a GitHub-style activity heatmap for the last 7 days.
 func (m Model) renderHeatmap() string {
 	if m.summaryData == nil || len(m.summaryData.Data) == 0 {
-		return dimStyle.Render("No activity data")
+		return DimStyle(m.theme).Render("No activity data")
 	}
 
 	var blocks []string
 	for _, day := range m.summaryData.Data {
 		hours := day.GrandTotal.TotalSeconds / 3600.0
-		color := getActivityColor(hours)
+		color := getThemedActivityColor(hours, m.theme)
 		// Unicode block character with day label
 		label := day.Range.Date[5:] // MM-DD format
 		block := lipgloss.NewStyle().
 			Background(color).
-			Foreground(lipgloss.Color("#fff")).
+			Foreground(m.theme.Foreground).
 			Padding(0, 1).
 			Render(label)
 		blocks = append(blocks, block)
@@ -536,18 +548,18 @@ func (m Model) renderHeatmap() string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, blocks...)
 }
 
-// getActivityColor returns a GitHub-style contribution color based on hours coded.
-func getActivityColor(hours float64) lipgloss.Color {
+// getThemedActivityColor returns a theme-aware contribution color based on hours coded.
+func getThemedActivityColor(hours float64, t theme.Theme) lipgloss.Color {
 	switch {
 	case hours < 0.5:
-		return lipgloss.Color("#2d2d2d") // Very dark gray
+		return t.HeatmapColors[0] // None
 	case hours < 2:
-		return lipgloss.Color("#0e4429") // Dark green
+		return t.HeatmapColors[1] // Low
 	case hours < 4:
-		return lipgloss.Color("#006d32") // Medium green
+		return t.HeatmapColors[2] // Medium
 	case hours < 6:
-		return lipgloss.Color("#26a641") // Bright green
+		return t.HeatmapColors[3] // High
 	default:
-		return lipgloss.Color("#39d353") // Very bright green (GitHub-style)
+		return t.HeatmapColors[4] // VeryHigh
 	}
 }
