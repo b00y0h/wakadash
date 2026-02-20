@@ -7,6 +7,7 @@ package types
 type StatItem struct {
 	Name         string  `json:"name"`
 	TotalSeconds float64 `json:"total_seconds"`
+	Percent      float64 `json:"percent"` // Percentage of total time
 }
 
 // GrandTotal holds the aggregated totals for a single day.
@@ -58,6 +59,13 @@ type DailyAverage struct {
 	Text                  string  `json:"text"`
 }
 
+// BestDay represents the day with the most coding activity.
+type BestDay struct {
+	Date         string  `json:"date"`
+	Text         string  `json:"text"`
+	TotalSeconds float64 `json:"total_seconds"`
+}
+
 // SummaryResponse is the top-level response from the /v1/users/current/summaries endpoint.
 type SummaryResponse struct {
 	Data            []DayData       `json:"data"`
@@ -85,6 +93,7 @@ type StatsData struct {
 	DaysIncludingHolidays     int        `json:"days_including_holidays"`
 	Start                     string     `json:"start"`
 	End                       string     `json:"end"`
+	BestDay                   BestDay    `json:"best_day"`
 	HumanReadableDailyAverage string     `json:"human_readable_daily_average"`
 	HumanReadableRange        string     `json:"human_readable_range"`
 	HumanReadableTotal        string     `json:"human_readable_total"`
