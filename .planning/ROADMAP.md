@@ -96,10 +96,12 @@ Plans:
   2. User sees visual theme preview on first run before selecting
   3. User's theme selection persists across restarts in ~/.wakatime.cfg
   4. All existing panels (Languages, Projects, Heatmap) use the selected theme colors consistently
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 08-01: TBD
+- [ ] 08-01-PLAN.md - Theme package with struct, 6 presets, and config persistence
+- [ ] 08-02-PLAN.md - Theme-aware styles migration and Model integration
+- [ ] 08-03-PLAN.md - Full-screen theme picker with preview and first-run detection
 
 #### Phase 9: Stats Panels + Summary
 **Goal**: Dashboard displays comprehensive stats with responsive layout
