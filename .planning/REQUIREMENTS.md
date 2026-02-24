@@ -9,7 +9,7 @@ Requirements for historical data support. Each maps to roadmap phases.
 
 ### Configuration
 
-- [ ] **CFG-01**: User can specify `history_repo` in ~/.wakatime.cfg
+- [x] **CFG-01**: User can specify `history_repo` in ~/.wakatime.cfg
 
 ### Data Fetching
 
@@ -64,7 +64,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CFG-01 | Phase 11 | Pending |
+| CFG-01 | Phase 11 | Complete |
 | DATA-01 | Phase 13 | Pending |
 | DATA-02 | Phase 13 | Pending |
 | DATA-03 | Phase 12 | Pending |
