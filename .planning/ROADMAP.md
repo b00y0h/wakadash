@@ -67,10 +67,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. User can add `history_repo` key to ~/.wakatime.cfg
   2. Dashboard starts successfully when `history_repo` is not configured
   3. Dashboard starts successfully when `history_repo` is configured but invalid
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- TBD
+- [ ] 11-01-PLAN.md — Add history_repo config with section-aware parsing and auto-template
 
 ### Phase 12: GitHub Archive Integration
 **Goal**: Read archived WakaTime data from GitHub
@@ -140,7 +140,7 @@ Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 →
 | 8. Theme Foundation | v2.1 | 3/3 | Complete | 2026-02-20 |
 | 9. Stats Panels + Summary | v2.1 | 3/3 | Complete | 2026-02-20 |
 | 10. Polish + Edge Cases | v2.1 | 1/1 | Complete | 2026-02-20 |
-| 11. Configuration & Validation | v2.2 | 0/? | Not started | - |
+| 11. Configuration & Validation | v2.2 | 0/1 | Planned | - |
 | 12. GitHub Archive Integration | v2.2 | 0/? | Not started | - |
 | 13. Hybrid Data Fetching | v2.2 | 0/? | Not started | - |
 | 14. Date Navigation | v2.2 | 0/? | Not started | - |
