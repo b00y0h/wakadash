@@ -55,6 +55,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Ensure [wakadash] section exists in config file (for discoverability)
+	if err := config.EnsureWakadashSection(); err != nil {
+		// Log warning but continue - this is not critical for startup
+		log.Printf("Warning: could not ensure [wakadash] section: %v", err)
+	}
+
 	client := api.New(cfg.APIKey, cfg.APIURL)
 	refreshInterval := time.Duration(*refreshFlag) * time.Second
 
