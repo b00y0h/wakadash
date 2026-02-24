@@ -1,0 +1,11 @@
+# GoReleaser output
+dist/
+
+# Test binaries
+*.test
+
+# macOS metadata
+.DS_Store
+
+# Built binary (root-level only)
+/wakadash
