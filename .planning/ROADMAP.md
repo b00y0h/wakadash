@@ -52,7 +52,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 11: Configuration & Validation** - Add history_repo config with graceful fallback (completed 2026-02-24)
-- [ ] **Phase 12: GitHub Archive Integration** - Read archived stats from GitHub repo
+- [x] **Phase 12: GitHub Archive Integration** - Read archived stats from GitHub repo
 - [ ] **Phase 13: Hybrid Data Fetching** - Combine API and archive for seamless experience
 - [ ] **Phase 14: Date Navigation** - Arrow key controls for browsing history
 - [ ] **Phase 15: Historical Display** - Date indicator and auto-refresh control
@@ -83,7 +83,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 12-01-PLAN.md — Create GitHub archive fetcher with graceful 404 handling
+- [x] 12-01-PLAN.md — Create GitHub archive fetcher with graceful 404 handling
 
 ### Phase 13: Hybrid Data Fetching
 **Goal**: Seamlessly combine API and archive data
