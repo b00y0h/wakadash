@@ -2,46 +2,41 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-23)
+See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** A beautiful, live-updating terminal dashboard for coding stats — like htop for your coding activity
-**Current focus:** v2.2 Historical Data Support
+**Current focus:** v2.2 Historical Data - Phase 11 (Configuration & Validation)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-24 — Milestone v2.2 started
+Phase: 11 of 15 (Configuration & Validation)
+Plan: Ready to plan phase 11
+Status: Ready to plan
+Last activity: 2026-02-24 — v2.2 milestone started, roadmap created
 
-Progress: ░░░░░░░░░░░░░░░░░░ 0%
+Progress: [████████████████████░░░░░░] 67% (20 plans complete across phases 1-10)
 
 ## Performance Metrics
 
-**Velocity (v1.0):**
-- Total plans completed: 6
-- Average duration: 2.5 min
-- Total execution time: 0.25 hours
+**Velocity:**
+- Total plans completed: 20
+- Previous milestones:
+  - v1.0: 6 plans (phases 1-3)
+  - v2.0: 9 plans (phases 4-7)
+  - v2.1: 7 plans (phases 8-10) — completed in 1 day
 
-**Velocity (v2.0):**
-- Total plans completed: 9
-- Average duration: 9.7 min
-- Total execution time: 1.45 hours
+**By Milestone:**
 
-**Velocity (v2.1):**
-- Total plans completed: 7
-- Average duration: 3.0 min
-- Total execution time: 0.35 hours
+| Milestone | Phases | Plans | Timeline |
+|-----------|--------|-------|----------|
+| v1.0 | 3 | 6 | 5 days (2026-02-13 → 2026-02-17) |
+| v2.0 | 4 | 9 | 2 days (2026-02-18 → 2026-02-19) |
+| v2.1 | 3 | 7 | 1 day (2026-02-20) |
+| v2.2 | 5 | TBD | In progress |
 
-**By Phase (v2.1):**
+**Trend:** Accelerating (5 days → 2 days → 1 day per milestone)
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 8 | 3/3 | 9min | 3min |
-| 9 | 3/3 | 10min | 3.3min |
-| 10 | 1/1 | 2min | 2min |
-
-*Updated after milestone completion*
+*Metrics will update after each plan completion*
 
 ## Accumulated Context
 
@@ -50,18 +45,14 @@ Progress: ░░░░░░░░░░░░░░░░░░ 0%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-**v2.1 decisions:**
-- Hex colors for themes (lipgloss auto-handles terminal downsampling)
-- 5-level heatmap gradient per theme
-- Persist theme to ~/.wakatime.cfg (reuses existing config file)
-- Top-10 limit with "Other" aggregation for stat panels
-- Summary panel uses accent border (theme.Primary) for visual distinction
-- 2-column grid at >= 80 cols, vertical stack at 40-79 cols
-- Case-insensitive theme lookup for forgiving config parsing
+- v2.1: Persist theme to ~/.wakatime.cfg (single source of truth)
+- v2.1: Case-insensitive theme lookup (forgiving config parsing)
+- v2.0: BubbleTea with tea.WithAltScreen() (avoids race conditions)
+- v2.0: Self-loop ticker pattern (avoids ticker drift)
 
 ### Pending Todos
 
-None — milestone complete.
+None yet.
 
 ### Blockers/Concerns
 
@@ -69,10 +60,6 @@ None — milestone complete.
 
 ## Session Continuity
 
-Last session: 2026-02-23
-Stopped at: Milestone v2.1 completed and archived
+Last session: 2026-02-24
+Stopped at: v2.2 roadmap created, ready to plan Phase 11
 Resume file: None
-
-## Next Steps
-
-Defining requirements for v2.2 Historical Data Support.
