@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** A beautiful, live-updating terminal dashboard for coding stats — like htop for your coding activity
-**Current focus:** Milestone complete — ready for /gsd:new-milestone
+**Current focus:** v2.2 Historical Data Support
 
 ## Current Position
 
-Phase: 10 of 10 (Polish and Edge Cases)
-Plan: 1 of 1
-Status: v2.1 SHIPPED
-Last activity: 2026-02-23 — Milestone v2.1 completed
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-24 — Milestone v2.2 started
 
-Progress: [██████████████████] 100% (22 total plans complete across v1.0, v2.0, v2.1)
+Progress: ░░░░░░░░░░░░░░░░░░ 0%
 
 ## Performance Metrics
 
@@ -75,10 +75,4 @@ Resume file: None
 
 ## Next Steps
 
-Run `/gsd:new-milestone` to start planning the next version (v2.2).
-
-Potential v2.2 features (from REQUIREMENTS.md Future Requirements):
-- THEME-05: Runtime theme switching without restart
-- THEME-06: Custom themes via config file
-- ADV-02: Time range switcher at runtime
-- POL-03: Shell completions (bash, zsh, fish)
+Defining requirements for v2.2 Historical Data Support.

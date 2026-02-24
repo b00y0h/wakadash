@@ -61,7 +61,20 @@ A beautiful, live-updating terminal dashboard that shows your coding stats at a 
 
 ### Active
 
-(Define in next milestone)
+**v2.2: Historical Data Support**
+- [ ] Read archived WakaTime data from GitHub repo
+- [ ] Date navigation with left/right arrow keys
+- [ ] Graceful fallback when history_repo not configured
+
+## Current Milestone: v2.2 Historical Data
+
+**Goal:** Enable viewing coding stats from any historical date by reading archived data from a GitHub repository.
+
+**Target features:**
+- history_repo config key to specify archive location
+- Hybrid data fetching: API for recent days, GitHub archive for older
+- Keyboard date navigation (left/right arrows)
+- Pause auto-refresh on historical dates
 
 ### Out of Scope
 
@@ -118,4 +131,4 @@ A beautiful, live-updating terminal dashboard that shows your coding stats at a 
 | Case-insensitive theme lookup | Forgiving config parsing for user-friendliness | ✓ Good |
 
 ---
-*Last updated: 2026-02-23 after v2.1 milestone*
+*Last updated: 2026-02-24 after v2.2 milestone start*
