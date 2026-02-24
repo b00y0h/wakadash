@@ -70,7 +70,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 1 plan
 
 Plans:
-- [ ] 11-01-PLAN.md — Add history_repo config with section-aware parsing and auto-template
+- [x] 11-01-PLAN.md — Add history_repo config with section-aware parsing and auto-template
 
 ### Phase 12: GitHub Archive Integration
 **Goal**: Read archived WakaTime data from GitHub
@@ -80,10 +80,10 @@ Plans:
   1. Dashboard fetches archived data from GitHub when `history_repo` is configured
   2. Dashboard shows "no data available" when archive file missing (no crash)
   3. Archive data parses correctly and populates all panels
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- TBD
+- [ ] 12-01-PLAN.md — Create GitHub archive fetcher with graceful 404 handling
 
 ### Phase 13: Hybrid Data Fetching
 **Goal**: Seamlessly combine API and archive data
@@ -140,8 +140,8 @@ Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 →
 | 8. Theme Foundation | v2.1 | 3/3 | Complete | 2026-02-20 |
 | 9. Stats Panels + Summary | v2.1 | 3/3 | Complete | 2026-02-20 |
 | 10. Polish + Edge Cases | v2.1 | 1/1 | Complete | 2026-02-20 |
-| 11. Configuration & Validation | 1/1 | Complete    | 2026-02-24 | - |
-| 12. GitHub Archive Integration | v2.2 | 0/? | Not started | - |
+| 11. Configuration & Validation | v2.2 | 1/1 | Complete | 2026-02-24 |
+| 12. GitHub Archive Integration | v2.2 | 0/1 | Not started | - |
 | 13. Hybrid Data Fetching | v2.2 | 0/? | Not started | - |
 | 14. Date Navigation | v2.2 | 0/? | Not started | - |
 | 15. Historical Display | v2.2 | 0/? | Not started | - |
@@ -154,4 +154,4 @@ Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 →
 
 ---
 *Roadmap created: 2026-02-18*
-*Last updated: 2026-02-24 (v2.2 phases 11-15 added)*
+*Last updated: 2026-02-24 (Phase 12 planning complete)*
