@@ -51,7 +51,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 11: Configuration & Validation** - Add history_repo config with graceful fallback
+- [x] **Phase 11: Configuration & Validation** - Add history_repo config with graceful fallback (completed 2026-02-24)
 - [ ] **Phase 12: GitHub Archive Integration** - Read archived stats from GitHub repo
 - [ ] **Phase 13: Hybrid Data Fetching** - Combine API and archive for seamless experience
 - [ ] **Phase 14: Date Navigation** - Arrow key controls for browsing history
@@ -140,7 +140,7 @@ Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 →
 | 8. Theme Foundation | v2.1 | 3/3 | Complete | 2026-02-20 |
 | 9. Stats Panels + Summary | v2.1 | 3/3 | Complete | 2026-02-20 |
 | 10. Polish + Edge Cases | v2.1 | 1/1 | Complete | 2026-02-20 |
-| 11. Configuration & Validation | v2.2 | 0/1 | Planned | - |
+| 11. Configuration & Validation | 1/1 | Complete   | 2026-02-24 | - |
 | 12. GitHub Archive Integration | v2.2 | 0/? | Not started | - |
 | 13. Hybrid Data Fetching | v2.2 | 0/? | Not started | - |
 | 14. Date Navigation | v2.2 | 0/? | Not started | - |
