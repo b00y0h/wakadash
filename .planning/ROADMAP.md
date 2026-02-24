@@ -2,14 +2,15 @@
 
 ## Milestones
 
-- ✅ **v1.0 Homebrew Distribution** — Phases 1-3 (shipped 2026-02-17)
-- ✅ **v2.0 wakadash** — Phases 4-7 (shipped 2026-02-19)
-- ✅ **v2.1 Visual Overhaul + Themes** — Phases 8-10 (shipped 2026-02-23)
+- ✅ **v1.0 Homebrew Distribution** - Phases 1-3 (shipped 2026-02-17)
+- ✅ **v2.0 wakadash** - Phases 4-7 (shipped 2026-02-19)
+- ✅ **v2.1 Visual Overhaul + Themes** - Phases 8-10 (shipped 2026-02-23)
+- 🚧 **v2.2 Historical Data** - Phases 11-15 (in progress)
 
 ## Phases
 
 <details>
-<summary>✅ v1.0 Homebrew Distribution (Phases 1-3) — SHIPPED 2026-02-17</summary>
+<summary>✅ v1.0 Homebrew Distribution (Phases 1-3) - SHIPPED 2026-02-17</summary>
 
 See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 
@@ -18,7 +19,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 </details>
 
 <details>
-<summary>✅ v2.0 wakadash (Phases 4-7) — SHIPPED 2026-02-19</summary>
+<summary>✅ v2.0 wakadash (Phases 4-7) - SHIPPED 2026-02-19</summary>
 
 - [x] Phase 4: Repository Setup (2/2 plans) — completed 2026-02-19
 - [x] Phase 5: TUI Foundation (2/2 plans) — completed 2026-02-19
@@ -30,7 +31,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 </details>
 
 <details>
-<summary>✅ v2.1 Visual Overhaul + Themes (Phases 8-10) — SHIPPED 2026-02-23</summary>
+<summary>✅ v2.1 Visual Overhaul + Themes (Phases 8-10) - SHIPPED 2026-02-23</summary>
 
 - [x] Phase 8: Theme Foundation (3/3 plans) — completed 2026-02-20
 - [x] Phase 9: Stats Panels + Summary (3/3 plans) — completed 2026-02-20
@@ -40,9 +41,94 @@ See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 
 </details>
 
+### 🚧 v2.2 Historical Data (In Progress)
+
+**Milestone Goal:** Enable viewing coding stats from any historical date by reading archived data from a GitHub repository.
+
+**Phase Numbering:**
+- Integer phases (11-15): Planned milestone work
+- Decimal phases (11.1, 11.2): Urgent insertions (marked with INSERTED)
+
+Decimal phases appear between their surrounding integers in numeric order.
+
+- [ ] **Phase 11: Configuration & Validation** - Add history_repo config with graceful fallback
+- [ ] **Phase 12: GitHub Archive Integration** - Read archived stats from GitHub repo
+- [ ] **Phase 13: Hybrid Data Fetching** - Combine API and archive for seamless experience
+- [ ] **Phase 14: Date Navigation** - Arrow key controls for browsing history
+- [ ] **Phase 15: Historical Display** - Date indicator and auto-refresh control
+
+## Phase Details
+
+### Phase 11: Configuration & Validation
+**Goal**: User can specify archive location in config
+**Depends on**: Phase 10 (v2.1 complete)
+**Requirements**: CFG-01
+**Success Criteria** (what must be TRUE):
+  1. User can add `history_repo` key to ~/.wakatime.cfg
+  2. Dashboard starts successfully when `history_repo` is not configured
+  3. Dashboard starts successfully when `history_repo` is configured but invalid
+**Plans**: TBD
+
+Plans:
+- TBD
+
+### Phase 12: GitHub Archive Integration
+**Goal**: Read archived WakaTime data from GitHub
+**Depends on**: Phase 11
+**Requirements**: DATA-03, DATA-04
+**Success Criteria** (what must be TRUE):
+  1. Dashboard fetches archived data from GitHub when `history_repo` is configured
+  2. Dashboard shows "no data available" when archive file missing (no crash)
+  3. Archive data parses correctly and populates all panels
+**Plans**: TBD
+
+Plans:
+- TBD
+
+### Phase 13: Hybrid Data Fetching
+**Goal**: Seamlessly combine API and archive data
+**Depends on**: Phase 12
+**Requirements**: DATA-01, DATA-02
+**Success Criteria** (what must be TRUE):
+  1. Recent dates (last 7 days) fetch from WakaTime API
+  2. Older dates fetch from GitHub archive when available
+  3. User sees stats from any date without knowing the source
+**Plans**: TBD
+
+Plans:
+- TBD
+
+### Phase 14: Date Navigation
+**Goal**: User can browse historical dates
+**Depends on**: Phase 13
+**Requirements**: NAV-01, NAV-02, NAV-03
+**Success Criteria** (what must be TRUE):
+  1. Left arrow key navigates to previous day
+  2. Right arrow key navigates to next day
+  3. Pressing '0' or Home key returns to today
+  4. Navigation updates all panels with selected date's data
+**Plans**: TBD
+
+Plans:
+- TBD
+
+### Phase 15: Historical Display
+**Goal**: User knows when viewing historical data
+**Depends on**: Phase 14
+**Requirements**: DISP-01, DISP-02, DISP-03
+**Success Criteria** (what must be TRUE):
+  1. Date indicator appears when viewing non-today date
+  2. Auto-refresh pauses when viewing historical data
+  3. Auto-refresh resumes when returning to today
+**Plans**: TBD
+
+Plans:
+- TBD
+
 ## Progress
 
-**Execution Order:** All v2.1 phases complete
+**Execution Order:**
+Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 → ...
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -54,6 +140,11 @@ See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 | 8. Theme Foundation | v2.1 | 3/3 | Complete | 2026-02-20 |
 | 9. Stats Panels + Summary | v2.1 | 3/3 | Complete | 2026-02-20 |
 | 10. Polish + Edge Cases | v2.1 | 1/1 | Complete | 2026-02-20 |
+| 11. Configuration & Validation | v2.2 | 0/? | Not started | - |
+| 12. GitHub Archive Integration | v2.2 | 0/? | Not started | - |
+| 13. Hybrid Data Fetching | v2.2 | 0/? | Not started | - |
+| 14. Date Navigation | v2.2 | 0/? | Not started | - |
+| 15. Historical Display | v2.2 | 0/? | Not started | - |
 
 ## Distribution Notes
 
@@ -63,4 +154,4 @@ See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 
 ---
 *Roadmap created: 2026-02-18*
-*Last updated: 2026-02-23 (v2.1 shipped)*
+*Last updated: 2026-02-24 (v2.2 phases 11-15 added)*
