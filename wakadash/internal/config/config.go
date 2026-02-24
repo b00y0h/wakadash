@@ -103,6 +103,59 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
+// EnsureWakadashSection adds a [wakadash] section to ~/.wakatime.cfg if missing.
+// Called on startup to provide user with documented config options.
+func EnsureWakadashSection() error {
+	configPath, err := configFilePath()
+	if err != nil {
+		return err
+	}
+
+	// Read entire file
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // Config doesn't exist yet, will be created by WakaTime plugin
+		}
+		return fmt.Errorf("cannot read %s: %w", configPath, err)
+	}
+
+	content := string(data)
+
+	// Check if [wakadash] section exists (case-insensitive)
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
+			section := strings.ToLower(strings.Trim(trimmed, "[]"))
+			if section == "wakadash" {
+				return nil // Section already exists
+			}
+		}
+	}
+
+	// Append [wakadash] section template
+	template := `
+[wakadash]
+# Theme: dracula, nord, gruvbox, monokai, solarized, tokyonight
+# theme = dracula
+
+# GitHub repo for historical data (format: owner/repo)
+# Set up your archive with wakasync: https://github.com/b00y0h/wakasync
+# history_repo = your-username/wakatime-data
+`
+
+	// Ensure file ends with newline before appending
+	if !strings.HasSuffix(content, "\n") {
+		content += "\n"
+	}
+
+	content += template
+
+	// Write back with user read/write only permissions
+	return os.WriteFile(configPath, []byte(content), 0600)
+}
+
 // configFilePath returns the absolute path to ~/.wakatime.cfg.
 func configFilePath() (string, error) {
 	homeDir, err := os.UserHomeDir()
