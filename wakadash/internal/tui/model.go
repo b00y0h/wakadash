@@ -148,10 +148,10 @@ func (m Model) Init() tea.Cmd {
 		tickEverySecond(),
 	}
 
-	// Fetch today's archive if fetcher configured
-	if m.archiveFetcher != nil {
+	// Fetch today's data using hybrid DataSource (API for today, since it's recent)
+	if m.dataSource != nil {
 		today := time.Now().Format("2006-01-02")
-		cmds = append(cmds, fetchArchiveCmd(m.archiveFetcher, today))
+		cmds = append(cmds, fetchDataCmd(m.dataSource, today))
 	}
 
 	return tea.Batch(cmds...)
@@ -315,6 +315,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.archiveData = msg.data
 		// Data may be nil if archive not found (404) - that's graceful, not an error
 		// Future phases will use this data for historical date navigation
+		return m, nil
+
+	case dataFetchedMsg:
+		// Store data from hybrid source (API or archive based on date)
+		// For today, this will be API data formatted as DayData
+		// For older dates, this will be archive data
+		m.archiveData = msg.data
+		// Data may be nil if archive not found - that's graceful
 		return m, nil
 
 	case fetchErrMsg:
