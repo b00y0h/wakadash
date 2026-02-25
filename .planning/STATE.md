@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 
 ## Current Position
 
-Phase: 14 of 15 (Date Navigation)
-Plan: 3 of 3 (Complete)
+Phase: 16 of 17 (Wire Archive Display)
+Plan: 2 of 2 (Complete)
 Status: Complete
-Last activity: 2026-02-25 — Phase 14 Plan 03 complete
+Last activity: 2026-02-25 — Phase 16 Plan 02 complete
 
-Progress: [████████████████████████░░] 90% (28 plans complete across phases 1-14)
+Progress: [█████████████████████████░] 94% (30 plans complete across phases 1-16)
 
 ## Performance Metrics
 
@@ -47,6 +47,8 @@ Progress: [███████████████████████
 | Phase 14 P01 | 126 | 2 tasks | 2 files |
 | Phase 14 P02 | 147 | 3 tasks | 2 files |
 | Phase 14 P03 | 219 | 3 tasks | 4 files |
+| Phase 16 P01 | 169 | 3 tasks | 3 files |
+| Phase 16 P02 | 184 | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -75,6 +77,10 @@ Recent decisions affecting current work:
 - [Phase 14-03]: Search limit of 52 weeks (1 year) prevents infinite search loops
 - [Phase 14-03]: HasOlderData checks 4 weeks back to avoid false negatives from sparse data
 - [Phase 14-03]: Auto-skip only on backward navigation, not forward navigation
+- [Phase 16-01]: Helper method pattern centralizes data source selection logic (getActiveStatsData)
+- [Phase 16-01]: [HISTORICAL] indicator provides visual feedback for archived data view
+- [Phase 16-02]: Auto-refresh timer keeps running during historical view but skips fetch - maintains timer readiness for immediate resume
+- [Phase 16-02]: Status bar shows paused indicator instead of countdown when viewing history for clear user feedback
 
 ### Pending Todos
 
@@ -87,5 +93,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 14-03-PLAN.md
+Stopped at: Completed 16-01-PLAN.md
 Resume file: None
