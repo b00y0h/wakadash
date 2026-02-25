@@ -150,11 +150,12 @@ func getMaxSeconds(items []barItem) float64 {
 // renderLanguagesPanel renders the languages panel with wakafetch-style bars.
 func (m Model) renderLanguagesPanel() string {
 	panelWidth := m.width/2 - 4
-	if m.stats == nil || len(m.stats.Data.Languages) == 0 {
+	statsData := m.getActiveStatsData()
+	if statsData == nil || len(statsData.Languages) == 0 {
 		return renderBorderedPanel("Languages", "No data", panelWidth, m.theme)
 	}
 
-	items := getTopItems(m.stats.Data.Languages, 10)
+	items := getTopItems(statsData.Languages, 10)
 	maxSecs := getMaxSeconds(items)
 	// Bar width: panel width - border (2) - padding (2) = content area
 	barWidth := panelWidth - 8
@@ -165,11 +166,12 @@ func (m Model) renderLanguagesPanel() string {
 // renderProjectsPanel renders the projects panel with wakafetch-style bars.
 func (m Model) renderProjectsPanel() string {
 	panelWidth := m.width/2 - 4
-	if m.stats == nil || len(m.stats.Data.Projects) == 0 {
+	statsData := m.getActiveStatsData()
+	if statsData == nil || len(statsData.Projects) == 0 {
 		return renderBorderedPanel("Projects", "No data", panelWidth, m.theme)
 	}
 
-	items := getTopItems(m.stats.Data.Projects, 10)
+	items := getTopItems(statsData.Projects, 10)
 	maxSecs := getMaxSeconds(items)
 	barWidth := panelWidth - 8
 	// Use secondary/accent color for projects (cyan-ish)
@@ -181,11 +183,12 @@ func (m Model) renderProjectsPanel() string {
 // renderCategoriesPanel renders the categories panel with wakafetch-style bars.
 func (m Model) renderCategoriesPanel() string {
 	panelWidth := m.width/2 - 4
-	if m.stats == nil || len(m.stats.Data.Categories) == 0 {
+	statsData := m.getActiveStatsData()
+	if statsData == nil || len(statsData.Categories) == 0 {
 		return renderBorderedPanel("Categories", "No data", panelWidth, m.theme)
 	}
 
-	items := getTopItems(m.stats.Data.Categories, 10)
+	items := getTopItems(statsData.Categories, 10)
 	maxSecs := getMaxSeconds(items)
 	barWidth := panelWidth - 8
 	content := renderBarChart(items, maxSecs, m.theme.Primary, barWidth)
@@ -195,11 +198,12 @@ func (m Model) renderCategoriesPanel() string {
 // renderEditorsPanel renders the editors panel with wakafetch-style bars.
 func (m Model) renderEditorsPanel() string {
 	panelWidth := m.width/2 - 4
-	if m.stats == nil || len(m.stats.Data.Editors) == 0 {
+	statsData := m.getActiveStatsData()
+	if statsData == nil || len(statsData.Editors) == 0 {
 		return renderBorderedPanel("Editors", "No data", panelWidth, m.theme)
 	}
 
-	items := getTopItems(m.stats.Data.Editors, 10)
+	items := getTopItems(statsData.Editors, 10)
 	maxSecs := getMaxSeconds(items)
 	barWidth := panelWidth - 8
 	content := renderBarChart(items, maxSecs, m.theme.Primary, barWidth)
@@ -209,11 +213,12 @@ func (m Model) renderEditorsPanel() string {
 // renderOSPanel renders the operating systems panel with wakafetch-style bars.
 func (m Model) renderOSPanel() string {
 	panelWidth := m.width/2 - 4
-	if m.stats == nil || len(m.stats.Data.OperatingSystems) == 0 {
+	statsData := m.getActiveStatsData()
+	if statsData == nil || len(statsData.OperatingSystems) == 0 {
 		return renderBorderedPanel("Operating Systems", "No data", panelWidth, m.theme)
 	}
 
-	items := getTopItems(m.stats.Data.OperatingSystems, 10)
+	items := getTopItems(statsData.OperatingSystems, 10)
 	maxSecs := getMaxSeconds(items)
 	barWidth := panelWidth - 8
 	content := renderBarChart(items, maxSecs, m.theme.Primary, barWidth)
@@ -223,11 +228,12 @@ func (m Model) renderOSPanel() string {
 // renderMachinesPanel renders the machines panel with wakafetch-style bars.
 func (m Model) renderMachinesPanel() string {
 	panelWidth := m.width/2 - 4
-	if m.stats == nil || len(m.stats.Data.Machines) == 0 {
+	statsData := m.getActiveStatsData()
+	if statsData == nil || len(statsData.Machines) == 0 {
 		return renderBorderedPanel("Machines", "No data", panelWidth, m.theme)
 	}
 
-	items := getTopItems(m.stats.Data.Machines, 10)
+	items := getTopItems(statsData.Machines, 10)
 	maxSecs := getMaxSeconds(items)
 	barWidth := panelWidth - 8
 	content := renderBarChart(items, maxSecs, m.theme.Primary, barWidth)
