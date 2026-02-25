@@ -52,3 +52,10 @@ type weekSearchResultMsg struct {
 	found     bool   // Whether a non-empty week was found
 	atOldest  bool   // Whether this is the oldest available data
 }
+
+// prefetchResultMsg is sent when background prefetch completes.
+type prefetchResultMsg struct {
+	weekStart string         // Week being prefetched (YYYY-MM-DD Sunday)
+	data      *types.DayData // Prefetched data (nil if not found)
+	err       error          // Error (nil for success or 404)
+}
