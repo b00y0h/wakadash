@@ -15,8 +15,12 @@ type barItem struct {
 	seconds float64
 }
 
+// Bar character - matches wakafetch style (has natural vertical spacing)
+const barChar = "━"
+
 // renderBarChart renders a wakafetch-style horizontal bar chart.
-// Format: name ████████████ time
+// Format: name ━━━━━━━━━━━━░░░░░ time
+// Uses two-tone bars: colored fill + dim background track
 func renderBarChart(items []barItem, maxSeconds float64, barColor lipgloss.Color, panelWidth int) string {
 	if len(items) == 0 {
 		return "  No data"
@@ -47,6 +51,7 @@ func renderBarChart(items []barItem, maxSeconds float64, barColor lipgloss.Color
 
 	var sb strings.Builder
 	barStyle := lipgloss.NewStyle().Foreground(barColor)
+	dimStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#444444"))
 
 	for _, item := range items {
 		// Truncate long names
@@ -60,21 +65,22 @@ func renderBarChart(items []barItem, maxSeconds float64, barColor lipgloss.Color
 		if maxSeconds > 0 {
 			barLen = int(float64(barWidth) * (item.seconds / maxSeconds))
 		}
-		if barLen < 0 {
-			barLen = 0
+		if barLen < 1 && item.seconds > 0 {
+			barLen = 1 // Show at least 1 char for non-zero values
 		}
 
-		// Build the bar using Unicode lower-half block for visual spacing
-		bar := strings.Repeat("▄", barLen)
-		padding := strings.Repeat(" ", barWidth-barLen)
+		// Build two-tone bar: colored fill + dim background track
+		filledBar := strings.Repeat(barChar, barLen)
+		emptyBar := strings.Repeat(barChar, barWidth-barLen)
 
 		// Format time
 		timeStr := formatSecondsCompact(item.seconds)
 
-		// Render line: name (padded) + bar + time
+		// Render line: name (padded) + colored bar + dim track + time
 		line := fmt.Sprintf("%-*s %s%s %s\n",
 			maxNameLen, name,
-			barStyle.Render(bar), padding,
+			barStyle.Render(filledBar),
+			dimStyle.Render(emptyBar),
 			timeStr,
 		)
 		sb.WriteString(line)
