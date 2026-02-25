@@ -14,6 +14,7 @@ import (
 	"github.com/b00y0h/wakadash/internal/api"
 	"github.com/b00y0h/wakadash/internal/archive"
 	"github.com/b00y0h/wakadash/internal/config"
+	"github.com/b00y0h/wakadash/internal/datasource"
 	"github.com/b00y0h/wakadash/internal/theme"
 	"github.com/b00y0h/wakadash/internal/tui"
 )
@@ -69,6 +70,9 @@ func main() {
 	archiveFetcher := archive.New(cfg.HistoryRepo)
 	// archiveFetcher is nil if HistoryRepo is empty or invalid - that's OK (graceful no-op)
 
+	// Create hybrid data source (routes to API for recent dates, archive for old dates)
+	dataSource := datasource.New(client, archiveFetcher)
+
 	// Check if first run (no theme configured)
 	themeName, _ := theme.LoadThemeFromConfig()
 	isFirstRun := themeName == ""
@@ -86,7 +90,7 @@ func main() {
 		// No need to save again here — theme is persisted when user confirms in picker
 	}
 
-	m := tui.NewModel(client, *rangeFlag, refreshInterval, archiveFetcher)
+	m := tui.NewModel(client, *rangeFlag, refreshInterval, dataSource)
 
 	// tea.WithAltScreen() is the correct approach for full-screen apps.
 	// Per research: "Because commands run asynchronously, EnterAltScreen should

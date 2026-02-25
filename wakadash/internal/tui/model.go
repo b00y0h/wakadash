@@ -13,7 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/b00y0h/wakadash/internal/api"
-	"github.com/b00y0h/wakadash/internal/archive"
+	"github.com/b00y0h/wakadash/internal/datasource"
 	"github.com/b00y0h/wakadash/internal/theme"
 	"github.com/b00y0h/wakadash/internal/types"
 )
@@ -41,8 +41,8 @@ type Model struct {
 	client   *api.Client
 	rangeStr string
 
-	// Archive fetcher (nil when history_repo not configured)
-	archiveFetcher *archive.Fetcher
+	// DataSource for hybrid data fetching (API for recent, archive for old dates)
+	dataSource *datasource.DataSource
 
 	// Archived data for historical dates
 	archiveData *types.DayData
@@ -87,8 +87,8 @@ type Model struct {
 // rangeStr defaults to "last_7_days" if empty.
 // Valid values: last_7_days, last_30_days, last_6_months, last_year, all_time.
 // refreshInterval defaults to 60s if zero.
-// archiveFetcher may be nil if history_repo is not configured.
-func NewModel(client *api.Client, rangeStr string, refreshInterval time.Duration, archiveFetcher *archive.Fetcher) Model {
+// dataSource routes fetches to API (recent dates) or archive (old dates).
+func NewModel(client *api.Client, rangeStr string, refreshInterval time.Duration, dataSource *datasource.DataSource) Model {
 	if rangeStr == "" {
 		rangeStr = "last_7_days"
 	}
@@ -120,7 +120,7 @@ func NewModel(client *api.Client, rangeStr string, refreshInterval time.Duration
 		client:          client,
 		rangeStr:        rangeStr,
 		refreshInterval: refreshInterval,
-		archiveFetcher:  archiveFetcher,
+		dataSource:      dataSource,
 		theme:           activeTheme,
 		spinner:         s,
 		help:            h,
