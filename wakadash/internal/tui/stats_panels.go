@@ -29,19 +29,20 @@ func renderBarChart(items []barItem, maxSeconds float64, barColor lipgloss.Color
 			maxNameLen = len(item.name)
 		}
 	}
-	// Cap name length to avoid overflow
-	if maxNameLen > 15 {
-		maxNameLen = 15
+	// Cap name length to avoid overflow, but allow more space
+	if maxNameLen > 20 {
+		maxNameLen = 20
 	}
 
 	// Calculate bar width (panel width - name - spacing - time)
-	// Time format: "XXXh XXm" = ~9 chars
+	// Time format: "XXXh XXm" = ~9 chars, plus spacing = ~12
 	barWidth := panelWidth - maxNameLen - 12
 	if barWidth < 10 {
 		barWidth = 10
 	}
-	if barWidth > 30 {
-		barWidth = 30
+	// Allow bars to stretch wider for larger terminals
+	if barWidth > 80 {
+		barWidth = 80
 	}
 
 	var sb strings.Builder
@@ -70,7 +71,7 @@ func renderBarChart(items []barItem, maxSeconds float64, barColor lipgloss.Color
 		// Format time
 		timeStr := formatSecondsCompact(item.seconds)
 
-		// Render line: name (padded) + bar + time
+		// Render line: name (padded) + bar + time + blank line for spacing
 		line := fmt.Sprintf("%-*s %s%s %s\n",
 			maxNameLen, name,
 			barStyle.Render(bar), padding,
