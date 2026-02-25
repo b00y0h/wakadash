@@ -54,6 +54,10 @@ type Model struct {
 	selectedWeekStart string // Start of currently viewed week (YYYY-MM-DD, always a Sunday), empty = current week
 	atOldestData      bool   // True when viewing the oldest available data
 
+	// End-of-history state
+	showEndOfHistory bool   // True when navigated to week with no data
+	oldestDataDate   string // Date when archive data started (for banner display)
+
 	// Theme
 	theme theme.Theme // Active color theme
 
@@ -474,6 +478,11 @@ func (m Model) View() string {
 		return m.picker.View()
 	}
 
+	// Check for end-of-history state first
+	if m.showEndOfHistory {
+		return m.renderEndOfHistory()
+	}
+
 	// Check minimum terminal size
 	const minWidth = 40
 	const minHeight = 10
@@ -782,4 +791,27 @@ func getThemedActivityColor(hours float64, t theme.Theme) lipgloss.Color {
 	default:
 		return t.HeatmapColors[4] // VeryHigh
 	}
+}
+
+// renderEndOfHistory renders the full-screen end-of-history banner.
+// Per user decision: Banner text includes date when archive data started.
+func (m Model) renderEndOfHistory() string {
+	title := EndOfHistoryTitleStyle(m.theme).Render("End of History")
+
+	var dateInfo string
+	if m.oldestDataDate != "" {
+		dateInfo = EndOfHistoryTextStyle(m.theme).Render(
+			fmt.Sprintf("Archive data starts: %s", m.oldestDataDate))
+	} else {
+		dateInfo = EndOfHistoryTextStyle(m.theme).Render(
+			"No archived data available for this period")
+	}
+
+	// Per user decision: Show navigation hints
+	hints := EndOfHistoryHintStyle(m.theme).Render(
+		"Press → or 0 to return")
+
+	content := lipgloss.JoinVertical(lipgloss.Center, title, dateInfo, hints)
+
+	return EndOfHistoryStyle(m.theme, m.width, m.height).Render(content)
 }
