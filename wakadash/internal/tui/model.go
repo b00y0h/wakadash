@@ -381,6 +381,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// For older dates, this will be archive data
 		m.archiveData = msg.data
 		// Data may be nil if archive not found - that's graceful
+
+		// Trigger background prefetch of previous week
+		prevWeek := getPreviousWeekStart(m.selectedWeekStart)
+		if prevWeek != "" {
+			if _, cached := m.prefetchedData[prevWeek]; !cached {
+				return m, prefetchWeekCmd(m.dataSource, prevWeek)
+			}
+		}
 		return m, nil
 
 	case weekSearchResultMsg:
@@ -615,6 +623,18 @@ func getWeekStart(date time.Time) time.Time {
 	// Calculate days since Sunday (Sunday = 0)
 	daysSinceSunday := int(date.Weekday())
 	return date.AddDate(0, 0, -daysSinceSunday)
+}
+
+// getPreviousWeekStart returns the Sunday of the previous week.
+func getPreviousWeekStart(currentWeek string) string {
+	if currentWeek == "" {
+		currentWeek = getWeekStart(time.Now()).Format("2006-01-02")
+	}
+	parsed, err := time.Parse("2006-01-02", currentWeek)
+	if err != nil {
+		return ""
+	}
+	return parsed.AddDate(0, 0, -7).Format("2006-01-02")
 }
 
 // formatWeekRange returns a display string like "Feb 16-22" for a week starting on Sunday.

@@ -233,3 +233,25 @@ func findNonEmptyWeekCmd(ds *datasource.DataSource, startWeek string, direction 
 		return weekSearchResultMsg{weekStart: weekStart, found: true, atOldest: atOldest}
 	}
 }
+
+// prefetchWeekCmd fetches data for a week in the background.
+// Returns prefetchResultMsg; errors are stored in msg.err for silent handling.
+func prefetchWeekCmd(ds *datasource.DataSource, weekStart string) tea.Cmd {
+	return func() (msg tea.Msg) {
+		defer func() {
+			if r := recover(); r != nil {
+				var err error
+				switch v := r.(type) {
+				case error:
+					err = v
+				default:
+					err = fmt.Errorf("panic in prefetchWeekCmd: %v", r)
+				}
+				msg = prefetchResultMsg{weekStart: weekStart, err: err}
+			}
+		}()
+
+		data, err := ds.Fetch(weekStart)
+		return prefetchResultMsg{weekStart: weekStart, data: data, err: err}
+	}
+}
