@@ -607,18 +607,32 @@ func (m *Model) updateLanguagesChart() {
 	m.languagesChart.Clear()
 	data := m.stats.Data
 
-	// Add top 5 languages
+	// Limit to top 5 languages
 	limit := 5
 	if len(data.Languages) < limit {
 		limit = len(data.Languages)
 	}
 
+	// Calculate total for percentages
+	var total float64
+	for _, lang := range data.Languages {
+		total += lang.TotalSeconds
+	}
+
+	// Protect against division by zero (all items have 0 seconds)
+	if total == 0 {
+		m.languagesChart.Draw()
+		return
+	}
+
 	for _, lang := range data.Languages[:limit] {
 		hours := lang.TotalSeconds / 3600.0
+		percent := (lang.TotalSeconds / total) * 100
+		label := fmt.Sprintf("%s: %s", lang.Name, formatTimeWithPercent(lang.TotalSeconds, percent))
 		color := getLanguageColor(lang.Name)
 		barStyle := lipgloss.NewStyle().Foreground(color)
 		m.languagesChart.Push(barchart.BarData{
-			Label: lang.Name,
+			Label: label,
 			Values: []barchart.BarValue{
 				{
 					Name:  "",
@@ -641,10 +655,22 @@ func (m *Model) updateProjectsChart() {
 	m.projectsChart.Clear()
 	data := m.stats.Data
 
-	// Add top 5 projects
+	// Limit to top 5 projects
 	limit := 5
 	if len(data.Projects) < limit {
 		limit = len(data.Projects)
+	}
+
+	// Calculate total for percentages
+	var total float64
+	for _, proj := range data.Projects {
+		total += proj.TotalSeconds
+	}
+
+	// Protect against division by zero (all items have 0 seconds)
+	if total == 0 {
+		m.projectsChart.Draw()
+		return
 	}
 
 	// Fixed cyan color for all projects
@@ -653,8 +679,10 @@ func (m *Model) updateProjectsChart() {
 
 	for _, proj := range data.Projects[:limit] {
 		hours := proj.TotalSeconds / 3600.0
+		percent := (proj.TotalSeconds / total) * 100
+		label := fmt.Sprintf("%s: %s", proj.Name, formatTimeWithPercent(proj.TotalSeconds, percent))
 		m.projectsChart.Push(barchart.BarData{
-			Label: proj.Name,
+			Label: label,
 			Values: []barchart.BarValue{
 				{
 					Name:  "",
