@@ -80,10 +80,11 @@ Plans:
   1. Dashboard fetches archived data from GitHub when `history_repo` is configured
   2. Dashboard shows "no data available" when archive file missing (no crash)
   3. Archive data parses correctly and populates all panels
-**Plans**: 1 plan
+**Plans**: 2 plans
 
 Plans:
 - [x] 12-01-PLAN.md — Create GitHub archive fetcher with graceful 404 handling
+- [ ] 12-02-PLAN.md — Integrate archive fetcher into dashboard (gap closure)
 
 ### Phase 13: Hybrid Data Fetching
 **Goal**: Seamlessly combine API and archive data
@@ -141,7 +142,7 @@ Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 →
 | 9. Stats Panels + Summary | v2.1 | 3/3 | Complete | 2026-02-20 |
 | 10. Polish + Edge Cases | v2.1 | 1/1 | Complete | 2026-02-20 |
 | 11. Configuration & Validation | v2.2 | 1/1 | Complete | 2026-02-24 |
-| 12. GitHub Archive Integration | v2.2 | 0/1 | Not started | - |
+| 12. GitHub Archive Integration | v2.2 | 1/2 | In progress | - |
 | 13. Hybrid Data Fetching | v2.2 | 0/? | Not started | - |
 | 14. Date Navigation | v2.2 | 0/? | Not started | - |
 | 15. Historical Display | v2.2 | 0/? | Not started | - |
@@ -154,4 +155,4 @@ Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 →
 
 ---
 *Roadmap created: 2026-02-18*
-*Last updated: 2026-02-24 (Phase 12 planning complete)*
+*Last updated: 2026-02-25 (Phase 12 gap closure plan created)*
