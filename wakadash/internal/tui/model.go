@@ -47,6 +47,9 @@ type Model struct {
 	// Archived data for historical dates
 	archiveData *types.DayData
 
+	// Date navigation
+	selectedDate string // Currently viewed date (YYYY-MM-DD format), empty = today
+
 	// Theme
 	theme theme.Theme // Active color theme
 
@@ -121,6 +124,7 @@ func NewModel(client *api.Client, rangeStr string, refreshInterval time.Duration
 		rangeStr:        rangeStr,
 		refreshInterval: refreshInterval,
 		dataSource:      dataSource,
+		selectedDate:    "", // Empty means today (live data)
 		theme:           activeTheme,
 		spinner:         s,
 		help:            h,
@@ -284,6 +288,42 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 			return m, nil
+		case key.Matches(msg, m.keys.PrevDay):
+			// Calculate previous day
+			currentDate := m.selectedDate
+			if currentDate == "" {
+				currentDate = time.Now().Format("2006-01-02")
+			}
+			parsed, err := time.Parse("2006-01-02", currentDate)
+			if err != nil {
+				return m, nil
+			}
+			m.selectedDate = parsed.AddDate(0, 0, -1).Format("2006-01-02")
+			return m, fetchDataCmd(m.dataSource, m.selectedDate)
+		case key.Matches(msg, m.keys.NextDay):
+			currentDate := m.selectedDate
+			if currentDate == "" {
+				// Already at today, can't go forward
+				return m, nil
+			}
+			parsed, err := time.Parse("2006-01-02", currentDate)
+			if err != nil {
+				return m, nil
+			}
+			nextDay := parsed.AddDate(0, 0, 1)
+			today := time.Now().Format("2006-01-02")
+			if nextDay.Format("2006-01-02") >= today {
+				m.selectedDate = "" // Return to live today view
+			} else {
+				m.selectedDate = nextDay.Format("2006-01-02")
+			}
+			return m, fetchDataCmd(m.dataSource, nextDay.Format("2006-01-02"))
+		case key.Matches(msg, m.keys.Today):
+			if m.selectedDate == "" {
+				return m, nil // Already at today
+			}
+			m.selectedDate = ""
+			return m, fetchDataCmd(m.dataSource, time.Now().Format("2006-01-02"))
 		}
 		return m, nil
 
