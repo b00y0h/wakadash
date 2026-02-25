@@ -14,6 +14,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/b00y0h/wakadash/internal/api"
+	"github.com/b00y0h/wakadash/internal/archive"
 	"github.com/b00y0h/wakadash/internal/theme"
 	"github.com/b00y0h/wakadash/internal/types"
 )
@@ -41,13 +42,19 @@ type Model struct {
 	client   *api.Client
 	rangeStr string
 
+	// Archive fetcher (nil when history_repo not configured)
+	archiveFetcher *archive.Fetcher
+
+	// Archived data for historical dates
+	archiveData *types.DayData
+
 	// Theme
 	theme theme.Theme // Active color theme
 
 	// UI components
-	spinner        spinner.Model
-	help           help.Model
-	keys           keymap
+	spinner         spinner.Model
+	help            help.Model
+	keys            keymap
 	sparklineChart  sparkline.Model
 	languagesChart  barchart.Model
 	projectsChart   barchart.Model
@@ -87,7 +94,8 @@ type Model struct {
 // rangeStr defaults to "last_7_days" if empty.
 // Valid values: last_7_days, last_30_days, last_6_months, last_year, all_time.
 // refreshInterval defaults to 60s if zero.
-func NewModel(client *api.Client, rangeStr string, refreshInterval time.Duration) Model {
+// archiveFetcher may be nil if history_repo is not configured.
+func NewModel(client *api.Client, rangeStr string, refreshInterval time.Duration, archiveFetcher *archive.Fetcher) Model {
 	if rangeStr == "" {
 		rangeStr = "last_7_days"
 	}
@@ -125,6 +133,7 @@ func NewModel(client *api.Client, rangeStr string, refreshInterval time.Duration
 		client:          client,
 		rangeStr:        rangeStr,
 		refreshInterval: refreshInterval,
+		archiveFetcher:  archiveFetcher,
 		theme:           activeTheme,
 		spinner:         s,
 		help:            h,

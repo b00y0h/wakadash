@@ -12,14 +12,14 @@ import (
 
 // ThemePickerModel is a BubbleTea model for theme selection.
 type ThemePickerModel struct {
-	themes        []string      // Theme names from theme.AllThemes()
-	selectedIdx   int           // Current selection
-	width         int           // Terminal width
-	height        int           // Terminal height
-	confirmed     bool          // True when user pressed Enter
-	cancelled     bool          // True when user pressed Esc/Q (runtime only)
-	selectedTheme string        // Theme name when confirmed
-	isFirstRun    bool          // True for first-run flow (no cancel allowed)
+	themes        []string // Theme names from theme.AllThemes()
+	selectedIdx   int      // Current selection
+	width         int      // Terminal width
+	height        int      // Terminal height
+	confirmed     bool     // True when user pressed Enter
+	cancelled     bool     // True when user pressed Esc/Q (runtime only)
+	selectedTheme string   // Theme name when confirmed
+	isFirstRun    bool     // True for first-run flow (no cancel allowed)
 }
 
 // NewThemePicker creates a new theme picker model.
