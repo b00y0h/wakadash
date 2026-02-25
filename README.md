@@ -41,7 +41,15 @@ wakadash reads `~/.wakatime.cfg` — the same config file used by WakaTime edito
 
 ```ini
 [settings]
-api_url = https://wakatime.com/api
+api_url = https://wakatime.com/api/v1
+api_key = your-api-key-here
+```
+
+For Wakapi users:
+
+```ini
+[settings]
+api_url = https://your-wakapi-instance.com/api
 api_key = your-api-key-here
 ```
 
