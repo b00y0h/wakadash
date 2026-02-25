@@ -97,3 +97,37 @@ func renderBorderedPanel(title, content string, width int, t theme.Theme) string
 	lines[0] = newTopLine
 	return strings.Join(lines, "\n")
 }
+
+// EndOfHistoryStyle creates a centered box/border style for the end-of-history banner.
+// Per user decision: Box/border around message — emphasized style, draws attention like a modal.
+func EndOfHistoryStyle(t theme.Theme, width, height int) lipgloss.Style {
+	return lipgloss.NewStyle().
+		Width(width-4).
+		Height(height-4).
+		Align(lipgloss.Center, lipgloss.Center).
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(t.Warning).
+		Padding(2, 4)
+}
+
+// EndOfHistoryTitleStyle creates the title style for the banner.
+func EndOfHistoryTitleStyle(t theme.Theme) lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(t.Warning).
+		Bold(true).
+		MarginBottom(2)
+}
+
+// EndOfHistoryTextStyle creates the body text style for the banner.
+func EndOfHistoryTextStyle(t theme.Theme) lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(t.Foreground).
+		MarginBottom(1)
+}
+
+// EndOfHistoryHintStyle creates the navigation hint style.
+func EndOfHistoryHintStyle(t theme.Theme) lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(t.Dim).
+		Italic(true)
+}
