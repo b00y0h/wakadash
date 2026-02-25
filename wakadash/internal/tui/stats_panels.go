@@ -4,344 +4,242 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/NimbleMarkets/ntcharts/barchart"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/b00y0h/wakadash/internal/types"
 )
 
-// formatTimeWithPercent formats seconds and percentage as "2h 15m (65%)".
-func formatTimeWithPercent(secs float64, percent float64) string {
-	timeStr := formatSeconds(secs)
-	return fmt.Sprintf("%s (%.0f%%)", timeStr, percent)
+// barItem represents a single item in a bar chart.
+type barItem struct {
+	name    string
+	seconds float64
 }
 
-// updateCategoriesChart populates the categories chart from stats data.
-func (m *Model) updateCategoriesChart() {
-	if m.stats == nil {
-		return
+// renderBarChart renders a wakafetch-style horizontal bar chart.
+// Format: name ████████████ time
+func renderBarChart(items []barItem, maxSeconds float64, barColor lipgloss.Color, panelWidth int) string {
+	if len(items) == 0 {
+		return "  No data"
 	}
 
-	m.categoriesChart.Clear()
-	data := m.stats.Data
-
-	// Limit to top 10 categories
-	limit := 10
-	if len(data.Categories) < limit {
-		limit = len(data.Categories)
+	// Find max name length for alignment
+	maxNameLen := 0
+	for _, item := range items {
+		if len(item.name) > maxNameLen {
+			maxNameLen = len(item.name)
+		}
+	}
+	// Cap name length to avoid overflow
+	if maxNameLen > 15 {
+		maxNameLen = 15
 	}
 
-	// Calculate total for percentages
-	var total float64
-	for _, cat := range data.Categories {
-		total += cat.TotalSeconds
+	// Calculate bar width (panel width - name - spacing - time)
+	// Time format: "XXXh XXm" = ~9 chars
+	barWidth := panelWidth - maxNameLen - 12
+	if barWidth < 10 {
+		barWidth = 10
+	}
+	if barWidth > 30 {
+		barWidth = 30
 	}
 
-	// Protect against division by zero (all items have 0 seconds)
+	var sb strings.Builder
+	barStyle := lipgloss.NewStyle().Foreground(barColor)
+
+	for _, item := range items {
+		// Truncate long names
+		name := item.name
+		if len(name) > maxNameLen {
+			name = name[:maxNameLen-1] + "…"
+		}
+
+		// Calculate bar length proportional to max
+		barLen := 0
+		if maxSeconds > 0 {
+			barLen = int(float64(barWidth) * (item.seconds / maxSeconds))
+		}
+		if barLen < 0 {
+			barLen = 0
+		}
+
+		// Build the bar using Unicode block character
+		bar := strings.Repeat("█", barLen)
+		padding := strings.Repeat(" ", barWidth-barLen)
+
+		// Format time
+		timeStr := formatSecondsCompact(item.seconds)
+
+		// Render line: name (padded) + bar + time
+		line := fmt.Sprintf("%-*s %s%s %s\n",
+			maxNameLen, name,
+			barStyle.Render(bar), padding,
+			timeStr,
+		)
+		sb.WriteString(line)
+	}
+
+	return sb.String()
+}
+
+// formatSecondsCompact formats seconds as "XXh XXm" or "XXm XXs".
+func formatSecondsCompact(secs float64) string {
+	total := int(secs)
 	if total == 0 {
-		m.categoriesChart.Draw()
-		return
+		return "    0s"
 	}
 
-	// Add top 10 categories
+	hours := total / 3600
+	mins := (total % 3600) / 60
+	seconds := total % 60
+
+	if hours > 0 {
+		return fmt.Sprintf("%3dh %2dm", hours, mins)
+	}
+	if mins > 0 {
+		return fmt.Sprintf("%3dm %2ds", mins, seconds)
+	}
+	return fmt.Sprintf("    %2ds", seconds)
+}
+
+// getTopItems extracts top N items from a slice, with optional "Other" aggregation.
+func getTopItems(items []types.StatItem, limit int) []barItem {
+	result := make([]barItem, 0, limit+1)
+
 	var otherSeconds float64
-	for i, cat := range data.Categories {
+	for i, item := range items {
 		if i < limit {
-			hours := cat.TotalSeconds / 3600.0
-			percent := (cat.TotalSeconds / total) * 100
-			label := fmt.Sprintf("%s: %s", cat.Name, formatTimeWithPercent(cat.TotalSeconds, percent))
-			barStyle := lipgloss.NewStyle().Foreground(m.theme.Primary)
-			m.categoriesChart.Push(barchart.BarData{
-				Label: label,
-				Values: []barchart.BarValue{
-					{
-						Name:  "",
-						Value: hours,
-						Style: barStyle,
-					},
-				},
+			result = append(result, barItem{
+				name:    item.Name,
+				seconds: item.TotalSeconds,
 			})
 		} else {
-			otherSeconds += cat.TotalSeconds
+			otherSeconds += item.TotalSeconds
 		}
 	}
 
-	// Add "Other" category if there are remaining items
-	if len(data.Categories) > limit {
-		hours := otherSeconds / 3600.0
-		percent := (otherSeconds / total) * 100
-		label := fmt.Sprintf("Other: %s", formatTimeWithPercent(otherSeconds, percent))
-		barStyle := lipgloss.NewStyle().Foreground(m.theme.Primary)
-		m.categoriesChart.Push(barchart.BarData{
-			Label: label,
-			Values: []barchart.BarValue{
-				{
-					Name:  "",
-					Value: hours,
-					Style: barStyle,
-				},
-			},
+	// Add "Other" if there are more items
+	if len(items) > limit && otherSeconds > 0 {
+		result = append(result, barItem{
+			name:    "Other",
+			seconds: otherSeconds,
 		})
 	}
 
-	m.categoriesChart.Draw()
+	return result
 }
 
-// updateEditorsChart populates the editors chart from stats data.
-func (m *Model) updateEditorsChart() {
-	if m.stats == nil {
-		return
-	}
-
-	m.editorsChart.Clear()
-	data := m.stats.Data
-
-	// Limit to top 10 editors
-	limit := 10
-	if len(data.Editors) < limit {
-		limit = len(data.Editors)
-	}
-
-	// Calculate total for percentages
-	var total float64
-	for _, ed := range data.Editors {
-		total += ed.TotalSeconds
-	}
-
-	// Protect against division by zero (all items have 0 seconds)
-	if total == 0 {
-		m.editorsChart.Draw()
-		return
-	}
-
-	// Add top 10 editors
-	var otherSeconds float64
-	for i, ed := range data.Editors {
-		if i < limit {
-			hours := ed.TotalSeconds / 3600.0
-			percent := (ed.TotalSeconds / total) * 100
-			label := fmt.Sprintf("%s: %s", ed.Name, formatTimeWithPercent(ed.TotalSeconds, percent))
-			barStyle := lipgloss.NewStyle().Foreground(m.theme.Primary)
-			m.editorsChart.Push(barchart.BarData{
-				Label: label,
-				Values: []barchart.BarValue{
-					{
-						Name:  "",
-						Value: hours,
-						Style: barStyle,
-					},
-				},
-			})
-		} else {
-			otherSeconds += ed.TotalSeconds
+// getMaxSeconds finds the maximum seconds value in a slice.
+func getMaxSeconds(items []barItem) float64 {
+	var max float64
+	for _, item := range items {
+		if item.seconds > max {
+			max = item.seconds
 		}
 	}
-
-	// Add "Other" category if there are remaining items
-	if len(data.Editors) > limit {
-		hours := otherSeconds / 3600.0
-		percent := (otherSeconds / total) * 100
-		label := fmt.Sprintf("Other: %s", formatTimeWithPercent(otherSeconds, percent))
-		barStyle := lipgloss.NewStyle().Foreground(m.theme.Primary)
-		m.editorsChart.Push(barchart.BarData{
-			Label: label,
-			Values: []barchart.BarValue{
-				{
-					Name:  "",
-					Value: hours,
-					Style: barStyle,
-				},
-			},
-		})
-	}
-
-	m.editorsChart.Draw()
+	return max
 }
 
-// updateOSChart populates the operating systems chart from stats data.
-func (m *Model) updateOSChart() {
-	if m.stats == nil {
-		return
+// renderLanguagesPanel renders the languages panel with wakafetch-style bars.
+func (m Model) renderLanguagesPanel() string {
+	var sb strings.Builder
+	sb.WriteString(TitleStyle(m.theme).Render("Languages") + "\n")
+
+	if m.stats == nil || len(m.stats.Data.Languages) == 0 {
+		sb.WriteString("  No data")
+		return sb.String()
 	}
 
-	m.osChart.Clear()
-	data := m.stats.Data
-
-	// Limit to top 10 operating systems
-	limit := 10
-	if len(data.OperatingSystems) < limit {
-		limit = len(data.OperatingSystems)
-	}
-
-	// Calculate total for percentages
-	var total float64
-	for _, os := range data.OperatingSystems {
-		total += os.TotalSeconds
-	}
-
-	// Protect against division by zero (all items have 0 seconds)
-	if total == 0 {
-		m.osChart.Draw()
-		return
-	}
-
-	// Add top 10 operating systems
-	var otherSeconds float64
-	for i, os := range data.OperatingSystems {
-		if i < limit {
-			hours := os.TotalSeconds / 3600.0
-			percent := (os.TotalSeconds / total) * 100
-			label := fmt.Sprintf("%s: %s", os.Name, formatTimeWithPercent(os.TotalSeconds, percent))
-			barStyle := lipgloss.NewStyle().Foreground(m.theme.Primary)
-			m.osChart.Push(barchart.BarData{
-				Label: label,
-				Values: []barchart.BarValue{
-					{
-						Name:  "",
-						Value: hours,
-						Style: barStyle,
-					},
-				},
-			})
-		} else {
-			otherSeconds += os.TotalSeconds
-		}
-	}
-
-	// Add "Other" category if there are remaining items
-	if len(data.OperatingSystems) > limit {
-		hours := otherSeconds / 3600.0
-		percent := (otherSeconds / total) * 100
-		label := fmt.Sprintf("Other: %s", formatTimeWithPercent(otherSeconds, percent))
-		barStyle := lipgloss.NewStyle().Foreground(m.theme.Primary)
-		m.osChart.Push(barchart.BarData{
-			Label: label,
-			Values: []barchart.BarValue{
-				{
-					Name:  "",
-					Value: hours,
-					Style: barStyle,
-				},
-			},
-		})
-	}
-
-	m.osChart.Draw()
+	items := getTopItems(m.stats.Data.Languages, 10)
+	maxSecs := getMaxSeconds(items)
+	panelWidth := m.width/2 - 4
+	sb.WriteString(renderBarChart(items, maxSecs, m.theme.Primary, panelWidth))
+	return sb.String()
 }
 
-// updateMachinesChart populates the machines chart from stats data.
-func (m *Model) updateMachinesChart() {
-	if m.stats == nil {
-		return
+// renderProjectsPanel renders the projects panel with wakafetch-style bars.
+func (m Model) renderProjectsPanel() string {
+	var sb strings.Builder
+	sb.WriteString(TitleStyle(m.theme).Render("Projects") + "\n")
+
+	if m.stats == nil || len(m.stats.Data.Projects) == 0 {
+		sb.WriteString("  No data")
+		return sb.String()
 	}
 
-	m.machinesChart.Clear()
-	data := m.stats.Data
-
-	// Limit to top 10 machines
-	limit := 10
-	if len(data.Machines) < limit {
-		limit = len(data.Machines)
-	}
-
-	// Calculate total for percentages
-	var total float64
-	for _, mach := range data.Machines {
-		total += mach.TotalSeconds
-	}
-
-	// Protect against division by zero (all items have 0 seconds)
-	if total == 0 {
-		m.machinesChart.Draw()
-		return
-	}
-
-	// Add top 10 machines
-	var otherSeconds float64
-	for i, mach := range data.Machines {
-		if i < limit {
-			hours := mach.TotalSeconds / 3600.0
-			percent := (mach.TotalSeconds / total) * 100
-			label := fmt.Sprintf("%s: %s", mach.Name, formatTimeWithPercent(mach.TotalSeconds, percent))
-			barStyle := lipgloss.NewStyle().Foreground(m.theme.Primary)
-			m.machinesChart.Push(barchart.BarData{
-				Label: label,
-				Values: []barchart.BarValue{
-					{
-						Name:  "",
-						Value: hours,
-						Style: barStyle,
-					},
-				},
-			})
-		} else {
-			otherSeconds += mach.TotalSeconds
-		}
-	}
-
-	// Add "Other" category if there are remaining items
-	if len(data.Machines) > limit {
-		hours := otherSeconds / 3600.0
-		percent := (otherSeconds / total) * 100
-		label := fmt.Sprintf("Other: %s", formatTimeWithPercent(otherSeconds, percent))
-		barStyle := lipgloss.NewStyle().Foreground(m.theme.Primary)
-		m.machinesChart.Push(barchart.BarData{
-			Label: label,
-			Values: []barchart.BarValue{
-				{
-					Name:  "",
-					Value: hours,
-					Style: barStyle,
-				},
-			},
-		})
-	}
-
-	m.machinesChart.Draw()
+	items := getTopItems(m.stats.Data.Projects, 10)
+	maxSecs := getMaxSeconds(items)
+	panelWidth := m.width/2 - 4
+	// Use secondary/accent color for projects (cyan-ish)
+	projectColor := lipgloss.Color("#00d7ff")
+	sb.WriteString(renderBarChart(items, maxSecs, projectColor, panelWidth))
+	return sb.String()
 }
 
-// renderCategoriesPanel renders the categories panel with title.
+// renderCategoriesPanel renders the categories panel with wakafetch-style bars.
 func (m Model) renderCategoriesPanel() string {
 	var sb strings.Builder
 	sb.WriteString(TitleStyle(m.theme).Render("Categories") + "\n")
+
 	if m.stats == nil || len(m.stats.Data.Categories) == 0 {
 		sb.WriteString("  No data")
-	} else {
-		sb.WriteString(m.categoriesChart.View())
+		return sb.String()
 	}
+
+	items := getTopItems(m.stats.Data.Categories, 10)
+	maxSecs := getMaxSeconds(items)
+	panelWidth := m.width/2 - 4
+	sb.WriteString(renderBarChart(items, maxSecs, m.theme.Primary, panelWidth))
 	return sb.String()
 }
 
-// renderEditorsPanel renders the editors panel with title.
+// renderEditorsPanel renders the editors panel with wakafetch-style bars.
 func (m Model) renderEditorsPanel() string {
 	var sb strings.Builder
 	sb.WriteString(TitleStyle(m.theme).Render("Editors") + "\n")
+
 	if m.stats == nil || len(m.stats.Data.Editors) == 0 {
 		sb.WriteString("  No data")
-	} else {
-		sb.WriteString(m.editorsChart.View())
+		return sb.String()
 	}
+
+	items := getTopItems(m.stats.Data.Editors, 10)
+	maxSecs := getMaxSeconds(items)
+	panelWidth := m.width/2 - 4
+	sb.WriteString(renderBarChart(items, maxSecs, m.theme.Primary, panelWidth))
 	return sb.String()
 }
 
-// renderOSPanel renders the operating systems panel with title.
+// renderOSPanel renders the operating systems panel with wakafetch-style bars.
 func (m Model) renderOSPanel() string {
 	var sb strings.Builder
 	sb.WriteString(TitleStyle(m.theme).Render("Operating Systems") + "\n")
+
 	if m.stats == nil || len(m.stats.Data.OperatingSystems) == 0 {
 		sb.WriteString("  No data")
-	} else {
-		sb.WriteString(m.osChart.View())
+		return sb.String()
 	}
+
+	items := getTopItems(m.stats.Data.OperatingSystems, 10)
+	maxSecs := getMaxSeconds(items)
+	panelWidth := m.width/2 - 4
+	sb.WriteString(renderBarChart(items, maxSecs, m.theme.Primary, panelWidth))
 	return sb.String()
 }
 
-// renderMachinesPanel renders the machines panel with title.
+// renderMachinesPanel renders the machines panel with wakafetch-style bars.
 func (m Model) renderMachinesPanel() string {
 	var sb strings.Builder
 	sb.WriteString(TitleStyle(m.theme).Render("Machines") + "\n")
+
 	if m.stats == nil || len(m.stats.Data.Machines) == 0 {
 		sb.WriteString("  No data")
-	} else {
-		sb.WriteString(m.machinesChart.View())
+		return sb.String()
 	}
+
+	items := getTopItems(m.stats.Data.Machines, 10)
+	maxSecs := getMaxSeconds(items)
+	panelWidth := m.width/2 - 4
+	sb.WriteString(renderBarChart(items, maxSecs, m.theme.Primary, panelWidth))
 	return sb.String()
 }

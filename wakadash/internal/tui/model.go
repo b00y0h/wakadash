@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NimbleMarkets/ntcharts/barchart"
 	"github.com/NimbleMarkets/ntcharts/sparkline"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
@@ -52,16 +51,10 @@ type Model struct {
 	theme theme.Theme // Active color theme
 
 	// UI components
-	spinner         spinner.Model
-	help            help.Model
-	keys            keymap
-	sparklineChart  sparkline.Model
-	languagesChart  barchart.Model
-	projectsChart   barchart.Model
-	categoriesChart barchart.Model
-	editorsChart    barchart.Model
-	osChart         barchart.Model
-	machinesChart   barchart.Model
+	spinner        spinner.Model
+	help           help.Model
+	keys           keymap
+	sparklineChart sparkline.Model
 
 	// Sparkline data
 	hourlyData []float64 // 24 hours of activity
@@ -118,12 +111,6 @@ func NewModel(client *api.Client, rangeStr string, refreshInterval time.Duration
 	h.Width = 80
 
 	sparklineChart := sparkline.New(70, 5)
-	languagesChart := barchart.New(35, 8)
-	projectsChart := barchart.New(35, 8)
-	categoriesChart := barchart.New(35, 10)
-	editorsChart := barchart.New(35, 10)
-	osChart := barchart.New(35, 10)
-	machinesChart := barchart.New(35, 10)
 
 	return Model{
 		// Safe defaults — overridden by WindowSizeMsg before meaningful renders.
@@ -139,12 +126,6 @@ func NewModel(client *api.Client, rangeStr string, refreshInterval time.Duration
 		help:            h,
 		keys:            defaultKeymap,
 		sparklineChart:  sparklineChart,
-		languagesChart:  languagesChart,
-		projectsChart:   projectsChart,
-		categoriesChart: categoriesChart,
-		editorsChart:    editorsChart,
-		osChart:         osChart,
-		machinesChart:   machinesChart,
 		showSummary:     true,
 		showLanguages:   true,
 		showProjects:    true,
@@ -215,30 +196,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		m.help.Width = msg.Width
 
-		// Calculate layout dimensions
-		panelWidth := (msg.Width / 2) - 4 // For side-by-side panels
-		fullWidth := msg.Width - 4        // For full-width panels
-		chartHeight := 8                  // Bar chart height
-		sparklineHeight := 5              // Sparkline height
-
-		// Resize all chart models
-		m.languagesChart.Resize(panelWidth, chartHeight)
-		m.projectsChart.Resize(panelWidth, chartHeight)
-		m.categoriesChart.Resize(panelWidth, 10)
-		m.editorsChart.Resize(panelWidth, 10)
-		m.osChart.Resize(panelWidth, 10)
-		m.machinesChart.Resize(panelWidth, 10)
+		// Resize sparkline for full width
+		fullWidth := msg.Width - 4
+		sparklineHeight := 5
 		m.sparklineChart.Resize(fullWidth, sparklineHeight)
 
-		// Redraw charts with new dimensions
-		if m.stats != nil {
-			m.updateLanguagesChart()
-			m.updateProjectsChart()
-			m.updateCategoriesChart()
-			m.updateEditorsChart()
-			m.updateOSChart()
-			m.updateMachinesChart()
-		}
+		// Redraw sparkline with new dimensions
 		if len(m.hourlyData) > 0 {
 			m.updateSparkline()
 		}
@@ -325,18 +288,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case statsFetchedMsg:
+		// Note: Stats from /stats endpoint may be incomplete - summaryFetchedMsg
+		// will override with aggregated data from /summaries which is more reliable
 		m.loading = false
 		m.stats = msg.stats
 		m.err = nil
 		m.rateLimited = false // Clear rate limit indicator on success
 		m.lastFetch = time.Now()
 		m.nextRefresh = time.Now().Add(m.refreshInterval)
-		m.updateLanguagesChart()
-		m.updateProjectsChart()
-		m.updateCategoriesChart()
-		m.updateEditorsChart()
-		m.updateOSChart()
-		m.updateMachinesChart()
 		return m, scheduleRefresh(m.refreshInterval)
 
 	case durationsFetchedMsg:
@@ -349,12 +308,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Aggregate summary data into stats format (more reliable than /stats endpoint)
 		if aggregated := types.AggregateFromSummary(msg.summary); aggregated != nil {
 			m.stats = &types.StatsResponse{Data: *aggregated}
-			m.updateLanguagesChart()
-			m.updateProjectsChart()
-			m.updateCategoriesChart()
-			m.updateEditorsChart()
-			m.updateOSChart()
-			m.updateMachinesChart()
 		}
 		return m, nil
 
@@ -483,37 +436,17 @@ func (m Model) renderStats() string {
 	sb.WriteString(fmt.Sprintf("  Daily average: %s\n", data.HumanReadableDailyAverage))
 	sb.WriteString("\n")
 
-	// Calculate panel widths for 2-column layout
-	panelWidth := (m.width / 2) - 6
-	if panelWidth < 20 {
-		panelWidth = 20
-	}
-
 	// Build visible panels
 	var panels []string
 
-	// Left panel: Languages chart
+	// Left panel: Languages
 	if m.showLanguages {
-		var leftPanel strings.Builder
-		leftPanel.WriteString(TitleStyle(m.theme).Render("Languages") + "\n")
-		if len(data.Languages) > 0 {
-			leftPanel.WriteString(m.languagesChart.View())
-		} else {
-			leftPanel.WriteString("  No data")
-		}
-		panels = append(panels, leftPanel.String())
+		panels = append(panels, m.renderLanguagesPanel())
 	}
 
-	// Right panel: Projects chart
+	// Right panel: Projects
 	if m.showProjects {
-		var rightPanel strings.Builder
-		rightPanel.WriteString(TitleStyle(m.theme).Render("Projects") + "\n")
-		if len(data.Projects) > 0 {
-			rightPanel.WriteString(m.projectsChart.View())
-		} else {
-			rightPanel.WriteString("  No data")
-		}
-		panels = append(panels, rightPanel.String())
+		panels = append(panels, m.renderProjectsPanel())
 	}
 
 	// Join panels horizontally if both visible, otherwise just show the one
@@ -606,104 +539,6 @@ func (m Model) renderHeatmapPanel() string {
 	heatmapTitle := TitleStyle(m.theme).Render("\nActivity (Last 7 Days)")
 	heatmapContent := m.renderHeatmap()
 	return lipgloss.JoinVertical(lipgloss.Left, heatmapTitle, heatmapContent)
-}
-
-// updateLanguagesChart updates the languages bar chart with current stats.
-func (m *Model) updateLanguagesChart() {
-	if m.stats == nil {
-		return
-	}
-
-	m.languagesChart.Clear()
-	data := m.stats.Data
-
-	// Limit to top 5 languages
-	limit := 5
-	if len(data.Languages) < limit {
-		limit = len(data.Languages)
-	}
-
-	// Calculate total for percentages
-	var total float64
-	for _, lang := range data.Languages {
-		total += lang.TotalSeconds
-	}
-
-	// Protect against division by zero (all items have 0 seconds)
-	if total == 0 {
-		m.languagesChart.Draw()
-		return
-	}
-
-	for _, lang := range data.Languages[:limit] {
-		hours := lang.TotalSeconds / 3600.0
-		percent := (lang.TotalSeconds / total) * 100
-		label := fmt.Sprintf("%s: %s", lang.Name, formatTimeWithPercent(lang.TotalSeconds, percent))
-		color := getLanguageColor(lang.Name)
-		barStyle := lipgloss.NewStyle().Foreground(color)
-		m.languagesChart.Push(barchart.BarData{
-			Label: label,
-			Values: []barchart.BarValue{
-				{
-					Name:  "",
-					Value: hours,
-					Style: barStyle,
-				},
-			},
-		})
-	}
-
-	m.languagesChart.Draw()
-}
-
-// updateProjectsChart updates the projects bar chart with current stats.
-func (m *Model) updateProjectsChart() {
-	if m.stats == nil {
-		return
-	}
-
-	m.projectsChart.Clear()
-	data := m.stats.Data
-
-	// Limit to top 5 projects
-	limit := 5
-	if len(data.Projects) < limit {
-		limit = len(data.Projects)
-	}
-
-	// Calculate total for percentages
-	var total float64
-	for _, proj := range data.Projects {
-		total += proj.TotalSeconds
-	}
-
-	// Protect against division by zero (all items have 0 seconds)
-	if total == 0 {
-		m.projectsChart.Draw()
-		return
-	}
-
-	// Fixed cyan color for all projects
-	projectColor := lipgloss.Color("#00d7ff")
-	barStyle := lipgloss.NewStyle().Foreground(projectColor)
-
-	for _, proj := range data.Projects[:limit] {
-		hours := proj.TotalSeconds / 3600.0
-		percent := (proj.TotalSeconds / total) * 100
-		label := fmt.Sprintf("%s: %s", proj.Name, formatTimeWithPercent(proj.TotalSeconds, percent))
-		m.projectsChart.Push(barchart.BarData{
-			Label: label,
-			Values: []barchart.BarValue{
-				{
-					Name:  "",
-					Value: hours,
-					Style: barStyle,
-				},
-			},
-		})
-	}
-
-	m.projectsChart.Draw()
 }
 
 // renderHeatmap renders a GitHub-style activity heatmap for the last 7 days.
