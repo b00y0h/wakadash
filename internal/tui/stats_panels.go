@@ -13,6 +13,7 @@ import (
 type barItem struct {
 	name    string
 	seconds float64
+	color   lipgloss.Color // optional per-item color; zero value means use default
 }
 
 // Bar character - matches wakafetch style (has natural vertical spacing)
@@ -50,7 +51,6 @@ func renderBarChart(items []barItem, maxSeconds float64, barColor lipgloss.Color
 	}
 
 	var sb strings.Builder
-	barStyle := lipgloss.NewStyle().Foreground(barColor)
 	dimStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#444444"))
 
 	for _, item := range items {
@@ -75,6 +75,13 @@ func renderBarChart(items []barItem, maxSeconds float64, barColor lipgloss.Color
 
 		// Format time
 		timeStr := formatSecondsCompact(item.seconds)
+
+		// Use per-item color if set, otherwise fall back to the caller-supplied color
+		activeColor := barColor
+		if item.color != "" {
+			activeColor = item.color
+		}
+		barStyle := lipgloss.NewStyle().Foreground(activeColor)
 
 		// Render line: name (padded) + colored bar + dim track + time
 		line := fmt.Sprintf("%-*s %s%s %s\n",
@@ -156,6 +163,16 @@ func (m Model) renderLanguagesPanel() string {
 	}
 
 	items := getTopItems(statsData.Languages, 10)
+
+	// Assign per-language GitHub Linguist colors
+	for i := range items {
+		if items[i].name == "Other" {
+			items[i].color = m.theme.Accent4
+		} else {
+			items[i].color = getLanguageColor(items[i].name)
+		}
+	}
+
 	maxSecs := getMaxSeconds(items)
 	// Bar width: panel width - border (2) - padding (2) = content area
 	barWidth := panelWidth - 8
