@@ -47,8 +47,8 @@ type Model struct {
 	// Archived data for historical dates
 	archiveData *types.DayData
 
-	// Date navigation
-	selectedDate string // Currently viewed date (YYYY-MM-DD format), empty = today
+	// Date navigation - week-based (Sunday to Saturday)
+	selectedWeekStart string // Start of currently viewed week (YYYY-MM-DD, always a Sunday), empty = current week
 
 	// Theme
 	theme theme.Theme // Active color theme
@@ -117,28 +117,28 @@ func NewModel(client *api.Client, rangeStr string, refreshInterval time.Duration
 
 	return Model{
 		// Safe defaults — overridden by WindowSizeMsg before meaningful renders.
-		width:           80,
-		height:          24,
-		loading:         true,
-		client:          client,
-		rangeStr:        rangeStr,
-		refreshInterval: refreshInterval,
-		dataSource:      dataSource,
-		selectedDate:    "", // Empty means today (live data)
-		theme:           activeTheme,
-		spinner:         s,
-		help:            h,
-		keys:            defaultKeymap,
-		sparklineChart:  sparklineChart,
-		showSummary:     true,
-		showLanguages:   true,
-		showProjects:    true,
-		showSparkline:   true,
-		showHeatmap:     true,
-		showCategories:  true,
-		showEditors:     true,
-		showOS:          true,
-		showMachines:    true,
+		width:             80,
+		height:            24,
+		loading:           true,
+		client:            client,
+		rangeStr:          rangeStr,
+		refreshInterval:   refreshInterval,
+		dataSource:        dataSource,
+		selectedWeekStart: "", // Empty means current week (live data)
+		theme:             activeTheme,
+		spinner:           s,
+		help:              h,
+		keys:              defaultKeymap,
+		sparklineChart:    sparklineChart,
+		showSummary:       true,
+		showLanguages:     true,
+		showProjects:      true,
+		showSparkline:     true,
+		showHeatmap:       true,
+		showCategories:    true,
+		showEditors:       true,
+		showOS:            true,
+		showMachines:      true,
 	}
 }
 
@@ -289,40 +289,48 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		case key.Matches(msg, m.keys.PrevDay):
-			// Calculate previous day
-			currentDate := m.selectedDate
-			if currentDate == "" {
-				currentDate = time.Now().Format("2006-01-02")
-			}
-			parsed, err := time.Parse("2006-01-02", currentDate)
-			if err != nil {
-				return m, nil
-			}
-			m.selectedDate = parsed.AddDate(0, 0, -1).Format("2006-01-02")
-			return m, fetchDataCmd(m.dataSource, m.selectedDate)
-		case key.Matches(msg, m.keys.NextDay):
-			currentDate := m.selectedDate
-			if currentDate == "" {
-				// Already at today, can't go forward
-				return m, nil
-			}
-			parsed, err := time.Parse("2006-01-02", currentDate)
-			if err != nil {
-				return m, nil
-			}
-			nextDay := parsed.AddDate(0, 0, 1)
-			today := time.Now().Format("2006-01-02")
-			if nextDay.Format("2006-01-02") >= today {
-				m.selectedDate = "" // Return to live today view
+			// Navigate to previous week
+			var currentWeekStart time.Time
+			if m.selectedWeekStart == "" {
+				currentWeekStart = getWeekStart(time.Now())
 			} else {
-				m.selectedDate = nextDay.Format("2006-01-02")
+				parsed, err := time.Parse("2006-01-02", m.selectedWeekStart)
+				if err != nil {
+					return m, nil
+				}
+				currentWeekStart = parsed
 			}
-			return m, fetchDataCmd(m.dataSource, nextDay.Format("2006-01-02"))
+			prevWeekStart := currentWeekStart.AddDate(0, 0, -7)
+			m.selectedWeekStart = prevWeekStart.Format("2006-01-02")
+			return m, fetchDataCmd(m.dataSource, m.selectedWeekStart)
+		case key.Matches(msg, m.keys.NextDay):
+			// Navigate to next week (capped at current week)
+			if m.selectedWeekStart == "" {
+				// Already at current week, can't go forward
+				return m, nil
+			}
+			parsed, err := time.Parse("2006-01-02", m.selectedWeekStart)
+			if err != nil {
+				return m, nil
+			}
+			nextWeekStart := parsed.AddDate(0, 0, 7)
+			currentWeekStart := getWeekStart(time.Now())
+			if !nextWeekStart.Before(currentWeekStart) {
+				// Reached current week, return to live view
+				m.selectedWeekStart = ""
+			} else {
+				m.selectedWeekStart = nextWeekStart.Format("2006-01-02")
+			}
+			dateToFetch := nextWeekStart.Format("2006-01-02")
+			if m.selectedWeekStart == "" {
+				dateToFetch = time.Now().Format("2006-01-02")
+			}
+			return m, fetchDataCmd(m.dataSource, dateToFetch)
 		case key.Matches(msg, m.keys.Today):
-			if m.selectedDate == "" {
-				return m, nil // Already at today
+			if m.selectedWeekStart == "" {
+				return m, nil // Already at current week
 			}
-			m.selectedDate = ""
+			m.selectedWeekStart = ""
 			return m, fetchDataCmd(m.dataSource, time.Now().Format("2006-01-02"))
 		}
 		return m, nil
@@ -541,6 +549,22 @@ func (m Model) renderHelp() string {
 	helpText := m.help.View(m.keys)
 	hint := DimStyle(m.theme).Render("\nPress ? to return to dashboard")
 	return lipgloss.JoinVertical(lipgloss.Left, title, "", helpText, hint)
+}
+
+// getWeekStart returns the Sunday that starts the week containing the given date.
+func getWeekStart(date time.Time) time.Time {
+	// Calculate days since Sunday (Sunday = 0)
+	daysSinceSunday := int(date.Weekday())
+	return date.AddDate(0, 0, -daysSinceSunday)
+}
+
+// formatWeekRange returns a display string like "Feb 16-22" for a week starting on Sunday.
+func formatWeekRange(weekStart time.Time) string {
+	weekEnd := weekStart.AddDate(0, 0, 6) // Saturday
+	if weekStart.Month() == weekEnd.Month() {
+		return fmt.Sprintf("%s %d-%d", weekStart.Format("Jan"), weekStart.Day(), weekEnd.Day())
+	}
+	return fmt.Sprintf("%s %d - %s %d", weekStart.Format("Jan"), weekStart.Day(), weekEnd.Format("Jan"), weekEnd.Day())
 }
 
 // formatSeconds converts a float64 seconds value to a human-readable string.
