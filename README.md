@@ -127,6 +127,7 @@ wakadash --version
 | `←` | Previous week (historical data) |
 | `→` | Next week |
 | `0` / `Home` | Return to current week |
+| `w` | Open weekly summary browser |
 | `t` | Open theme picker |
 | `?` | Toggle help overlay |
 | `q` / `Ctrl+C` | Quit |
