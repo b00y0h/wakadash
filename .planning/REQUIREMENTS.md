@@ -32,8 +32,8 @@ Requirements for historical data support. Each maps to roadmap phases.
 
 ### Prefetch (Phase 17)
 
-- [ ] **PREFETCH-01**: Previous week data prefetches silently after dashboard loads
-- [ ] **PREFETCH-02**: Backward navigation is instant when data is prefetched
+- [x] **PREFETCH-01**: Previous week data prefetches silently after dashboard loads
+- [x] **PREFETCH-02**: Backward navigation is instant when data is prefetched
 
 ### No-Data UX (Phase 17)
 
@@ -85,8 +85,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DISP-01 | Phase 16 | Complete |
 | DISP-02 | Phase 16 | Complete |
 | DISP-03 | Phase 16 | Complete |
-| PREFETCH-01 | Phase 17 | Pending |
-| PREFETCH-02 | Phase 17 | Pending |
+| PREFETCH-01 | Phase 17 | Complete |
+| PREFETCH-02 | Phase 17 | Complete |
 | NODATA-01 | Phase 17 | Pending |
 | NODATA-02 | Phase 17 | Pending |
 

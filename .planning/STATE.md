@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 
 ## Current Position
 
-Phase: 16 of 17 (Wire Archive Display)
-Plan: 2 of 2 (Complete)
+Phase: 17 of 17 (Background Prefetch and Improved No-Data UX)
+Plan: 1 of 1 (Complete)
 Status: Complete
-Last activity: 2026-02-25 — Phase 16 Plan 02 complete
+Last activity: 2026-02-25 — Phase 17 Plan 01 complete
 
-Progress: [█████████████████████████░] 94% (30 plans complete across phases 1-16)
+Progress: [█████████████████████████░] 97% (31 plans complete across phases 1-17)
 
 ## Performance Metrics
 
@@ -49,8 +49,13 @@ Progress: [███████████████████████
 | Phase 14 P03 | 219 | 3 tasks | 4 files |
 | Phase 16 P01 | 169 | 3 tasks | 3 files |
 | Phase 16 P02 | 184 | 3 tasks | 1 files |
+| Phase 17 P01 | 142 | 3 tasks | 3 files |
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 17 added: Background prefetch and improved no-data UX
 
 ### Decisions
 
@@ -81,6 +86,9 @@ Recent decisions affecting current work:
 - [Phase 16-01]: [HISTORICAL] indicator provides visual feedback for archived data view
 - [Phase 16-02]: Auto-refresh timer keeps running during historical view but skips fetch - maintains timer readiness for immediate resume
 - [Phase 16-02]: Status bar shows paused indicator instead of countdown when viewing history for clear user feedback
+- [Phase 17-01]: Prefetch errors are silently discarded without UI feedback - background optimization shouldn't interrupt UX
+- [Phase 17-01]: Always prefetch exactly one week ahead during navigation for instant feel
+- [Phase 17-01]: Cache stores nil for weeks with no data to avoid re-fetching known empty weeks
 
 ### Pending Todos
 
@@ -93,5 +101,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 16-02-PLAN.md
+Stopped at: Completed 17-01-PLAN.md
 Resume file: None
