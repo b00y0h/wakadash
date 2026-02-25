@@ -5,24 +5,26 @@ import (
 	"time"
 
 	"github.com/b00y0h/wakadash/internal/archive"
+	"github.com/b00y0h/wakadash/internal/datasource"
 )
 
-func TestNewModel_WithArchiveFetcher(t *testing.T) {
-	// Test that NewModel accepts an archive fetcher
+func TestNewModel_WithDataSource(t *testing.T) {
+	// Test that NewModel accepts a DataSource
 	fetcher := archive.New("owner/repo")
-	m := NewModel(nil, "last_7_days", 60*time.Second, fetcher)
+	ds := datasource.New(nil, fetcher)
+	m := NewModel(nil, "last_7_days", 60*time.Second, ds)
 
-	if m.archiveFetcher == nil {
-		t.Error("expected archiveFetcher to be set")
+	if m.dataSource == nil {
+		t.Error("expected dataSource to be set")
 	}
 }
 
-func TestNewModel_WithNilArchiveFetcher(t *testing.T) {
-	// Test that NewModel handles nil fetcher gracefully
+func TestNewModel_WithNilDataSource(t *testing.T) {
+	// Test that NewModel handles nil dataSource gracefully
 	m := NewModel(nil, "last_7_days", 60*time.Second, nil)
 
-	if m.archiveFetcher != nil {
-		t.Error("expected archiveFetcher to be nil")
+	if m.dataSource != nil {
+		t.Error("expected dataSource to be nil")
 	}
 }
 
