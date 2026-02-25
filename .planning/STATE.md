@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 17 of 17 (Background Prefetch and Improved No-Data UX)
-Plan: 1 of 1 (Complete)
+Plan: 2 of 2 (Complete)
 Status: Complete
-Last activity: 2026-02-25 — Phase 17 Plan 01 complete
+Last activity: 2026-02-25 — Phase 17 Plan 02 complete
 
-Progress: [█████████████████████████░] 97% (31 plans complete across phases 1-17)
+Progress: [██████████████████████████] 100% (32 plans complete across phases 1-17)
 
 ## Performance Metrics
 
@@ -50,6 +50,7 @@ Progress: [███████████████████████
 | Phase 16 P01 | 169 | 3 tasks | 3 files |
 | Phase 16 P02 | 184 | 3 tasks | 1 files |
 | Phase 17 P01 | 142 | 3 tasks | 3 files |
+| Phase 17 P02 | 203 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -89,6 +90,8 @@ Recent decisions affecting current work:
 - [Phase 17-01]: Prefetch errors are silently discarded without UI feedback - background optimization shouldn't interrupt UX
 - [Phase 17-01]: Always prefetch exactly one week ahead during navigation for instant feel
 - [Phase 17-01]: Cache stores nil for weeks with no data to avoid re-fetching known empty weeks
+- [Phase 17-02]: Box/border around end-of-history message for modal-like emphasis
+- [Phase 17-02]: Clear banner state on forward navigation for natural UX flow
 
 ### Pending Todos
 
