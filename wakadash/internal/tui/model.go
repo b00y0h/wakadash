@@ -521,6 +521,16 @@ func (m Model) renderStats() string {
 // renderStatusBar renders the bottom status line.
 func (m Model) renderStatusBar() string {
 	var status string
+
+	// Show week indicator when viewing historical data
+	var weekIndicator string
+	if m.selectedWeekStart != "" {
+		parsed, err := time.Parse("2006-01-02", m.selectedWeekStart)
+		if err == nil {
+			weekIndicator = fmt.Sprintf("[%s] ", formatWeekRange(parsed))
+		}
+	}
+
 	if m.rateLimited {
 		status = WarningStyle(m.theme).Render("Rate limited - retrying with backoff...")
 	} else if m.loading {
@@ -536,6 +546,11 @@ func (m Model) renderStatusBar() string {
 			m.lastFetch.Format("15:04:05"),
 			remaining,
 		)
+	}
+
+	// Prepend week indicator if viewing historical data
+	if weekIndicator != "" {
+		status = weekIndicator + status
 	}
 
 	helpHint := DimStyle(m.theme).Render("? help  1-9 panels  a/h all  r refresh  q quit")
