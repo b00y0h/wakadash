@@ -18,6 +18,9 @@ type keymap struct {
 	Toggle9     key.Binding // Summary
 	ShowAll     key.Binding // Show all panels
 	HideAll     key.Binding // Hide all panels
+	PrevDay     key.Binding // Navigate to previous day
+	NextDay     key.Binding // Navigate to next day
+	Today       key.Binding // Return to today
 }
 
 // ShortHelp returns bindings shown in compact help view
@@ -33,6 +36,7 @@ func (k keymap) FullHelp() [][]key.Binding {
 		{k.Toggle1, k.Toggle2, k.Toggle3, k.Toggle4},
 		{k.Toggle5, k.Toggle6, k.Toggle7, k.Toggle8, k.Toggle9},
 		{k.ShowAll, k.HideAll},
+		{k.PrevDay, k.NextDay, k.Today},
 	}
 }
 
@@ -96,5 +100,17 @@ var defaultKeymap = keymap{
 	HideAll: key.NewBinding(
 		key.WithKeys("h"),
 		key.WithHelp("h", "hide all panels"),
+	),
+	PrevDay: key.NewBinding(
+		key.WithKeys("left"),
+		key.WithHelp("←", "previous day"),
+	),
+	NextDay: key.NewBinding(
+		key.WithKeys("right"),
+		key.WithHelp("→", "next day"),
+	),
+	Today: key.NewBinding(
+		key.WithKeys("0", "home"),
+		key.WithHelp("0/home", "return to today"),
 	),
 }
