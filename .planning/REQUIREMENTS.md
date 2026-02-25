@@ -20,9 +20,9 @@ Requirements for historical data support. Each maps to roadmap phases.
 
 ### Navigation
 
-- [ ] **NAV-01**: User can navigate to previous day with left arrow
-- [ ] **NAV-02**: User can navigate to next day with right arrow
-- [ ] **NAV-03**: User can return to today (e.g., 'Home' or '0' key)
+- [x] **NAV-01**: User can navigate to previous day with left arrow
+- [x] **NAV-02**: User can navigate to next day with right arrow
+- [x] **NAV-03**: User can return to today (e.g., 'Home' or '0' key)
 
 ### Display
 
@@ -69,9 +69,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-02 | Phase 13 | Complete |
 | DATA-03 | Phase 12 | ✅ Complete |
 | DATA-04 | Phase 12 | ✅ Complete |
-| NAV-01 | Phase 14 | Pending |
-| NAV-02 | Phase 14 | Pending |
-| NAV-03 | Phase 14 | Pending |
+| NAV-01 | Phase 14 | Complete |
+| NAV-02 | Phase 14 | Complete |
+| NAV-03 | Phase 14 | Complete |
 | DISP-01 | Phase 15 | Pending |
 | DISP-02 | Phase 15 | Pending |
 | DISP-03 | Phase 15 | Pending |

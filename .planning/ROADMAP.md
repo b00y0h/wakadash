@@ -54,7 +54,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 11: Configuration & Validation** - Add history_repo config with graceful fallback (completed 2026-02-24)
 - [x] **Phase 12: GitHub Archive Integration** - Read archived stats from GitHub repo
 - [x] **Phase 13: Hybrid Data Fetching** - Combine API and archive for seamless experience (completed 2026-02-25)
-- [ ] **Phase 14: Date Navigation** - Arrow key controls for browsing history
+- [x] **Phase 14: Date Navigation** - Arrow key controls for browsing history (completed 2026-02-25)
 - [ ] **Phase 15: Historical Display** - Date indicator and auto-refresh control
 
 ## Phase Details
@@ -145,7 +145,7 @@ Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 →
 | 11. Configuration & Validation | v2.2 | 1/1 | Complete | 2026-02-24 |
 | 12. GitHub Archive Integration | v2.2 | 2/2 | Complete | 2026-02-25 |
 | 13. Hybrid Data Fetching | 2/2 | Complete    | 2026-02-25 | - |
-| 14. Date Navigation | v2.2 | 0/1 | Planned | - |
+| 14. Date Navigation | 1/1 | Complete   | 2026-02-25 | - |
 | 15. Historical Display | v2.2 | 0/? | Not started | - |
 
 ## Distribution Notes
