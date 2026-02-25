@@ -59,15 +59,16 @@ func Load() (*Config, error) {
 		value = strings.TrimSpace(value)
 
 		// Parse keys based on current section
-		if currentSection == "" {
-			// Root/global section: parse api_url and api_key
+		switch currentSection {
+		case "", "settings":
+			// Root or [settings] section: parse api_url and api_key
 			switch key {
 			case "api_url":
 				cfg.APIURL = value
 			case "api_key":
 				cfg.APIKey = value
 			}
-		} else if currentSection == "wakadash" {
+		case "wakadash":
 			// [wakadash] section: parse history_repo
 			if key == "history_repo" {
 				cfg.HistoryRepo = value
