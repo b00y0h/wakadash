@@ -5,7 +5,7 @@
 - **v1.0 Homebrew Distribution** - Phases 1-3 (shipped 2026-02-17)
 - **v2.0 wakadash** - Phases 4-7 (shipped 2026-02-19)
 - **v2.1 Visual Overhaul + Themes** - Phases 8-10 (shipped 2026-02-23)
-- **v2.2 Historical Data** - Phases 11-15 (in progress)
+- **v2.2 Historical Data** - Phases 11-17 (in progress)
 
 ## Phases
 
@@ -46,7 +46,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 **Milestone Goal:** Enable viewing coding stats from any historical date by reading archived data from a GitHub repository.
 
 **Phase Numbering:**
-- Integer phases (11-15): Planned milestone work
+- Integer phases (11-17): Planned milestone work
 - Decimal phases (11.1, 11.2): Urgent insertions (marked with INSERTED)
 
 Decimal phases appear between their surrounding integers in numeric order.
@@ -57,6 +57,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 14: Date Navigation** - Week-based navigation with auto-skip blank weeks (gap closure in progress) (completed 2026-02-25)
 - [ ] **Phase 15: Historical Display** - DESCOPED (merged into Phase 16)
 - [x] **Phase 16: Wire Archive Data to Display** - Gap closure: connect archiveData to UI rendering (completed 2026-02-25)
+- [ ] **Phase 17: Background Prefetch and No-Data UX** - Instant navigation and clear end-of-history feedback
 
 ## Phase Details
 
@@ -115,8 +116,8 @@ Plans:
 
 Plans:
 - [x] 14-01-PLAN.md — Add day-based navigation controls (superseded by gap closure)
-- [ ] 14-02-PLAN.md — Convert to week-based navigation with week range display (gap closure)
-- [ ] 14-03-PLAN.md — Add auto-skip blank weeks and end-of-history indicator (gap closure)
+- [x] 14-02-PLAN.md — Convert to week-based navigation with week range display (gap closure)
+- [x] 14-03-PLAN.md — Add auto-skip blank weeks and end-of-history indicator (gap closure)
 
 ### Phase 15: Historical Display
 **Status**: DESCOPED — requirements merged into Phase 16 gap closure
@@ -137,8 +138,25 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 16-01-PLAN.md — Wire archiveData to UI rendering with getActiveStatsData helper
-- [ ] 16-02-PLAN.md — Pause/resume auto-refresh based on view state
+- [x] 16-01-PLAN.md — Wire archiveData to UI rendering with getActiveStatsData helper
+- [x] 16-02-PLAN.md — Pause/resume auto-refresh based on view state
+
+### Phase 17: Background Prefetch and No-Data UX
+**Goal**: Instant backward navigation with clear end-of-history feedback
+**Depends on**: Phase 16
+**Requirements**: PREFETCH-01, PREFETCH-02, NODATA-01, NODATA-02
+**Success Criteria** (what must be TRUE):
+  1. Previous week data prefetches silently after dashboard loads
+  2. Backward navigation is instant when data is prefetched
+  3. Prefetch continues one week ahead as user navigates
+  4. Full-screen "End of history" banner appears when no data exists
+  5. Banner shows date when archive data started
+  6. Today key returns to current week from end-of-history banner
+**Plans**: 2 plans
+
+Plans:
+- [ ] 17-01-PLAN.md — Background prefetch system for instant backward navigation
+- [ ] 17-02-PLAN.md — Full-screen end-of-history banner for no-data weeks
 
 ## Progress
 
@@ -160,7 +178,8 @@ Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 →
 | 13. Hybrid Data Fetching | v2.2 | 2/2 | Complete | 2026-02-25 |
 | 14. Date Navigation | v2.2 | 3/3 | Complete | 2026-02-25 |
 | 15. Historical Display | v2.2 | - | Descoped | - |
-| 16. Wire Archive Data to Display | 2/2 | Complete    | 2026-02-25 | - |
+| 16. Wire Archive Data to Display | v2.2 | 2/2 | Complete | 2026-02-25 |
+| 17. Background Prefetch & No-Data UX | v2.2 | 0/2 | Planned | - |
 
 ## Distribution Notes
 
@@ -170,4 +189,4 @@ Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 →
 
 ---
 *Roadmap created: 2026-02-18*
-*Last updated: 2026-02-25 (Phase 16 plans created)*
+*Last updated: 2026-02-25 (Phase 17 plans created)*

@@ -30,6 +30,16 @@ Requirements for historical data support. Each maps to roadmap phases.
 - [x] **DISP-02**: Auto-refresh pauses when viewing historical data
 - [x] **DISP-03**: Auto-refresh resumes when returning to today
 
+### Prefetch (Phase 17)
+
+- [ ] **PREFETCH-01**: Previous week data prefetches silently after dashboard loads
+- [ ] **PREFETCH-02**: Backward navigation is instant when data is prefetched
+
+### No-Data UX (Phase 17)
+
+- [ ] **NODATA-01**: Full-screen "End of history" banner appears when no data exists
+- [ ] **NODATA-02**: Banner shows navigation hints to return to current week
+
 ## Future Requirements
 
 ### Navigation Enhancements
@@ -67,23 +77,27 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CFG-01 | Phase 11 | Complete |
 | DATA-01 | Phase 16 | Complete |
 | DATA-02 | Phase 13 | Complete |
-| DATA-03 | Phase 12 | ✅ Complete |
-| DATA-04 | Phase 12 | ✅ Complete |
+| DATA-03 | Phase 12 | Complete |
+| DATA-04 | Phase 12 | Complete |
 | NAV-01 | Phase 14 | Complete |
 | NAV-02 | Phase 14 | Complete |
 | NAV-03 | Phase 14 | Complete |
 | DISP-01 | Phase 16 | Complete |
 | DISP-02 | Phase 16 | Complete |
 | DISP-03 | Phase 16 | Complete |
+| PREFETCH-01 | Phase 17 | Pending |
+| PREFETCH-02 | Phase 17 | Pending |
+| NODATA-01 | Phase 17 | Pending |
+| NODATA-02 | Phase 17 | Pending |
 
 **Coverage:**
-- v2.2 requirements: 11 total
-- Satisfied: 7 (CFG-01, DATA-02, DATA-03, DATA-04, NAV-01, NAV-02, NAV-03)
-- Pending (Phase 16): 4 (DATA-01, DISP-01, DISP-02, DISP-03)
+- v2.2 requirements: 15 total
+- Complete: 11 (CFG-01, DATA-01-04, NAV-01-03, DISP-01-03)
+- Pending (Phase 17): 4 (PREFETCH-01-02, NODATA-01-02)
 - Unmapped: 0
 
-✓ All v2.2 requirements mapped to phases
+All v2.2 requirements mapped to phases
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after roadmap creation*
+*Last updated: 2026-02-25 (Phase 17 requirements added)*
