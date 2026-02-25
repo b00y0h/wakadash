@@ -3,6 +3,8 @@
 // Attribution: Rewritten from github.com/sahaj-b/wakafetch (MIT License)
 package types
 
+import "fmt"
+
 // StatItem represents a single coding activity entry (language, project, editor, etc.).
 type StatItem struct {
 	Name         string  `json:"name"`
@@ -120,4 +122,133 @@ type DurationsResponse struct {
 	Start    string     `json:"start"`
 	End      string     `json:"end"`
 	Timezone string     `json:"timezone"`
+}
+
+// AggregateFromSummary creates StatsData by aggregating daily summaries.
+// This is more reliable than the /stats endpoint which can return incomplete data.
+func AggregateFromSummary(summary *SummaryResponse) *StatsData {
+	if summary == nil || len(summary.Data) == 0 {
+		return nil
+	}
+
+	// Maps to aggregate by name
+	languages := make(map[string]float64)
+	projects := make(map[string]float64)
+	editors := make(map[string]float64)
+	categories := make(map[string]float64)
+	operatingSystems := make(map[string]float64)
+	machines := make(map[string]float64)
+
+	var totalSeconds float64
+	var bestDay BestDay
+
+	// Aggregate across all days
+	for _, day := range summary.Data {
+		dayTotal := day.GrandTotal.TotalSeconds
+		totalSeconds += dayTotal
+
+		// Track best day
+		if dayTotal > bestDay.TotalSeconds {
+			bestDay.Date = day.Range.Date
+			bestDay.TotalSeconds = dayTotal
+			bestDay.Text = day.GrandTotal.Text
+		}
+
+		// Aggregate each dimension
+		for _, item := range day.Languages {
+			languages[item.Name] += item.TotalSeconds
+		}
+		for _, item := range day.Projects {
+			projects[item.Name] += item.TotalSeconds
+		}
+		for _, item := range day.Editors {
+			editors[item.Name] += item.TotalSeconds
+		}
+		for _, item := range day.Categories {
+			categories[item.Name] += item.TotalSeconds
+		}
+		for _, item := range day.OperatingSystems {
+			operatingSystems[item.Name] += item.TotalSeconds
+		}
+		for _, item := range day.Machines {
+			machines[item.Name] += item.TotalSeconds
+		}
+	}
+
+	// Convert maps to sorted slices
+	stats := &StatsData{
+		Languages:        mapToStatItems(languages, totalSeconds),
+		Projects:         mapToStatItems(projects, totalSeconds),
+		Editors:          mapToStatItems(editors, totalSeconds),
+		Categories:       mapToStatItems(categories, totalSeconds),
+		OperatingSystems: mapToStatItems(operatingSystems, totalSeconds),
+		Machines:         mapToStatItems(machines, totalSeconds),
+		TotalSeconds:     totalSeconds,
+		BestDay:          bestDay,
+		DailyAverage:     summary.DailyAverage.Seconds,
+		Start:            summary.Start,
+		End:              summary.End,
+		Status:           "ok",
+	}
+
+	// Format human-readable strings
+	stats.HumanReadableTotal = formatDuration(totalSeconds)
+	stats.HumanReadableDailyAverage = formatDuration(summary.DailyAverage.Seconds)
+
+	return stats
+}
+
+// mapToStatItems converts a name->seconds map to a sorted slice of StatItems.
+func mapToStatItems(m map[string]float64, total float64) []StatItem {
+	items := make([]StatItem, 0, len(m))
+	for name, secs := range m {
+		percent := 0.0
+		if total > 0 {
+			percent = (secs / total) * 100
+		}
+		items = append(items, StatItem{
+			Name:         name,
+			TotalSeconds: secs,
+			Percent:      percent,
+		})
+	}
+
+	// Sort by TotalSeconds descending
+	for i := 0; i < len(items); i++ {
+		for j := i + 1; j < len(items); j++ {
+			if items[j].TotalSeconds > items[i].TotalSeconds {
+				items[i], items[j] = items[j], items[i]
+			}
+		}
+	}
+
+	return items
+}
+
+// formatDuration converts seconds to human-readable format like "2 hrs 15 mins".
+func formatDuration(secs float64) string {
+	total := int(secs)
+	if total == 0 {
+		return "0 secs"
+	}
+
+	hours := total / 3600
+	mins := (total % 3600) / 60
+
+	if hours > 0 && mins > 0 {
+		return formatPlural(hours, "hr") + " " + formatPlural(mins, "min")
+	} else if hours > 0 {
+		return formatPlural(hours, "hr")
+	} else if mins > 0 {
+		return formatPlural(mins, "min")
+	}
+	return formatPlural(total, "sec")
+}
+
+// formatPlural returns "N unit" or "N units" based on count.
+func formatPlural(n int, unit string) string {
+	if n == 1 {
+		return "1 " + unit
+	}
+	return fmt.Sprintf("%d %ss", n, unit)
 }
