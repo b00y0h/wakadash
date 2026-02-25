@@ -103,11 +103,11 @@ var defaultKeymap = keymap{
 	),
 	PrevDay: key.NewBinding(
 		key.WithKeys("left"),
-		key.WithHelp("←", "previous day"),
+		key.WithHelp("←", "previous week"),
 	),
 	NextDay: key.NewBinding(
 		key.WithKeys("right"),
-		key.WithHelp("→", "next day"),
+		key.WithHelp("→", "next week"),
 	),
 	Today: key.NewBinding(
 		key.WithKeys("0", "home"),
