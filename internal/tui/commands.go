@@ -234,6 +234,79 @@ func findNonEmptyWeekCmd(ds *datasource.DataSource, startWeek string, direction 
 	}
 }
 
+// fetchWeeklySummariesCmd scans backwards from the current week up to maxWeeks,
+// collecting WeeklySummary entries for each week that has data.
+// The current week is always included. Results are sent as weeklyDataFetchedMsg.
+func fetchWeeklySummariesCmd(ds *datasource.DataSource, maxWeeks int) tea.Cmd {
+	return func() (msg tea.Msg) {
+		defer func() {
+			if r := recover(); r != nil {
+				var err error
+				switch v := r.(type) {
+				case error:
+					err = v
+				default:
+					err = fmt.Errorf("panic in fetchWeeklySummariesCmd: %v", r)
+				}
+				msg = weeklyDataFetchedMsg{err: err}
+			}
+		}()
+
+		var weeks []WeeklySummary
+
+		// Calculate the start of the current week (Sunday)
+		now := time.Now()
+		currentWeekStart := getWeekStartTime(now)
+
+		for i := 0; i < maxWeeks; i++ {
+			weekStart := currentWeekStart.AddDate(0, 0, -7*i)
+			weekEnd := weekStart.AddDate(0, 0, 6) // Saturday
+
+			weekStartStr := weekStart.Format("2006-01-02")
+			weekEndStr := weekEnd.Format("2006-01-02")
+
+			// Current week (i == 0): always include with live data awareness
+			if i == 0 {
+				weeks = append(weeks, WeeklySummary{
+					WeekStart:   weekStartStr,
+					WeekEnd:     weekEndStr,
+					HasData:     true,
+					TopLanguage: "", // live data; caller can enrich later
+				})
+				continue
+			}
+
+			// Older weeks: fetch from data source
+			data, err := ds.Fetch(weekStartStr)
+			if err != nil || data == nil || data.GrandTotal.TotalSeconds <= 0 {
+				continue // Skip weeks with no data
+			}
+
+			summary := WeeklySummary{
+				WeekStart:    weekStartStr,
+				WeekEnd:      weekEndStr,
+				TotalSeconds: data.GrandTotal.TotalSeconds,
+				HasData:      true,
+			}
+
+			if len(data.Languages) > 0 {
+				summary.TopLanguage = data.Languages[0].Name
+			}
+			summary.ProjectCount = len(data.Projects)
+
+			weeks = append(weeks, summary)
+		}
+
+		return weeklyDataFetchedMsg{weeks: weeks}
+	}
+}
+
+// getWeekStartTime returns the Sunday that starts the week containing the given time.
+func getWeekStartTime(t time.Time) time.Time {
+	daysSinceSunday := int(t.Weekday())
+	return t.AddDate(0, 0, -daysSinceSunday)
+}
+
 // prefetchWeekCmd fetches data for a week in the background.
 // Returns prefetchResultMsg; errors are stored in msg.err for silent handling.
 func prefetchWeekCmd(ds *datasource.DataSource, weekStart string) tea.Cmd {
