@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A terminal dashboard for WakaTime/Wakapi coding stats. Displays live-updating visualizations of coding activity with color-coded charts, sparklines, heatmaps, and comprehensive stats panels — bringing the WakaTime web dashboard experience to the terminal with 6 beautiful theme presets.
+A terminal dashboard for WakaTime/Wakapi coding stats. Displays live-updating visualizations of coding activity with color-coded charts, sparklines, heatmaps, and comprehensive stats panels — bringing the WakaTime web dashboard experience to the terminal with 6 beautiful theme presets and historical data browsing via GitHub archives.
 
 ## Core Value
 
@@ -10,9 +10,9 @@ A beautiful, live-updating terminal dashboard that shows your coding stats at a 
 
 ## Current State
 
-**Shipped:** v2.1 Visual Overhaul + Themes (2026-02-23)
+**Shipped:** v2.2 Historical Data (2026-02-25)
 
-**Codebase:** 2,638 LOC Go, BubbleTea TUI framework
+**Codebase:** 3,832 LOC Go, BubbleTea TUI framework
 
 **Features shipped:**
 - Full-screen dashboard with auto-refresh (configurable interval)
@@ -23,6 +23,10 @@ A beautiful, live-updating terminal dashboard that shows your coding stats at a 
 - Keyboard controls: 1-9 panel toggles, a/h show/hide all, ? help, q quit
 - Rate limiting: Exponential backoff with visual indicator
 - Edge case handling: Terminal size validation, case-insensitive config, zero-division protection
+- **Historical data navigation:** Week-based browsing of archived WakaTime data via GitHub
+- **Hybrid data source:** API for recent dates (≤7 days), GitHub archive for historical
+- **Background prefetch:** Instant backward navigation via predictive data loading
+- **End-of-history UX:** Full-screen banner when reaching oldest available data
 
 **Distribution:**
 - Personal tap: `brew tap b00y0h/wakadash && brew install wakadash`
@@ -59,22 +63,18 @@ A beautiful, live-updating terminal dashboard that shows your coding stats at a 
 - ✓ Responsive 2-column layout at >= 80 cols — v2.1
 - ✓ Extended keyboard toggles (5-9, a, h) — v2.1
 
+**v2.2:**
+- ✓ Read archived WakaTime data from GitHub repo — v2.2
+- ✓ Week-based navigation with left/right arrow keys — v2.2
+- ✓ Graceful fallback when history_repo not configured — v2.2
+- ✓ Auto-refresh pauses during historical view — v2.2
+- ✓ Background prefetch for instant backward navigation — v2.2
+- ✓ Full-screen end-of-history banner — v2.2
+
 ### Active
 
-**v2.2: Historical Data Support**
-- [ ] Read archived WakaTime data from GitHub repo
-- [ ] Date navigation with left/right arrow keys
-- [ ] Graceful fallback when history_repo not configured
-
-## Current Milestone: v2.2 Historical Data
-
-**Goal:** Enable viewing coding stats from any historical date by reading archived data from a GitHub repository.
-
-**Target features:**
-- history_repo config key to specify archive location
-- Hybrid data fetching: API for recent days, GitHub archive for older
-- Keyboard date navigation (left/right arrows)
-- Pause auto-refresh on historical dates
+**v2.3: (Next milestone)**
+- TBD — use `/gsd:new-milestone` to define next milestone
 
 ### Out of Scope
 
@@ -99,6 +99,8 @@ A beautiful, live-updating terminal dashboard that shows your coding stats at a 
 **Key insight from v1.0:** homebrew-core won't accept forks. Creating original work with unique value proposition solved this.
 
 **Key insight from v2.1:** Theme system with hex colors works well; lipgloss handles terminal color downsampling automatically.
+
+**Key insight from v2.2:** Week-based navigation feels more natural than day-based for historical data; auto-skip blank weeks prevents frustration with sparse archives.
 
 ## Constraints
 
@@ -129,6 +131,14 @@ A beautiful, live-updating terminal dashboard that shows your coding stats at a 
 | Top-10 limit with "Other" aggregation | Prevents UI overflow; maintains readability | ✓ Good |
 | Summary panel with accent border | Visual distinction from stat panels | ✓ Good |
 | Case-insensitive theme lookup | Forgiving config parsing for user-friendliness | ✓ Good |
+| 7-day boundary for API vs archive | Matches WakaTime API retention; simple date math | ✓ Good |
+| 404 returns (nil, nil) not error | Missing archive data is expected, not an error | ✓ Good |
+| Nil fetcher pattern | Enables zero-config operation when history_repo not set | ✓ Good |
+| Week-based over day-based navigation | Weekly boundaries match WakaTime's standard format | ✓ Good |
+| Auto-skip blank weeks | Prevents frustration navigating sparse archives | ✓ Good |
+| 52-week search limit | Balances thoroughness with performance | ✓ Good |
+| Prefetch one week ahead | Instant feel for common backward navigation pattern | ✓ Good |
+| Cache stores nil for empty weeks | Avoids re-fetching known empty weeks | ✓ Good |
 
 ---
-*Last updated: 2026-02-24 after v2.2 milestone start*
+*Last updated: 2026-02-25 after v2.2 milestone*

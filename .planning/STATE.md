@@ -2,30 +2,29 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-24)
+See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** A beautiful, live-updating terminal dashboard for coding stats — like htop for your coding activity
-**Current focus:** v2.2 Historical Data - Phase 11 (Configuration & Validation)
+**Current focus:** Milestone v2.2 completed — awaiting next milestone definition
 
 ## Current Position
 
-Phase: 17 of 17 (Background Prefetch and Improved No-Data UX)
-Plan: 2 of 2 (Complete)
-Status: Complete
-Last activity: 2026-02-25 — Phase 17 Plan 02 complete
+Phase: Milestone boundary (v2.2 complete)
+Plan: -
+Status: Milestone completed
+Last activity: 2026-02-25 — v2.2 Historical Data shipped
 
-Progress: [██████████████████████████] 100% (32 plans complete across phases 1-17)
+Progress: [██████████████████████████] 100% (34 plans complete across phases 1-17)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 24
-- Previous milestones:
-  - v1.0: 6 plans (phases 1-3)
-  - v2.0: 9 plans (phases 4-7)
-  - v2.1: 7 plans (phases 8-10) — completed in 1 day
-- Current milestone:
-  - v2.2: 5 plans complete (Phase 11, Phase 12, Phase 13) — in progress
+- Total plans completed: 34
+- Milestones:
+  - v1.0: 6 plans (phases 1-3) — 5 days
+  - v2.0: 9 plans (phases 4-7) — 2 days
+  - v2.1: 7 plans (phases 8-10) — 1 day
+  - v2.2: 12 plans (phases 11-17) — 2 days
 
 **By Milestone:**
 
@@ -34,68 +33,30 @@ Progress: [███████████████████████
 | v1.0 | 3 | 6 | 5 days (2026-02-13 → 2026-02-17) |
 | v2.0 | 4 | 9 | 2 days (2026-02-18 → 2026-02-19) |
 | v2.1 | 3 | 7 | 1 day (2026-02-20) |
-| v2.2 | 5 | TBD | In progress |
+| v2.2 | 6 | 12 | 2 days (2026-02-24 → 2026-02-25) |
 
-**Trend:** Accelerating (5 days → 2 days → 1 day per milestone)
-
-*Metrics will update after each plan completion*
-| Phase 11 P01 | 3 | 3 tasks | 2 files |
-| Phase 12 P01 | 116 | 2 tasks | 2 files |
-| Phase 12 P02 | 183 | 3 tasks | 6 files |
-| Phase 13 P01 | 197 | 3 tasks | 2 files |
-| Phase 13 P02 | 184 | 3 tasks | 4 files |
-| Phase 14 P01 | 126 | 2 tasks | 2 files |
-| Phase 14 P02 | 147 | 3 tasks | 2 files |
-| Phase 14 P03 | 219 | 3 tasks | 4 files |
-| Phase 16 P01 | 169 | 3 tasks | 3 files |
-| Phase 16 P02 | 184 | 3 tasks | 1 files |
-| Phase 17 P01 | 142 | 3 tasks | 3 files |
-| Phase 17 P02 | 203 | 3 tasks | 2 files |
+**Trend:** Sustained high velocity (12 plans in 2 days)
 
 ## Accumulated Context
 
 ### Roadmap Evolution
 
-- Phase 17 added: Background prefetch and improved no-data UX
+All v2.2 phases shipped:
+- Phase 11: Configuration & Validation
+- Phase 12: GitHub Archive Integration
+- Phase 13: Hybrid Data Fetching
+- Phase 14: Date Navigation
+- Phase 15: Historical Display (DESCOPED, merged into Phase 16)
+- Phase 16: Wire Archive Data to Display
+- Phase 17: Background Prefetch and No-Data UX
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- v2.1: Persist theme to ~/.wakatime.cfg (single source of truth)
-- v2.1: Case-insensitive theme lookup (forgiving config parsing)
-- v2.0: BubbleTea with tea.WithAltScreen() (avoids race conditions)
-- v2.0: Self-loop ticker pattern (avoids ticker drift)
-- [Phase 11]: Defer history_repo format validation to Phase 12 for better error context
-- [Phase 11]: Auto-create [wakadash] section template on startup for user discoverability
-- [Phase 11]: Case-insensitive section matching for forgiving config parsing
-- [Phase 12]: 404 returns (nil, nil) not error - missing archive data is expected
-- [Phase 12]: Nil fetcher pattern for zero-config operation when history_repo not set
-- [Phase 12]: Archive fetch on startup for today's date (parallel with API fetches)
-- [Phase 12]: Archive data stored separately from API data for future hybrid logic
-- [Phase 13]: 7-day boundary for recent vs archive (7 days ago = recent, 8 days ago = archive)
-- [Phase 13]: Nil archive fetcher returns (nil, nil) not error - enables zero-config operation
-- [Phase 13-02]: DataSource injected at main.go level and passed through to Model
-- [Phase 14-01]: Empty selectedDate string represents 'today' (live data view)
-- [Phase 14-02]: Week boundaries aligned to Sunday-Saturday to match WakaTime's standard weekly data format
-- [Phase 14-02]: Empty selectedWeekStart represents current week (live view)
-- [Phase 14-03]: Search limit of 52 weeks (1 year) prevents infinite search loops
-- [Phase 14-03]: HasOlderData checks 4 weeks back to avoid false negatives from sparse data
-- [Phase 14-03]: Auto-skip only on backward navigation, not forward navigation
-- [Phase 16-01]: Helper method pattern centralizes data source selection logic (getActiveStatsData)
-- [Phase 16-01]: [HISTORICAL] indicator provides visual feedback for archived data view
-- [Phase 16-02]: Auto-refresh timer keeps running during historical view but skips fetch - maintains timer readiness for immediate resume
-- [Phase 16-02]: Status bar shows paused indicator instead of countdown when viewing history for clear user feedback
-- [Phase 17-01]: Prefetch errors are silently discarded without UI feedback - background optimization shouldn't interrupt UX
-- [Phase 17-01]: Always prefetch exactly one week ahead during navigation for instant feel
-- [Phase 17-01]: Cache stores nil for weeks with no data to avoid re-fetching known empty weeks
-- [Phase 17-02]: Box/border around end-of-history message for modal-like emphasis
-- [Phase 17-02]: Clear banner state on forward navigation for natural UX flow
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
@@ -104,5 +65,9 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 17-01-PLAN.md
+Stopped at: v2.2 milestone complete
 Resume file: None
+
+## Next Steps
+
+Run `/gsd:new-milestone` to define v2.3 goals and requirements.
