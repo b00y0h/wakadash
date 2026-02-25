@@ -59,3 +59,19 @@ type prefetchResultMsg struct {
 	data      *types.DayData // Prefetched data (nil if not found)
 	err       error          // Error (nil for success or 404)
 }
+
+// WeeklySummary holds summary data for a single week (for the weekly browser list).
+type WeeklySummary struct {
+	WeekStart    string  // YYYY-MM-DD (Sunday)
+	WeekEnd      string  // YYYY-MM-DD (Saturday)
+	TotalSeconds float64
+	TopLanguage  string
+	ProjectCount int
+	HasData      bool
+}
+
+// weeklyDataFetchedMsg is sent when all weekly summaries have been scanned.
+type weeklyDataFetchedMsg struct {
+	weeks []WeeklySummary
+	err   error
+}
