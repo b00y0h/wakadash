@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 Phase: Milestone boundary (v2.2 complete)
 Plan: -
 Status: Milestone completed
-Last activity: 2026-02-25 - Completed quick task 1: create keyboard action w for weekly summary browsing
+Last activity: 2026-02-25 - Completed quick task 2: each language needs a different color in Languages panel
 
 Progress: [██████████████████████████] 100% (34 plans complete across phases 1-17)
 
@@ -67,11 +67,12 @@ None.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 1 | create keyboard action w for weekly summary browsing | 2026-02-25 | 61772ac | [1-create-keyboard-action-w-for-weekly-summ](./quick/1-create-keyboard-action-w-for-weekly-summ/) |
+| 2 | each language needs a different color in Languages panel | 2026-02-25 | 24af5e5 | [2-each-language-needs-to-have-a-different-](./quick/2-each-language-needs-to-have-a-different-/) |
 
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: v2.2 milestone complete
+Stopped at: Completed quick-2: per-language colors in Languages panel
 Resume file: None
 
 ## Next Steps
