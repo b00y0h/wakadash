@@ -2,10 +2,13 @@
 
 ## v2.1 Visual Overhaul + Themes (Shipped: 2026-02-23)
 
-**Phases completed:** 0 phases, 0 plans, 0 tasks
+**Phases completed:** 12 phases
 
 **Key accomplishments:**
-- (none recorded)
+- Themed UI with bordered panels
+- Horizontal bar charts (wakafetch-style)
+- GitHub archive integration for historical data
+- Sparkline and heatmap visualizations
 
 ---
 
