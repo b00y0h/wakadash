@@ -32,3 +32,9 @@ type durationsFetchedMsg struct {
 type summaryFetchedMsg struct {
 	summary *types.SummaryResponse
 }
+
+// archiveFetchedMsg is sent when archive data fetch completes.
+type archiveFetchedMsg struct {
+	data *types.DayData // nil if archive not found (404)
+	date string         // Date that was fetched
+}

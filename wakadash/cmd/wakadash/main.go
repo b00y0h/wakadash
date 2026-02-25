@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/b00y0h/wakadash/internal/api"
+	"github.com/b00y0h/wakadash/internal/archive"
 	"github.com/b00y0h/wakadash/internal/config"
 	"github.com/b00y0h/wakadash/internal/theme"
 	"github.com/b00y0h/wakadash/internal/tui"
@@ -64,6 +65,10 @@ func main() {
 	client := api.New(cfg.APIKey, cfg.APIURL)
 	refreshInterval := time.Duration(*refreshFlag) * time.Second
 
+	// Create archive fetcher (nil if history_repo not configured)
+	archiveFetcher := archive.New(cfg.HistoryRepo)
+	// archiveFetcher is nil if HistoryRepo is empty or invalid - that's OK (graceful no-op)
+
 	// Check if first run (no theme configured)
 	themeName, _ := theme.LoadThemeFromConfig()
 	isFirstRun := themeName == ""
@@ -81,7 +86,7 @@ func main() {
 		// No need to save again here — theme is persisted when user confirms in picker
 	}
 
-	m := tui.NewModel(client, *rangeFlag, refreshInterval)
+	m := tui.NewModel(client, *rangeFlag, refreshInterval, archiveFetcher)
 
 	// tea.WithAltScreen() is the correct approach for full-screen apps.
 	// Per research: "Because commands run asynchronously, EnterAltScreen should

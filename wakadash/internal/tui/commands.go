@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/b00y0h/wakadash/internal/api"
+	"github.com/b00y0h/wakadash/internal/archive"
 	"github.com/b00y0h/wakadash/internal/types"
 )
 
@@ -146,5 +147,32 @@ func fetchSummaryCmd(client *api.Client) tea.Cmd {
 			return fetchErrMsg{err: err}
 		}
 		return summaryFetchedMsg{summary: summary}
+	}
+}
+
+// fetchArchiveCmd fetches archived data for a specific date.
+// Returns archiveFetchedMsg with data=nil if archive not found (graceful).
+func fetchArchiveCmd(fetcher *archive.Fetcher, date string) tea.Cmd {
+	return func() (msg tea.Msg) {
+		defer func() {
+			if r := recover(); r != nil {
+				var err error
+				switch v := r.(type) {
+				case error:
+					err = v
+				default:
+					err = fmt.Errorf("panic in fetchArchiveCmd: %v", r)
+				}
+				msg = fetchErrMsg{err: err}
+			}
+		}()
+
+		// Fetcher may be nil if history_repo not configured
+		data, err := fetcher.FetchArchive(date)
+		if err != nil {
+			return fetchErrMsg{err: err}
+		}
+		// data may be nil if 404 (archive not found) - that's OK
+		return archiveFetchedMsg{data: data, date: date}
 	}
 }
