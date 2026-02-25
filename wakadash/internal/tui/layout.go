@@ -63,29 +63,40 @@ func (m Model) renderStatsGrid() string {
 		return DimStyle(m.theme).Render("Terminal too narrow")
 	}
 
+	// Calculate panel width for 2-column layout
+	panelWidth := (m.width - 4) / 2 // Half width minus gap
+
+	// Create style for fixed-width panels
+	panelStyle := lipgloss.NewStyle().Width(panelWidth)
+
 	// Wide terminals (>=80 cols): 2-column layout
 	if m.width >= 80 {
 		var rows []string
 		for i := 0; i < len(visiblePanels); i += 2 {
 			if i+1 < len(visiblePanels) {
-				// Two panels in this row
+				// Two panels in this row - apply fixed width to each
 				row := lipgloss.JoinHorizontal(
 					lipgloss.Top,
-					visiblePanels[i],
+					panelStyle.Render(visiblePanels[i]),
 					strings.Repeat(" ", 2), // Gap between columns
-					visiblePanels[i+1],
+					panelStyle.Render(visiblePanels[i+1]),
 				)
 				rows = append(rows, row)
 			} else {
 				// Single panel in this row
-				rows = append(rows, visiblePanels[i])
+				rows = append(rows, panelStyle.Render(visiblePanels[i]))
 			}
 		}
 		return lipgloss.JoinVertical(lipgloss.Left, rows...)
 	}
 
-	// Narrow terminals (40-79 cols): Stack vertically
-	return lipgloss.JoinVertical(lipgloss.Left, visiblePanels...)
+	// Narrow terminals (40-79 cols): Stack vertically with full width
+	fullWidthStyle := lipgloss.NewStyle().Width(m.width - 4)
+	var stackedPanels []string
+	for _, panel := range visiblePanels {
+		stackedPanels = append(stackedPanels, fullWidthStyle.Render(panel))
+	}
+	return lipgloss.JoinVertical(lipgloss.Left, stackedPanels...)
 }
 
 // renderDashboardLayout builds the complete dashboard layout with all sections.

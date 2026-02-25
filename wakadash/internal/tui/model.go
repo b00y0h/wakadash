@@ -436,17 +436,21 @@ func (m Model) renderStats() string {
 	sb.WriteString(fmt.Sprintf("  Daily average: %s\n", data.HumanReadableDailyAverage))
 	sb.WriteString("\n")
 
+	// Calculate panel width for 2-column layout
+	panelWidth := (m.width - 4) / 2
+	panelStyle := lipgloss.NewStyle().Width(panelWidth)
+
 	// Build visible panels
 	var panels []string
 
 	// Left panel: Languages
 	if m.showLanguages {
-		panels = append(panels, m.renderLanguagesPanel())
+		panels = append(panels, panelStyle.Render(m.renderLanguagesPanel()))
 	}
 
 	// Right panel: Projects
 	if m.showProjects {
-		panels = append(panels, m.renderProjectsPanel())
+		panels = append(panels, panelStyle.Render(m.renderProjectsPanel()))
 	}
 
 	// Join panels horizontally if both visible, otherwise just show the one
