@@ -3,24 +3,25 @@ package tui
 import "github.com/charmbracelet/bubbles/key"
 
 type keymap struct {
-	Quit        key.Binding
-	Help        key.Binding
-	Refresh     key.Binding
-	ChangeTheme key.Binding
-	Toggle1     key.Binding // Languages
-	Toggle2     key.Binding // Projects
-	Toggle3     key.Binding // Sparkline
-	Toggle4     key.Binding // Heatmap
-	Toggle5     key.Binding // Categories
-	Toggle6     key.Binding // Editors
-	Toggle7     key.Binding // OS
-	Toggle8     key.Binding // Machines
-	Toggle9     key.Binding // Summary
-	ShowAll     key.Binding // Show all panels
-	HideAll     key.Binding // Hide all panels
-	PrevDay     key.Binding // Navigate to previous day
-	NextDay     key.Binding // Navigate to next day
-	Today       key.Binding // Return to today
+	Quit          key.Binding
+	Help          key.Binding
+	Refresh       key.Binding
+	ChangeTheme   key.Binding
+	Toggle1       key.Binding // Languages
+	Toggle2       key.Binding // Projects
+	Toggle3       key.Binding // Sparkline
+	Toggle4       key.Binding // Heatmap
+	Toggle5       key.Binding // Categories
+	Toggle6       key.Binding // Editors
+	Toggle7       key.Binding // OS
+	Toggle8       key.Binding // Machines
+	Toggle9       key.Binding // Summary
+	ShowAll       key.Binding // Show all panels
+	HideAll       key.Binding // Hide all panels
+	PrevDay       key.Binding // Navigate to previous day
+	NextDay       key.Binding // Navigate to next day
+	Today         key.Binding // Return to today
+	WeeklyBrowser key.Binding // Open weekly history browser
 }
 
 // ShortHelp returns bindings shown in compact help view
@@ -36,7 +37,7 @@ func (k keymap) FullHelp() [][]key.Binding {
 		{k.Toggle1, k.Toggle2, k.Toggle3, k.Toggle4},
 		{k.Toggle5, k.Toggle6, k.Toggle7, k.Toggle8, k.Toggle9},
 		{k.ShowAll, k.HideAll},
-		{k.PrevDay, k.NextDay, k.Today},
+		{k.PrevDay, k.NextDay, k.Today, k.WeeklyBrowser},
 	}
 }
 
@@ -112,5 +113,9 @@ var defaultKeymap = keymap{
 	Today: key.NewBinding(
 		key.WithKeys("0", "home"),
 		key.WithHelp("0/home", "return to today"),
+	),
+	WeeklyBrowser: key.NewBinding(
+		key.WithKeys("w"),
+		key.WithHelp("w", "weekly browser"),
 	),
 }

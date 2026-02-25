@@ -88,6 +88,10 @@ type Model struct {
 	showPicker bool             // True when showing theme picker
 	picker     ThemePickerModel // Theme picker model
 
+	// Weekly browser
+	showWeeklyBrowser bool               // True when showing weekly history browser
+	weeklyBrowser     WeeklyBrowserModel // Weekly browser sub-model
+
 	// State
 	quitting    bool
 	showHelp    bool
@@ -204,6 +208,46 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Delegate to weekly browser when in browser mode
+	if m.showWeeklyBrowser {
+		switch msg := msg.(type) {
+		case tea.WindowSizeMsg:
+			m.weeklyBrowser.width = msg.Width
+			m.weeklyBrowser.height = msg.Height
+			m.width = msg.Width
+			m.height = msg.Height
+		case weeklyDataFetchedMsg:
+			// Forward data to browser
+			newBrowser, _ := m.weeklyBrowser.Update(msg)
+			m.weeklyBrowser = newBrowser.(WeeklyBrowserModel)
+		case tea.KeyMsg:
+			newBrowser, _ := m.weeklyBrowser.Update(msg)
+			m.weeklyBrowser = newBrowser.(WeeklyBrowserModel)
+			if m.weeklyBrowser.IsConfirmed() {
+				// User selected a week — navigate to it
+				selectedWeek := m.weeklyBrowser.SelectedWeek()
+				m.showWeeklyBrowser = false
+				// Check if selected week is current week
+				currentWeekStart := getWeekStart(time.Now()).Format("2006-01-02")
+				if selectedWeek == currentWeekStart {
+					m.selectedWeekStart = ""
+					m.atOldestData = false
+					return m, fetchDataCmd(m.dataSource, time.Now().Format("2006-01-02"))
+				}
+				// Navigate to historical week
+				m.selectedWeekStart = selectedWeek
+				m.atOldestData = !m.dataSource.HasOlderData(selectedWeek)
+				m.showEndOfHistory = false
+				return m, fetchDataCmd(m.dataSource, selectedWeek)
+			}
+			if m.weeklyBrowser.IsCancelled() {
+				m.showWeeklyBrowser = false
+				return m, nil
+			}
+		}
+		return m, nil
+	}
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -296,6 +340,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.picker.selectedIdx = i
 					break
 				}
+			}
+			return m, nil
+		case key.Matches(msg, m.keys.WeeklyBrowser):
+			// Only open if dataSource is available (needs archive access)
+			if m.dataSource != nil {
+				m.showWeeklyBrowser = true
+				m.weeklyBrowser = NewWeeklyBrowser(m.theme)
+				return m, fetchWeeklySummariesCmd(m.dataSource, 52)
 			}
 			return m, nil
 		case key.Matches(msg, m.keys.PrevDay):
@@ -500,6 +552,11 @@ func (m Model) View() string {
 		return m.picker.View()
 	}
 
+	// Show weekly browser if active
+	if m.showWeeklyBrowser {
+		return m.weeklyBrowser.View()
+	}
+
 	// Check for end-of-history state first
 	if m.showEndOfHistory {
 		return m.renderEndOfHistory()
@@ -660,7 +717,7 @@ func (m Model) renderStatusBar() string {
 		status = oldestIndicator + historyIndicator + weekIndicator + status
 	}
 
-	helpHint := DimStyle(m.theme).Render("? help  1-9 panels  a/h all  r refresh  q quit")
+	helpHint := DimStyle(m.theme).Render("? help  w weeks  1-9 panels  a/h all  r refresh  q quit")
 	gap := strings.Repeat(" ", max(0, m.width-lipgloss.Width(status)-lipgloss.Width(helpHint)))
 	return DimStyle(m.theme).Render(status) + gap + helpHint
 }
