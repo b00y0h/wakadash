@@ -1,8 +1,15 @@
 # wakadash
 
+[![GitHub release](https://img.shields.io/github/v/release/b00y0h/wakadash)](https://github.com/b00y0h/wakadash/releases/latest)
+[![Go version](https://img.shields.io/github/go-mod/go-version/b00y0h/wakadash)](https://go.dev/)
+[![License: MIT](https://img.shields.io/github/license/b00y0h/wakadash)](LICENSE)
+[![Build](https://img.shields.io/github/actions/workflow/status/b00y0h/wakadash/build.yml?branch=main)](https://github.com/b00y0h/wakadash/actions/workflows/build.yml)
+
 > Like htop for your coding activity
 
 A beautiful, live-updating terminal dashboard for [WakaTime](https://wakatime.com) and [Wakapi](https://wakapi.dev) coding stats. View your projects, languages, editors, and activity — all in your terminal with stunning visualizations and theme support.
+
+![wakadash terminal dashboard](assets/wakadash.png)
 
 ## Features
 
