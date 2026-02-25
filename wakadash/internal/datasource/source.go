@@ -3,6 +3,8 @@
 package datasource
 
 import (
+	"time"
+
 	"github.com/b00y0h/wakadash/internal/api"
 	"github.com/b00y0h/wakadash/internal/archive"
 	"github.com/b00y0h/wakadash/internal/types"
@@ -23,8 +25,23 @@ func New(client *api.Client, fetcher *archive.Fetcher) *DataSource {
 }
 
 // IsRecent returns true if the date is within 7 days of today.
+// Date should be in YYYY-MM-DD format.
 func (ds *DataSource) IsRecent(date string) bool {
-	return false // TODO: implement
+	// Parse the input date
+	targetDate, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		return false // Invalid date format is not recent
+	}
+
+	// Get today's date (midnight)
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	// Calculate 7 days ago
+	sevenDaysAgo := today.AddDate(0, 0, -7)
+
+	// Date is recent if it's >= 7 days ago and <= today
+	return !targetDate.Before(sevenDaysAgo) && !targetDate.After(today)
 }
 
 // Fetch retrieves data for the given date from API (recent) or archive (old).
