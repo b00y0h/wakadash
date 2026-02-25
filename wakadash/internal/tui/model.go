@@ -336,6 +336,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.selectedWeekStart = ""
 			m.atOldestData = false
+			// Returning to today enables auto-refresh (isViewingHistory becomes false)
 			return m, fetchDataCmd(m.dataSource, time.Now().Format("2006-01-02"))
 		}
 		return m, nil
