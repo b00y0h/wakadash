@@ -315,6 +315,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// Check cache first
 			if cachedData, ok := m.prefetchedData[prevWeekStart]; ok {
+				if cachedData == nil {
+					// No data for this week - show end-of-history banner
+					m.showEndOfHistory = true
+					m.oldestDataDate = m.selectedWeekStart // Last week with data
+					return m, nil
+				}
 				m.archiveData = cachedData
 				m.selectedWeekStart = prevWeekStart
 				m.atOldestData = !m.dataSource.HasOlderData(prevWeekStart)
@@ -332,6 +338,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, findNonEmptyWeekCmd(m.dataSource, prevWeekStart, -1)
 		case key.Matches(msg, m.keys.NextDay):
 			m.atOldestData = false // Moving forward, not at oldest
+			// Clear end-of-history state when navigating forward
+			if m.showEndOfHistory {
+				m.showEndOfHistory = false
+			}
 			// Navigate to next week (capped at current week)
 			if m.selectedWeekStart == "" {
 				// Already at current week, can't go forward
@@ -355,11 +365,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, fetchDataCmd(m.dataSource, dateToFetch)
 		case key.Matches(msg, m.keys.Today):
-			if m.selectedWeekStart == "" {
+			if m.selectedWeekStart == "" && !m.showEndOfHistory {
 				return m, nil // Already at current week
 			}
+			// Per user decision: Today key (0/Home) from end-of-history: Jump directly to today
 			m.selectedWeekStart = ""
 			m.atOldestData = false
+			m.showEndOfHistory = false
+			m.oldestDataDate = ""
 			// Returning to today enables auto-refresh (isViewingHistory becomes false)
 			return m, fetchDataCmd(m.dataSource, time.Now().Format("2006-01-02"))
 		}
@@ -402,6 +415,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.archiveData = msg.data
 		// Data may be nil if archive not found - that's graceful
 
+		// If navigating to historical week and no data exists
+		if m.selectedWeekStart != "" && msg.data == nil {
+			m.showEndOfHistory = true
+			m.oldestDataDate = msg.date
+			m.loading = false
+			return m, nil
+		}
+
 		// Trigger background prefetch of previous week
 		prevWeek := getPreviousWeekStart(m.selectedWeekStart)
 		if prevWeek != "" {
@@ -414,8 +435,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case weekSearchResultMsg:
 		m.loading = false
 		if !msg.found {
-			// No more data available, stay at current position
-			m.atOldestData = true
+			m.showEndOfHistory = true
+			m.oldestDataDate = m.selectedWeekStart
+			m.loading = false
 			return m, nil
 		}
 		// Update to found week
