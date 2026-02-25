@@ -2,15 +2,15 @@
 
 ## Milestones
 
-- ✅ **v1.0 Homebrew Distribution** - Phases 1-3 (shipped 2026-02-17)
-- ✅ **v2.0 wakadash** - Phases 4-7 (shipped 2026-02-19)
-- ✅ **v2.1 Visual Overhaul + Themes** - Phases 8-10 (shipped 2026-02-23)
-- 🚧 **v2.2 Historical Data** - Phases 11-15 (in progress)
+- **v1.0 Homebrew Distribution** - Phases 1-3 (shipped 2026-02-17)
+- **v2.0 wakadash** - Phases 4-7 (shipped 2026-02-19)
+- **v2.1 Visual Overhaul + Themes** - Phases 8-10 (shipped 2026-02-23)
+- **v2.2 Historical Data** - Phases 11-15 (in progress)
 
 ## Phases
 
 <details>
-<summary>✅ v1.0 Homebrew Distribution (Phases 1-3) - SHIPPED 2026-02-17</summary>
+<summary>v1.0 Homebrew Distribution (Phases 1-3) - SHIPPED 2026-02-17</summary>
 
 See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 
@@ -19,7 +19,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 </details>
 
 <details>
-<summary>✅ v2.0 wakadash (Phases 4-7) - SHIPPED 2026-02-19</summary>
+<summary>v2.0 wakadash (Phases 4-7) - SHIPPED 2026-02-19</summary>
 
 - [x] Phase 4: Repository Setup (2/2 plans) — completed 2026-02-19
 - [x] Phase 5: TUI Foundation (2/2 plans) — completed 2026-02-19
@@ -31,7 +31,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 </details>
 
 <details>
-<summary>✅ v2.1 Visual Overhaul + Themes (Phases 8-10) - SHIPPED 2026-02-23</summary>
+<summary>v2.1 Visual Overhaul + Themes (Phases 8-10) - SHIPPED 2026-02-23</summary>
 
 - [x] Phase 8: Theme Foundation (3/3 plans) — completed 2026-02-20
 - [x] Phase 9: Stats Panels + Summary (3/3 plans) — completed 2026-02-20
@@ -41,7 +41,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 
 </details>
 
-### 🚧 v2.2 Historical Data (In Progress)
+### v2.2 Historical Data (In Progress)
 
 **Milestone Goal:** Enable viewing coding stats from any historical date by reading archived data from a GitHub repository.
 
@@ -54,7 +54,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 11: Configuration & Validation** - Add history_repo config with graceful fallback (completed 2026-02-24)
 - [x] **Phase 12: GitHub Archive Integration** - Read archived stats from GitHub repo
 - [x] **Phase 13: Hybrid Data Fetching** - Combine API and archive for seamless experience (completed 2026-02-25)
-- [x] **Phase 14: Date Navigation** - Arrow key controls for browsing history (completed 2026-02-25)
+- [ ] **Phase 14: Date Navigation** - Week-based navigation with auto-skip blank weeks (gap closure in progress)
 - [ ] **Phase 15: Historical Display** - Date indicator and auto-refresh control
 
 ## Phase Details
@@ -98,21 +98,24 @@ Plans:
 
 Plans:
 - [x] 13-01-PLAN.md — Create DataSource with date-based routing logic (TDD)
-- [ ] 13-02-PLAN.md — Integrate DataSource into dashboard initialization
+- [x] 13-02-PLAN.md — Integrate DataSource into dashboard initialization
 
 ### Phase 14: Date Navigation
-**Goal**: User can browse historical dates
+**Goal**: User can browse historical weeks with auto-skip for blank data
 **Depends on**: Phase 13
 **Requirements**: NAV-01, NAV-02, NAV-03
 **Success Criteria** (what must be TRUE):
-  1. Left arrow key navigates to previous day
-  2. Right arrow key navigates to next day
-  3. Pressing '0' or Home key returns to today
-  4. Navigation updates all panels with selected date's data
-**Plans**: 1 plan
+  1. Left arrow key navigates to previous week (Sunday-Saturday boundary)
+  2. Right arrow key navigates to next week (capped at current week)
+  3. Pressing '0' or Home key returns to current week
+  4. Navigation auto-skips blank weeks to next week with data
+  5. Status bar shows week range and end-of-history indicator
+**Plans**: 3 plans
 
 Plans:
-- [ ] 14-01-PLAN.md — Add date navigation controls with keyboard bindings
+- [x] 14-01-PLAN.md — Add day-based navigation controls (superseded by gap closure)
+- [ ] 14-02-PLAN.md — Convert to week-based navigation with week range display (gap closure)
+- [ ] 14-03-PLAN.md — Add auto-skip blank weeks and end-of-history indicator (gap closure)
 
 ### Phase 15: Historical Display
 **Goal**: User knows when viewing historical data
@@ -144,8 +147,8 @@ Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 →
 | 10. Polish + Edge Cases | v2.1 | 1/1 | Complete | 2026-02-20 |
 | 11. Configuration & Validation | v2.2 | 1/1 | Complete | 2026-02-24 |
 | 12. GitHub Archive Integration | v2.2 | 2/2 | Complete | 2026-02-25 |
-| 13. Hybrid Data Fetching | 2/2 | Complete    | 2026-02-25 | - |
-| 14. Date Navigation | 1/1 | Complete    | 2026-02-25 | - |
+| 13. Hybrid Data Fetching | v2.2 | 2/2 | Complete | 2026-02-25 |
+| 14. Date Navigation | v2.2 | 1/3 | Gap Closure | - |
 | 15. Historical Display | v2.2 | 0/? | Not started | - |
 
 ## Distribution Notes
@@ -156,4 +159,4 @@ Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 →
 
 ---
 *Roadmap created: 2026-02-18*
-*Last updated: 2026-02-25 (Phase 14 plans created)*
+*Last updated: 2026-02-25 (Phase 14 gap closure plans created)*
