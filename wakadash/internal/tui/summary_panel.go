@@ -44,12 +44,13 @@ func calculateStreaks(summaryData *types.SummaryResponse) (current int, best int
 
 // renderSummaryPanel renders the summary panel with 30-day overview statistics.
 func (m Model) renderSummaryPanel() string {
-	if m.stats == nil {
+	statsData := m.getActiveStatsData()
+	if statsData == nil {
 		return ""
 	}
 
 	var sb strings.Builder
-	data := m.stats.Data
+	data := *statsData
 
 	// Total and averages
 	sb.WriteString(fmt.Sprintf("Total: %s\n", data.HumanReadableTotal))
