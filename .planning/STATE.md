@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 14 of 15 (Date Navigation)
-Plan: 1 of 1 (Complete)
-Status: Complete
-Last activity: 2026-02-25 — Phase 14 Plan 01 complete
+Plan: 2 of 3 (Complete)
+Status: In Progress
+Last activity: 2026-02-25 — Phase 14 Plan 02 complete
 
-Progress: [██████████████████████░░░░] 84% (26 plans complete across phases 1-14)
+Progress: [██████████████████████░░░░] 87% (27 plans complete across phases 1-14)
 
 ## Performance Metrics
 
@@ -45,6 +45,7 @@ Progress: [██████████████████████░
 | Phase 13 P01 | 197 | 3 tasks | 2 files |
 | Phase 13 P02 | 184 | 3 tasks | 4 files |
 | Phase 14 P01 | 126 | 2 tasks | 2 files |
+| Phase 14 P02 | 147 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -67,7 +68,9 @@ Recent decisions affecting current work:
 - [Phase 13]: 7-day boundary for recent vs archive (7 days ago = recent, 8 days ago = archive)
 - [Phase 13]: Nil archive fetcher returns (nil, nil) not error - enables zero-config operation
 - [Phase 13-02]: DataSource injected at main.go level and passed through to Model
-- [Phase 14]: Empty selectedDate string represents 'today' (live data view)
+- [Phase 14-01]: Empty selectedDate string represents 'today' (live data view)
+- [Phase 14-02]: Week boundaries aligned to Sunday-Saturday to match WakaTime's standard weekly data format
+- [Phase 14-02]: Empty selectedWeekStart represents current week (live view)
 
 ### Pending Todos
 
@@ -80,5 +83,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 14-01-PLAN.md
+Stopped at: Completed 14-02-PLAN.md
 Resume file: None
