@@ -55,7 +55,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 12: GitHub Archive Integration** - Read archived stats from GitHub repo
 - [x] **Phase 13: Hybrid Data Fetching** - Combine API and archive for seamless experience (completed 2026-02-25)
 - [x] **Phase 14: Date Navigation** - Week-based navigation with auto-skip blank weeks (gap closure in progress) (completed 2026-02-25)
-- [ ] **Phase 15: Historical Display** - Date indicator and auto-refresh control
+- [ ] **Phase 15: Historical Display** - DESCOPED (merged into Phase 16)
+- [ ] **Phase 16: Wire Archive Data to Display** - Gap closure: connect archiveData to UI rendering
 
 ## Phase Details
 
@@ -118,13 +119,21 @@ Plans:
 - [ ] 14-03-PLAN.md — Add auto-skip blank weeks and end-of-history indicator (gap closure)
 
 ### Phase 15: Historical Display
-**Goal**: User knows when viewing historical data
+**Status**: DESCOPED — requirements merged into Phase 16 gap closure
+**Original Goal**: User knows when viewing historical data
+**Original Requirements**: DISP-01, DISP-02, DISP-03
+
+### Phase 16: Wire Archive Data to Display
+**Goal**: Connect archiveData to UI rendering and add historical data indicators
 **Depends on**: Phase 14
-**Requirements**: DISP-01, DISP-02, DISP-03
+**Requirements**: DATA-01, DISP-01, DISP-02, DISP-03
+**Gap Closure**: Closes gaps from v2.2-MILESTONE-AUDIT.md
 **Success Criteria** (what must be TRUE):
-  1. Date indicator appears when viewing non-today date
-  2. Auto-refresh pauses when viewing historical data
-  3. Auto-refresh resumes when returning to today
+  1. View() displays archiveData when selectedWeekStart is set (not today's stats)
+  2. All rendering functions (summary, stats panels) use correct data source
+  3. Date indicator appears in UI when viewing historical data
+  4. Auto-refresh pauses when viewing historical data
+  5. Auto-refresh resumes when returning to today
 **Plans**: TBD
 
 Plans:
@@ -148,8 +157,9 @@ Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 →
 | 11. Configuration & Validation | v2.2 | 1/1 | Complete | 2026-02-24 |
 | 12. GitHub Archive Integration | v2.2 | 2/2 | Complete | 2026-02-25 |
 | 13. Hybrid Data Fetching | v2.2 | 2/2 | Complete | 2026-02-25 |
-| 14. Date Navigation | 3/3 | Complete    | 2026-02-25 | - |
-| 15. Historical Display | v2.2 | 0/? | Not started | - |
+| 14. Date Navigation | v2.2 | 3/3 | Complete | 2026-02-25 |
+| 15. Historical Display | v2.2 | - | Descoped | - |
+| 16. Wire Archive Data to Display | v2.2 | 0/? | Not started | - |
 
 ## Distribution Notes
 
