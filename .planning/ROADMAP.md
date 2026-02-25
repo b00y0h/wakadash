@@ -134,10 +134,11 @@ Plans:
   3. Date indicator appears in UI when viewing historical data
   4. Auto-refresh pauses when viewing historical data
   5. Auto-refresh resumes when returning to today
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- TBD
+- [ ] 16-01-PLAN.md — Wire archiveData to UI rendering with getActiveStatsData helper
+- [ ] 16-02-PLAN.md — Pause/resume auto-refresh based on view state
 
 ## Progress
 
@@ -159,7 +160,7 @@ Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 →
 | 13. Hybrid Data Fetching | v2.2 | 2/2 | Complete | 2026-02-25 |
 | 14. Date Navigation | v2.2 | 3/3 | Complete | 2026-02-25 |
 | 15. Historical Display | v2.2 | - | Descoped | - |
-| 16. Wire Archive Data to Display | v2.2 | 0/? | Not started | - |
+| 16. Wire Archive Data to Display | v2.2 | 0/2 | Planned | - |
 
 ## Distribution Notes
 
@@ -169,4 +170,4 @@ Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 →
 
 ---
 *Roadmap created: 2026-02-18*
-*Last updated: 2026-02-25 (Phase 14 gap closure plans created)*
+*Last updated: 2026-02-25 (Phase 16 plans created)*
