@@ -45,3 +45,10 @@ type dataFetchedMsg struct {
 	data *types.DayData
 	date string
 }
+
+// weekSearchResultMsg is sent when FindNonEmptyWeek completes.
+type weekSearchResultMsg struct {
+	weekStart string // Found week start, empty if none
+	found     bool   // Whether a non-empty week was found
+	atOldest  bool   // Whether this is the oldest available data
+}

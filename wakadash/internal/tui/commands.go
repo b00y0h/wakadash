@@ -202,3 +202,34 @@ func fetchDataCmd(ds *datasource.DataSource, date string) tea.Cmd {
 		return dataFetchedMsg{data: data, date: date}
 	}
 }
+
+// findNonEmptyWeekCmd searches for the next week with data asynchronously.
+// direction: -1 for backward (prev), 1 for forward (next)
+func findNonEmptyWeekCmd(ds *datasource.DataSource, startWeek string, direction int) tea.Cmd {
+	return func() (msg tea.Msg) {
+		defer func() {
+			if r := recover(); r != nil {
+				var err error
+				switch v := r.(type) {
+				case error:
+					err = v
+				default:
+					err = fmt.Errorf("panic in findNonEmptyWeekCmd: %v", r)
+				}
+				msg = fetchErrMsg{err: err}
+			}
+		}()
+
+		const maxWeeksBack = 52 // Search up to 1 year back
+
+		weekStart, found := ds.FindNonEmptyWeek(startWeek, direction, maxWeeksBack)
+		if !found {
+			return weekSearchResultMsg{weekStart: "", found: false, atOldest: true}
+		}
+
+		// Check if this is the oldest data
+		atOldest := !ds.HasOlderData(weekStart)
+
+		return weekSearchResultMsg{weekStart: weekStart, found: true, atOldest: atOldest}
+	}
+}
