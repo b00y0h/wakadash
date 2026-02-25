@@ -64,8 +64,8 @@ func renderBarChart(items []barItem, maxSeconds float64, barColor lipgloss.Color
 			barLen = 0
 		}
 
-		// Build the bar using Unicode block character
-		bar := strings.Repeat("█", barLen)
+		// Build the bar using Unicode lower-half block for visual spacing
+		bar := strings.Repeat("▄", barLen)
 		padding := strings.Repeat(" ", barWidth-barLen)
 
 		// Format time
