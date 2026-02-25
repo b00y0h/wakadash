@@ -2,15 +2,15 @@
 
 ## Milestones
 
-- **v1.0 Homebrew Distribution** - Phases 1-3 (shipped 2026-02-17)
-- **v2.0 wakadash** - Phases 4-7 (shipped 2026-02-19)
-- **v2.1 Visual Overhaul + Themes** - Phases 8-10 (shipped 2026-02-23)
-- **v2.2 Historical Data** - Phases 11-17 (in progress)
+- ✅ **v1.0 Homebrew Distribution** — Phases 1-3 (shipped 2026-02-17)
+- ✅ **v2.0 wakadash** — Phases 4-7 (shipped 2026-02-19)
+- ✅ **v2.1 Visual Overhaul + Themes** — Phases 8-10 (shipped 2026-02-23)
+- ✅ **v2.2 Historical Data** — Phases 11-17 (shipped 2026-02-25)
 
 ## Phases
 
 <details>
-<summary>v1.0 Homebrew Distribution (Phases 1-3) - SHIPPED 2026-02-17</summary>
+<summary>✅ v1.0 Homebrew Distribution (Phases 1-3) — SHIPPED 2026-02-17</summary>
 
 See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 
@@ -19,7 +19,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 </details>
 
 <details>
-<summary>v2.0 wakadash (Phases 4-7) - SHIPPED 2026-02-19</summary>
+<summary>✅ v2.0 wakadash (Phases 4-7) — SHIPPED 2026-02-19</summary>
 
 - [x] Phase 4: Repository Setup (2/2 plans) — completed 2026-02-19
 - [x] Phase 5: TUI Foundation (2/2 plans) — completed 2026-02-19
@@ -31,7 +31,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 </details>
 
 <details>
-<summary>v2.1 Visual Overhaul + Themes (Phases 8-10) - SHIPPED 2026-02-23</summary>
+<summary>✅ v2.1 Visual Overhaul + Themes (Phases 8-10) — SHIPPED 2026-02-23</summary>
 
 - [x] Phase 8: Theme Foundation (3/3 plans) — completed 2026-02-20
 - [x] Phase 9: Stats Panels + Summary (3/3 plans) — completed 2026-02-20
@@ -41,127 +41,22 @@ See `.planning/milestones/v1.0-ROADMAP.md` for archived phase details.
 
 </details>
 
-### v2.2 Historical Data (In Progress)
+<details>
+<summary>✅ v2.2 Historical Data (Phases 11-17) — SHIPPED 2026-02-25</summary>
 
-**Milestone Goal:** Enable viewing coding stats from any historical date by reading archived data from a GitHub repository.
+- [x] Phase 11: Configuration & Validation (1/1 plan) — completed 2026-02-24
+- [x] Phase 12: GitHub Archive Integration (2/2 plans) — completed 2026-02-25
+- [x] Phase 13: Hybrid Data Fetching (2/2 plans) — completed 2026-02-25
+- [x] Phase 14: Date Navigation (3/3 plans) — completed 2026-02-25
+- [ ] Phase 15: Historical Display — DESCOPED (merged into Phase 16)
+- [x] Phase 16: Wire Archive Data to Display (2/2 plans) — completed 2026-02-25
+- [x] Phase 17: Background Prefetch & No-Data UX (2/2 plans) — completed 2026-02-25
 
-**Phase Numbering:**
-- Integer phases (11-17): Planned milestone work
-- Decimal phases (11.1, 11.2): Urgent insertions (marked with INSERTED)
+**Delivered:** Historical data viewing via GitHub archive with week-based navigation, instant prefetch, and polished end-of-history UX
 
-Decimal phases appear between their surrounding integers in numeric order.
-
-- [x] **Phase 11: Configuration & Validation** - Add history_repo config with graceful fallback (completed 2026-02-24)
-- [x] **Phase 12: GitHub Archive Integration** - Read archived stats from GitHub repo
-- [x] **Phase 13: Hybrid Data Fetching** - Combine API and archive for seamless experience (completed 2026-02-25)
-- [x] **Phase 14: Date Navigation** - Week-based navigation with auto-skip blank weeks (gap closure in progress) (completed 2026-02-25)
-- [ ] **Phase 15: Historical Display** - DESCOPED (merged into Phase 16)
-- [x] **Phase 16: Wire Archive Data to Display** - Gap closure: connect archiveData to UI rendering (completed 2026-02-25)
-- [x] **Phase 17: Background Prefetch and No-Data UX** - Instant navigation and clear end-of-history feedback (completed 2026-02-25)
-
-## Phase Details
-
-### Phase 11: Configuration & Validation
-**Goal**: User can specify archive location in config
-**Depends on**: Phase 10 (v2.1 complete)
-**Requirements**: CFG-01
-**Success Criteria** (what must be TRUE):
-  1. User can add `history_repo` key to ~/.wakatime.cfg
-  2. Dashboard starts successfully when `history_repo` is not configured
-  3. Dashboard starts successfully when `history_repo` is configured but invalid
-**Plans**: 1 plan
-
-Plans:
-- [x] 11-01-PLAN.md — Add history_repo config with section-aware parsing and auto-template
-
-### Phase 12: GitHub Archive Integration
-**Goal**: Read archived WakaTime data from GitHub
-**Depends on**: Phase 11
-**Requirements**: DATA-03, DATA-04
-**Success Criteria** (what must be TRUE):
-  1. Dashboard fetches archived data from GitHub when `history_repo` is configured
-  2. Dashboard shows "no data available" when archive file missing (no crash)
-  3. Archive data parses correctly and populates all panels
-**Plans**: 2 plans
-
-Plans:
-- [x] 12-01-PLAN.md — Create GitHub archive fetcher with graceful 404 handling
-- [x] 12-02-PLAN.md — Integrate archive fetcher into dashboard
-
-### Phase 13: Hybrid Data Fetching
-**Goal**: Seamlessly combine API and archive data
-**Depends on**: Phase 12
-**Requirements**: DATA-01, DATA-02
-**Success Criteria** (what must be TRUE):
-  1. Recent dates (last 7 days) fetch from WakaTime API
-  2. Older dates fetch from GitHub archive when available
-  3. User sees stats from any date without knowing the source
-**Plans**: 2 plans
-
-Plans:
-- [x] 13-01-PLAN.md — Create DataSource with date-based routing logic (TDD)
-- [x] 13-02-PLAN.md — Integrate DataSource into dashboard initialization
-
-### Phase 14: Date Navigation
-**Goal**: User can browse historical weeks with auto-skip for blank data
-**Depends on**: Phase 13
-**Requirements**: NAV-01, NAV-02, NAV-03
-**Success Criteria** (what must be TRUE):
-  1. Left arrow key navigates to previous week (Sunday-Saturday boundary)
-  2. Right arrow key navigates to next week (capped at current week)
-  3. Pressing '0' or Home key returns to current week
-  4. Navigation auto-skips blank weeks to next week with data
-  5. Status bar shows week range and end-of-history indicator
-**Plans**: 3 plans
-
-Plans:
-- [x] 14-01-PLAN.md — Add day-based navigation controls (superseded by gap closure)
-- [x] 14-02-PLAN.md — Convert to week-based navigation with week range display (gap closure)
-- [x] 14-03-PLAN.md — Add auto-skip blank weeks and end-of-history indicator (gap closure)
-
-### Phase 15: Historical Display
-**Status**: DESCOPED — requirements merged into Phase 16 gap closure
-**Original Goal**: User knows when viewing historical data
-**Original Requirements**: DISP-01, DISP-02, DISP-03
-
-### Phase 16: Wire Archive Data to Display
-**Goal**: Connect archiveData to UI rendering and add historical data indicators
-**Depends on**: Phase 14
-**Requirements**: DATA-01, DISP-01, DISP-02, DISP-03
-**Gap Closure**: Closes gaps from v2.2-MILESTONE-AUDIT.md
-**Success Criteria** (what must be TRUE):
-  1. View() displays archiveData when selectedWeekStart is set (not today's stats)
-  2. All rendering functions (summary, stats panels) use correct data source
-  3. Date indicator appears in UI when viewing historical data
-  4. Auto-refresh pauses when viewing historical data
-  5. Auto-refresh resumes when returning to today
-**Plans**: 2 plans
-
-Plans:
-- [x] 16-01-PLAN.md — Wire archiveData to UI rendering with getActiveStatsData helper
-- [x] 16-02-PLAN.md — Pause/resume auto-refresh based on view state
-
-### Phase 17: Background Prefetch and No-Data UX
-**Goal**: Instant backward navigation with clear end-of-history feedback
-**Depends on**: Phase 16
-**Requirements**: PREFETCH-01, PREFETCH-02, NODATA-01, NODATA-02
-**Success Criteria** (what must be TRUE):
-  1. Previous week data prefetches silently after dashboard loads
-  2. Backward navigation is instant when data is prefetched
-  3. Prefetch continues one week ahead as user navigates
-  4. Full-screen "End of history" banner appears when no data exists
-  5. Banner shows date when archive data started
-  6. Today key returns to current week from end-of-history banner
-**Plans**: 2 plans
-
-Plans:
-- [ ] 17-01-PLAN.md — Background prefetch system for instant backward navigation
-- [ ] 17-02-PLAN.md — Full-screen end-of-history banner for no-data weeks
+</details>
 
 ## Progress
-
-**Execution Order:**
-Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 → ...
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -179,7 +74,7 @@ Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 →
 | 14. Date Navigation | v2.2 | 3/3 | Complete | 2026-02-25 |
 | 15. Historical Display | v2.2 | - | Descoped | - |
 | 16. Wire Archive Data to Display | v2.2 | 2/2 | Complete | 2026-02-25 |
-| 17. Background Prefetch & No-Data UX | 2/2 | Complete    | 2026-02-25 | - |
+| 17. Background Prefetch & No-Data UX | v2.2 | 2/2 | Complete | 2026-02-25 |
 
 ## Distribution Notes
 
@@ -189,4 +84,4 @@ Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 →
 
 ---
 *Roadmap created: 2026-02-18*
-*Last updated: 2026-02-25 (Phase 17 plans created)*
+*Last updated: 2026-02-25 after v2.2 milestone*

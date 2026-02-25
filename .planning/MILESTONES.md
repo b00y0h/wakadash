@@ -56,3 +56,25 @@
 
 ---
 
+
+## v2.2 Historical Data (Shipped: 2026-02-25)
+
+**Phases completed:** 6 phases, 12 plans
+**Timeline:** 2 days (2026-02-24 → 2026-02-25)
+
+**Delivered:** Historical data viewing via GitHub archive with week-based navigation, instant prefetch, and polished end-of-history UX
+
+**Key accomplishments:**
+- Configuration system: Section-aware INI parsing with `history_repo` field and auto-template creation for discoverability
+- GitHub archive fetcher: Retrieves historical WakaTime data with graceful 404 handling (missing data = nil, not error)
+- Hybrid data source: Automatic routing to API for recent dates (≤7 days) or archive for historical data
+- Week-based navigation: Left/right arrows navigate weeks with auto-skip blank weeks and 52-week search limit
+- Archive display wiring: All 9 stat panels show historical data via getActiveStatsData helper with [HISTORICAL] indicator
+- Auto-refresh management: Pauses during historical view, resumes when returning to today
+- Background prefetch: Instant backward navigation via silent prefetch cache for one week ahead
+- End-of-history UX: Full-screen modal banner when reaching oldest data with navigation hints
+
+**Archive:** `.planning/milestones/v2.2-ROADMAP.md`, `.planning/milestones/v2.2-REQUIREMENTS.md`, `.planning/milestones/v2.2-MILESTONE-AUDIT.md`
+
+---
+
