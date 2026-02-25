@@ -4,20 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
-
-	"github.com/b00y0h/wakadash/internal/theme"
 	"github.com/b00y0h/wakadash/internal/types"
 )
-
-// SummaryPanelStyle returns a styled border for the summary panel.
-func SummaryPanelStyle(t theme.Theme, width int) lipgloss.Style {
-	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(t.Primary).
-		Padding(1, 2).
-		Width(width - 4)
-}
 
 // calculateStreaks calculates current and best streaks from 7-day window.
 // Returns (current, best) where current is consecutive days from most recent
@@ -61,47 +49,43 @@ func (m Model) renderSummaryPanel() string {
 	}
 
 	var sb strings.Builder
-
-	// Title
-	title := TitleStyle(m.theme).Render("Summary (Last 30 Days)")
-	sb.WriteString(title + "\n\n")
-
 	data := m.stats.Data
 
 	// Total and averages
-	sb.WriteString(fmt.Sprintf("  Total: %s\n", data.HumanReadableTotal))
-	sb.WriteString(fmt.Sprintf("  Daily average: %s\n", data.HumanReadableDailyAverage))
+	sb.WriteString(fmt.Sprintf("Total: %s\n", data.HumanReadableTotal))
+	sb.WriteString(fmt.Sprintf("Daily average: %s\n", data.HumanReadableDailyAverage))
 
 	// Best day (if available)
 	if data.BestDay.Date != "" {
-		sb.WriteString(fmt.Sprintf("  Best day: %s (%s)\n", data.BestDay.Date, data.BestDay.Text))
+		sb.WriteString(fmt.Sprintf("Best day: %s (%s)\n", data.BestDay.Date, data.BestDay.Text))
 	}
 
 	// Streak information
 	currentStreak, bestStreak := calculateStreaks(m.summaryData)
-	sb.WriteString(fmt.Sprintf("  Streak: Current: %d days | Best: %d days\n", currentStreak, bestStreak))
+	sb.WriteString(fmt.Sprintf("Streak: Current: %d days | Best: %d days\n", currentStreak, bestStreak))
 
 	sb.WriteString("\n")
 
 	// Top items
 	if len(data.Languages) > 0 {
-		sb.WriteString(fmt.Sprintf("  Top language: %s\n", data.Languages[0].Name))
+		sb.WriteString(fmt.Sprintf("Top language: %s\n", data.Languages[0].Name))
 	}
 	if len(data.Projects) > 0 {
-		sb.WriteString(fmt.Sprintf("  Top project: %s\n", data.Projects[0].Name))
+		sb.WriteString(fmt.Sprintf("Top project: %s\n", data.Projects[0].Name))
 	}
 	if len(data.Editors) > 0 {
-		sb.WriteString(fmt.Sprintf("  Top editor: %s\n", data.Editors[0].Name))
+		sb.WriteString(fmt.Sprintf("Top editor: %s\n", data.Editors[0].Name))
 	}
 	if len(data.Categories) > 0 {
-		sb.WriteString(fmt.Sprintf("  Top category: %s\n", data.Categories[0].Name))
+		sb.WriteString(fmt.Sprintf("Top category: %s\n", data.Categories[0].Name))
 	}
 
 	sb.WriteString("\n")
 
 	// Counts
-	sb.WriteString(fmt.Sprintf("  Languages: %d\n", len(data.Languages)))
-	sb.WriteString(fmt.Sprintf("  Projects: %d\n", len(data.Projects)))
+	sb.WriteString(fmt.Sprintf("Languages: %d\n", len(data.Languages)))
+	sb.WriteString(fmt.Sprintf("Projects: %d", len(data.Projects)))
 
-	return sb.String()
+	content := sb.String()
+	return renderBorderedPanel("Summary", content, m.width-4, m.theme)
 }

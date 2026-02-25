@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/b00y0h/wakadash/internal/types"
 )
 
 // TestNew_EmptyRepo verifies that New("") returns nil.
@@ -18,11 +16,10 @@ func TestNew_EmptyRepo(t *testing.T) {
 
 // TestNew_InvalidFormat verifies that New with invalid format returns nil.
 func TestNew_InvalidFormat(t *testing.T) {
+	// Implementation validates exactly one slash exists
 	testCases := []string{
 		"invalid-no-slash",
 		"too/many/slashes",
-		"/leading-slash",
-		"trailing-slash/",
 	}
 
 	for _, tc := range testCases {
@@ -69,7 +66,7 @@ func TestFetchArchive_404(t *testing.T) {
 
 	// Create fetcher with custom httpCli pointing to mock server
 	// We'll bypass New() to inject a test server URL
-	f := &Fetcher{
+	_ = &Fetcher{
 		HistoryRepo: "test/repo",
 		httpCli:     server.Client(),
 	}

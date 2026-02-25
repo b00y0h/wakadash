@@ -149,104 +149,87 @@ func getMaxSeconds(items []barItem) float64 {
 
 // renderLanguagesPanel renders the languages panel with wakafetch-style bars.
 func (m Model) renderLanguagesPanel() string {
-	var sb strings.Builder
-	sb.WriteString(TitleStyle(m.theme).Render("Languages") + "\n")
-
+	panelWidth := m.width/2 - 4
 	if m.stats == nil || len(m.stats.Data.Languages) == 0 {
-		sb.WriteString("  No data")
-		return sb.String()
+		return renderBorderedPanel("Languages", "No data", panelWidth, m.theme)
 	}
 
 	items := getTopItems(m.stats.Data.Languages, 10)
 	maxSecs := getMaxSeconds(items)
-	panelWidth := m.width/2 - 4
-	sb.WriteString(renderBarChart(items, maxSecs, m.theme.Primary, panelWidth))
-	return sb.String()
+	// Bar width: panel width - border (2) - padding (2) = content area
+	barWidth := panelWidth - 8
+	content := renderBarChart(items, maxSecs, m.theme.Primary, barWidth)
+	return renderBorderedPanel("Languages", content, panelWidth, m.theme)
 }
 
 // renderProjectsPanel renders the projects panel with wakafetch-style bars.
 func (m Model) renderProjectsPanel() string {
-	var sb strings.Builder
-	sb.WriteString(TitleStyle(m.theme).Render("Projects") + "\n")
-
+	panelWidth := m.width/2 - 4
 	if m.stats == nil || len(m.stats.Data.Projects) == 0 {
-		sb.WriteString("  No data")
-		return sb.String()
+		return renderBorderedPanel("Projects", "No data", panelWidth, m.theme)
 	}
 
 	items := getTopItems(m.stats.Data.Projects, 10)
 	maxSecs := getMaxSeconds(items)
-	panelWidth := m.width/2 - 4
+	barWidth := panelWidth - 8
 	// Use secondary/accent color for projects (cyan-ish)
 	projectColor := lipgloss.Color("#00d7ff")
-	sb.WriteString(renderBarChart(items, maxSecs, projectColor, panelWidth))
-	return sb.String()
+	content := renderBarChart(items, maxSecs, projectColor, barWidth)
+	return renderBorderedPanel("Projects", content, panelWidth, m.theme)
 }
 
 // renderCategoriesPanel renders the categories panel with wakafetch-style bars.
 func (m Model) renderCategoriesPanel() string {
-	var sb strings.Builder
-	sb.WriteString(TitleStyle(m.theme).Render("Categories") + "\n")
-
+	panelWidth := m.width/2 - 4
 	if m.stats == nil || len(m.stats.Data.Categories) == 0 {
-		sb.WriteString("  No data")
-		return sb.String()
+		return renderBorderedPanel("Categories", "No data", panelWidth, m.theme)
 	}
 
 	items := getTopItems(m.stats.Data.Categories, 10)
 	maxSecs := getMaxSeconds(items)
-	panelWidth := m.width/2 - 4
-	sb.WriteString(renderBarChart(items, maxSecs, m.theme.Primary, panelWidth))
-	return sb.String()
+	barWidth := panelWidth - 8
+	content := renderBarChart(items, maxSecs, m.theme.Primary, barWidth)
+	return renderBorderedPanel("Categories", content, panelWidth, m.theme)
 }
 
 // renderEditorsPanel renders the editors panel with wakafetch-style bars.
 func (m Model) renderEditorsPanel() string {
-	var sb strings.Builder
-	sb.WriteString(TitleStyle(m.theme).Render("Editors") + "\n")
-
+	panelWidth := m.width/2 - 4
 	if m.stats == nil || len(m.stats.Data.Editors) == 0 {
-		sb.WriteString("  No data")
-		return sb.String()
+		return renderBorderedPanel("Editors", "No data", panelWidth, m.theme)
 	}
 
 	items := getTopItems(m.stats.Data.Editors, 10)
 	maxSecs := getMaxSeconds(items)
-	panelWidth := m.width/2 - 4
-	sb.WriteString(renderBarChart(items, maxSecs, m.theme.Primary, panelWidth))
-	return sb.String()
+	barWidth := panelWidth - 8
+	content := renderBarChart(items, maxSecs, m.theme.Primary, barWidth)
+	return renderBorderedPanel("Editors", content, panelWidth, m.theme)
 }
 
 // renderOSPanel renders the operating systems panel with wakafetch-style bars.
 func (m Model) renderOSPanel() string {
-	var sb strings.Builder
-	sb.WriteString(TitleStyle(m.theme).Render("Operating Systems") + "\n")
-
+	panelWidth := m.width/2 - 4
 	if m.stats == nil || len(m.stats.Data.OperatingSystems) == 0 {
-		sb.WriteString("  No data")
-		return sb.String()
+		return renderBorderedPanel("Operating Systems", "No data", panelWidth, m.theme)
 	}
 
 	items := getTopItems(m.stats.Data.OperatingSystems, 10)
 	maxSecs := getMaxSeconds(items)
-	panelWidth := m.width/2 - 4
-	sb.WriteString(renderBarChart(items, maxSecs, m.theme.Primary, panelWidth))
-	return sb.String()
+	barWidth := panelWidth - 8
+	content := renderBarChart(items, maxSecs, m.theme.Primary, barWidth)
+	return renderBorderedPanel("Operating Systems", content, panelWidth, m.theme)
 }
 
 // renderMachinesPanel renders the machines panel with wakafetch-style bars.
 func (m Model) renderMachinesPanel() string {
-	var sb strings.Builder
-	sb.WriteString(TitleStyle(m.theme).Render("Machines") + "\n")
-
+	panelWidth := m.width/2 - 4
 	if m.stats == nil || len(m.stats.Data.Machines) == 0 {
-		sb.WriteString("  No data")
-		return sb.String()
+		return renderBorderedPanel("Machines", "No data", panelWidth, m.theme)
 	}
 
 	items := getTopItems(m.stats.Data.Machines, 10)
 	maxSecs := getMaxSeconds(items)
-	panelWidth := m.width/2 - 4
-	sb.WriteString(renderBarChart(items, maxSecs, m.theme.Primary, panelWidth))
-	return sb.String()
+	barWidth := panelWidth - 8
+	content := renderBarChart(items, maxSecs, m.theme.Primary, barWidth)
+	return renderBorderedPanel("Machines", content, panelWidth, m.theme)
 }

@@ -534,15 +534,14 @@ func (m *Model) updateSparkline() {
 
 // renderSparkline renders the sparkline chart showing hourly activity.
 func (m Model) renderSparkline() string {
-	sparklineTitle := TitleStyle(m.theme).Render("\nHourly Activity (Today)")
-	return lipgloss.JoinVertical(lipgloss.Left, sparklineTitle, m.sparklineChart.View())
+	content := m.sparklineChart.View()
+	return renderBorderedPanel("Hourly Activity (Today)", content, m.width-4, m.theme)
 }
 
 // renderHeatmapPanel renders the heatmap section with title.
 func (m Model) renderHeatmapPanel() string {
-	heatmapTitle := TitleStyle(m.theme).Render("\nActivity (Last 7 Days)")
 	heatmapContent := m.renderHeatmap()
-	return lipgloss.JoinVertical(lipgloss.Left, heatmapTitle, heatmapContent)
+	return renderBorderedPanel("Activity (Last 7 Days)", heatmapContent, m.width-4, m.theme)
 }
 
 // renderHeatmap renders a GitHub-style activity heatmap for the last 7 days.
