@@ -49,6 +49,7 @@ type Model struct {
 
 	// Date navigation - week-based (Sunday to Saturday)
 	selectedWeekStart string // Start of currently viewed week (YYYY-MM-DD, always a Sunday), empty = current week
+	atOldestData      bool   // True when viewing the oldest available data
 
 	// Theme
 	theme theme.Theme // Active color theme
@@ -125,6 +126,7 @@ func NewModel(client *api.Client, rangeStr string, refreshInterval time.Duration
 		refreshInterval:   refreshInterval,
 		dataSource:        dataSource,
 		selectedWeekStart: "", // Empty means current week (live data)
+		atOldestData:      false,
 		theme:             activeTheme,
 		spinner:           s,
 		help:              h,
@@ -289,21 +291,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		case key.Matches(msg, m.keys.PrevDay):
-			// Navigate to previous week
-			var currentWeekStart time.Time
+			// Navigate to previous week with data (auto-skip blank weeks)
+			var searchStart time.Time
 			if m.selectedWeekStart == "" {
-				currentWeekStart = getWeekStart(time.Now())
+				searchStart = getWeekStart(time.Now())
 			} else {
 				parsed, err := time.Parse("2006-01-02", m.selectedWeekStart)
 				if err != nil {
 					return m, nil
 				}
-				currentWeekStart = parsed
+				searchStart = parsed
 			}
-			prevWeekStart := currentWeekStart.AddDate(0, 0, -7)
-			m.selectedWeekStart = prevWeekStart.Format("2006-01-02")
-			return m, fetchDataCmd(m.dataSource, m.selectedWeekStart)
+			// Start search from week before current
+			prevWeekStart := searchStart.AddDate(0, 0, -7)
+			m.loading = true
+			return m, findNonEmptyWeekCmd(m.dataSource, prevWeekStart.Format("2006-01-02"), -1)
 		case key.Matches(msg, m.keys.NextDay):
+			m.atOldestData = false // Moving forward, not at oldest
 			// Navigate to next week (capped at current week)
 			if m.selectedWeekStart == "" {
 				// Already at current week, can't go forward
@@ -331,6 +335,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil // Already at current week
 			}
 			m.selectedWeekStart = ""
+			m.atOldestData = false
 			return m, fetchDataCmd(m.dataSource, time.Now().Format("2006-01-02"))
 		}
 		return m, nil
@@ -372,6 +377,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.archiveData = msg.data
 		// Data may be nil if archive not found - that's graceful
 		return m, nil
+
+	case weekSearchResultMsg:
+		m.loading = false
+		if !msg.found {
+			// No more data available, stay at current position
+			m.atOldestData = true
+			return m, nil
+		}
+		// Update to found week
+		m.selectedWeekStart = msg.weekStart
+		m.atOldestData = msg.atOldest
+		return m, fetchDataCmd(m.dataSource, m.selectedWeekStart)
 
 	case fetchErrMsg:
 		m.loading = false
@@ -531,6 +548,12 @@ func (m Model) renderStatusBar() string {
 		}
 	}
 
+	// Show end-of-history indicator
+	var oldestIndicator string
+	if m.atOldestData {
+		oldestIndicator = WarningStyle(m.theme).Render("[oldest data] ")
+	}
+
 	if m.rateLimited {
 		status = WarningStyle(m.theme).Render("Rate limited - retrying with backoff...")
 	} else if m.loading {
@@ -548,9 +571,9 @@ func (m Model) renderStatusBar() string {
 		)
 	}
 
-	// Prepend week indicator if viewing historical data
-	if weekIndicator != "" {
-		status = weekIndicator + status
+	// Prepend indicators if viewing historical data
+	if weekIndicator != "" || oldestIndicator != "" {
+		status = oldestIndicator + weekIndicator + status
 	}
 
 	helpHint := DimStyle(m.theme).Render("? help  1-9 panels  a/h all  r refresh  q quit")
