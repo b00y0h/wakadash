@@ -398,7 +398,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, scheduleRefresh(m.refreshInterval)
 
 	case refreshMsg:
-		// Time to refresh - kick off new fetch
+		// Skip refresh when viewing historical data - user is browsing archive
+		if m.isViewingHistory() {
+			// Reschedule but don't fetch - will resume when returning to today
+			return m, scheduleRefresh(m.refreshInterval)
+		}
+		// Time to refresh - kick off new fetch (current week only)
 		m.loading = true
 		return m, tea.Batch(
 			fetchStatsCmd(m.client, m.rangeStr),
@@ -603,6 +608,32 @@ func formatWeekRange(weekStart time.Time) string {
 		return fmt.Sprintf("%s %d-%d", weekStart.Format("Jan"), weekStart.Day(), weekEnd.Day())
 	}
 	return fmt.Sprintf("%s %d - %s %d", weekStart.Format("Jan"), weekStart.Day(), weekEnd.Format("Jan"), weekEnd.Day())
+}
+
+// getActiveStatsData returns StatsData to display based on current view state.
+// When viewing historical data (selectedWeekStart != ""), converts archiveData to StatsData.
+// When viewing current week (selectedWeekStart == ""), returns m.stats.Data.
+func (m Model) getActiveStatsData() *types.StatsData {
+	if m.selectedWeekStart != "" && m.archiveData != nil {
+		// Convert DayData to StatsData format for rendering
+		// archiveData is a single day's data (DayData), need to wrap and aggregate
+		summaryWrapper := &types.SummaryResponse{
+			Data: []types.DayData{*m.archiveData},
+		}
+		if aggregated := types.AggregateFromSummary(summaryWrapper); aggregated != nil {
+			return aggregated
+		}
+	}
+	// Default: return current stats (API data)
+	if m.stats != nil {
+		return &m.stats.Data
+	}
+	return nil
+}
+
+// isViewingHistory returns true when viewing historical data (not current week).
+func (m Model) isViewingHistory() bool {
+	return m.selectedWeekStart != ""
 }
 
 // formatSeconds converts a float64 seconds value to a human-readable string.
