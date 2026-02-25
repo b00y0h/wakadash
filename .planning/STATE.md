@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 Phase: Milestone boundary (v2.2 complete)
 Plan: -
 Status: Milestone completed
-Last activity: 2026-02-25 - Completed quick task 2: each language needs a different color in Languages panel
+Last activity: 2026-02-25 - Completed quick task 3: hourly activity needs to show the hour below sparkline bars
 
 Progress: [██████████████████████████] 100% (34 plans complete across phases 1-17)
 
@@ -68,11 +68,12 @@ None.
 |---|-------------|------|--------|-----------|
 | 1 | create keyboard action w for weekly summary browsing | 2026-02-25 | 61772ac | [1-create-keyboard-action-w-for-weekly-summ](./quick/1-create-keyboard-action-w-for-weekly-summ/) |
 | 2 | each language needs a different color in Languages panel | 2026-02-25 | 24af5e5 | [2-each-language-needs-to-have-a-different-](./quick/2-each-language-needs-to-have-a-different-/) |
+| 3 | hourly activity needs to show the hour below sparkline bars | 2026-02-25 | 77c148f | [3-hourly-activity-needs-to-show-the-hour-b](./quick/3-hourly-activity-needs-to-show-the-hour-b/) |
 
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed quick-2: per-language colors in Languages panel
+Stopped at: Completed quick-3: hour labels below sparkline bars in Hourly Activity panel
 Resume file: None
 
 ## Next Steps
