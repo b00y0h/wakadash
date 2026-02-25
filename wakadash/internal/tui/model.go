@@ -159,13 +159,21 @@ func NewModel(client *api.Client, rangeStr string, refreshInterval time.Duration
 
 // Init starts the initial async stats fetch, spinner animation, and countdown ticker.
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(
+	cmds := []tea.Cmd{
 		fetchStatsCmd(m.client, m.rangeStr),
 		fetchDurationsCmd(m.client),
 		fetchSummaryCmd(m.client),
 		m.spinner.Tick,
 		tickEverySecond(),
-	)
+	}
+
+	// Fetch today's archive if fetcher configured
+	if m.archiveFetcher != nil {
+		today := time.Now().Format("2006-01-02")
+		cmds = append(cmds, fetchArchiveCmd(m.archiveFetcher, today))
+	}
+
+	return tea.Batch(cmds...)
 }
 
 // Update handles incoming messages and returns an updated model and next command.
@@ -338,6 +346,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case summaryFetchedMsg:
 		m.summaryData = msg.summary
+		return m, nil
+
+	case archiveFetchedMsg:
+		m.archiveData = msg.data
+		// Data may be nil if archive not found (404) - that's graceful, not an error
+		// Future phases will use this data for historical date navigation
 		return m, nil
 
 	case fetchErrMsg:
