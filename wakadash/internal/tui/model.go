@@ -307,9 +307,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				searchStart = parsed
 			}
 			// Start search from week before current
-			prevWeekStart := searchStart.AddDate(0, 0, -7)
+			prevWeekStart := searchStart.AddDate(0, 0, -7).Format("2006-01-02")
+
+			// Check cache first
+			if cachedData, ok := m.prefetchedData[prevWeekStart]; ok {
+				m.archiveData = cachedData
+				m.selectedWeekStart = prevWeekStart
+				m.atOldestData = !m.dataSource.HasOlderData(prevWeekStart)
+				// Trigger prefetch for week before this one
+				nextPrefetch := getPreviousWeekStart(prevWeekStart)
+				if nextPrefetch != "" {
+					if _, cached := m.prefetchedData[nextPrefetch]; !cached {
+						return m, prefetchWeekCmd(m.dataSource, nextPrefetch)
+					}
+				}
+				return m, nil
+			}
+			// Fall through to existing fetch logic if not cached
 			m.loading = true
-			return m, findNonEmptyWeekCmd(m.dataSource, prevWeekStart.Format("2006-01-02"), -1)
+			return m, findNonEmptyWeekCmd(m.dataSource, prevWeekStart, -1)
 		case key.Matches(msg, m.keys.NextDay):
 			m.atOldestData = false // Moving forward, not at oldest
 			// Navigate to next week (capped at current week)
@@ -402,6 +418,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.selectedWeekStart = msg.weekStart
 		m.atOldestData = msg.atOldest
 		return m, fetchDataCmd(m.dataSource, m.selectedWeekStart)
+
+	case prefetchResultMsg:
+		// Store result in cache (even nil for no-data weeks)
+		// Per user decision: Silent failure — no UI feedback on prefetch errors
+		if msg.err == nil {
+			m.prefetchedData[msg.weekStart] = msg.data
+		}
+		return m, nil
 
 	case fetchErrMsg:
 		m.loading = false
