@@ -566,14 +566,19 @@ func (m Model) renderStatusBar() string {
 	} else if m.err != nil {
 		status = ErrorStyle(m.theme).Render("Error: " + m.err.Error())
 	} else {
-		remaining := time.Until(m.nextRefresh).Round(time.Second)
-		if remaining < 0 {
-			remaining = 0
+		if m.isViewingHistory() {
+			// Show paused indicator when viewing historical data
+			status = DimStyle(m.theme).Render("Auto-refresh paused (viewing history)")
+		} else {
+			remaining := time.Until(m.nextRefresh).Round(time.Second)
+			if remaining < 0 {
+				remaining = 0
+			}
+			status = fmt.Sprintf("Updated: %s  Next: %s",
+				m.lastFetch.Format("15:04:05"),
+				remaining,
+			)
 		}
-		status = fmt.Sprintf("Updated: %s  Next: %s",
-			m.lastFetch.Format("15:04:05"),
-			remaining,
-		)
 	}
 
 	// Prepend indicators if viewing historical data
