@@ -27,17 +27,17 @@ func New(client *api.Client, fetcher *archive.Fetcher) *DataSource {
 // IsRecent returns true if the date is within 7 days of today.
 // Date should be in YYYY-MM-DD format.
 func (ds *DataSource) IsRecent(date string) bool {
-	// Parse the input date
-	targetDate, err := time.Parse("2006-01-02", date)
+	// Parse the input date (YYYY-MM-DD, treat as local date)
+	targetDate, err := time.ParseInLocation("2006-01-02", date, time.Local)
 	if err != nil {
 		return false // Invalid date format is not recent
 	}
 
-	// Get today's date (midnight)
+	// Get today's date (midnight, local timezone)
 	now := time.Now()
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
 
-	// Calculate 7 days ago
+	// Calculate 7 days ago (inclusive boundary)
 	sevenDaysAgo := today.AddDate(0, 0, -7)
 
 	// Date is recent if it's >= 7 days ago and <= today
