@@ -109,10 +109,10 @@ Plans:
   2. Right arrow key navigates to next day
   3. Pressing '0' or Home key returns to today
   4. Navigation updates all panels with selected date's data
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- TBD
+- [ ] 14-01-PLAN.md — Add date navigation controls with keyboard bindings
 
 ### Phase 15: Historical Display
 **Goal**: User knows when viewing historical data
@@ -145,7 +145,7 @@ Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 →
 | 11. Configuration & Validation | v2.2 | 1/1 | Complete | 2026-02-24 |
 | 12. GitHub Archive Integration | v2.2 | 2/2 | Complete | 2026-02-25 |
 | 13. Hybrid Data Fetching | 2/2 | Complete    | 2026-02-25 | - |
-| 14. Date Navigation | v2.2 | 0/? | Not started | - |
+| 14. Date Navigation | v2.2 | 0/1 | Planned | - |
 | 15. Historical Display | v2.2 | 0/? | Not started | - |
 
 ## Distribution Notes
@@ -156,4 +156,4 @@ Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 →
 
 ---
 *Roadmap created: 2026-02-18*
-*Last updated: 2026-02-25 (Phase 13 plans created)*
+*Last updated: 2026-02-25 (Phase 14 plans created)*
