@@ -80,7 +80,7 @@ func main() {
 	if isFirstRun {
 		// Show theme picker on first run
 		// isFirstRun=true means Esc/Q are ignored (user MUST select a theme)
-		picker := tui.NewThemePicker(true)
+		picker := tui.NewThemePicker(true, 0, 0) // Dimensions set by initial WindowSizeMsg from BubbleTea
 		pickerProgram := tea.NewProgram(picker, tea.WithAltScreen())
 		_, err := pickerProgram.Run()
 		if err != nil {

@@ -26,11 +26,15 @@ type ThemePickerModel struct {
 // isFirstRun controls cancel behavior:
 // - First-run (isFirstRun=true): No dashboard to return to, user MUST select a theme
 // - Runtime (isFirstRun=false): Dashboard exists, Esc/Q cancels and returns without changing theme
-func NewThemePicker(isFirstRun bool) ThemePickerModel {
+// width and height should be the current terminal dimensions so View() works correctly
+// before the first tea.WindowSizeMsg arrives.
+func NewThemePicker(isFirstRun bool, width, height int) ThemePickerModel {
 	return ThemePickerModel{
 		themes:      theme.AllThemes(),
 		selectedIdx: 0, // Start at Dracula
 		isFirstRun:  isFirstRun,
+		width:       width,
+		height:      height,
 	}
 }
 

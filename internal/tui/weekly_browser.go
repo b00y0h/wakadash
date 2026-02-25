@@ -29,10 +29,14 @@ type WeeklyBrowserModel struct {
 }
 
 // NewWeeklyBrowser creates a WeeklyBrowserModel in its initial loading state.
-func NewWeeklyBrowser(t theme.Theme) WeeklyBrowserModel {
+// width and height should be the current terminal dimensions so View() works correctly
+// before the first tea.WindowSizeMsg arrives.
+func NewWeeklyBrowser(t theme.Theme, width, height int) WeeklyBrowserModel {
 	return WeeklyBrowserModel{
 		loading: true,
 		thm:     t,
+		width:   width,
+		height:  height,
 	}
 }
 

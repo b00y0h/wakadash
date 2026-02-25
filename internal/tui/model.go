@@ -333,7 +333,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case key.Matches(msg, m.keys.ChangeTheme):
 			m.showPicker = true
-			m.picker = NewThemePicker(false) // false = not first run, cancel allowed
+			m.picker = NewThemePicker(false, m.width, m.height) // false = not first run, cancel allowed
 			// Pre-select current theme in picker
 			for i, name := range theme.AllThemes() {
 				if name == m.theme.Name || strings.ToLower(m.theme.Name) == name {
@@ -346,7 +346,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Only open if dataSource is available (needs archive access)
 			if m.dataSource != nil {
 				m.showWeeklyBrowser = true
-				m.weeklyBrowser = NewWeeklyBrowser(m.theme)
+				m.weeklyBrowser = NewWeeklyBrowser(m.theme, m.width, m.height)
 				return m, fetchWeeklySummariesCmd(m.dataSource, 52)
 			}
 			return m, nil
@@ -815,34 +815,47 @@ func groupDurationsByHour(durations []types.Duration) []float64 {
 }
 
 // updateSparkline updates the sparkline chart with current hourly data.
+// Expands 24 hourly values across the full canvas width so bars span left to right.
 func (m *Model) updateSparkline() {
 	m.sparklineChart.Clear()
-	m.sparklineChart.PushAll(m.hourlyData)
+	w := m.sparklineChart.Width()
+	if w <= 0 || len(m.hourlyData) == 0 {
+		return
+	}
+	// Stretch 24 hours across the full canvas width.
+	expanded := make([]float64, w)
+	for col := 0; col < w; col++ {
+		hour := col * 24 / w
+		if hour >= len(m.hourlyData) {
+			hour = len(m.hourlyData) - 1
+		}
+		expanded[col] = m.hourlyData[hour]
+	}
+	m.sparklineChart.PushAll(expanded)
 	m.sparklineChart.Draw()
 }
 
 // renderSparkline renders the sparkline chart showing hourly activity.
 func (m Model) renderSparkline() string {
 	content := m.sparklineChart.View()
+	w := m.sparklineChart.Width()
 
-	// Build hour labels row aligned with sparkline bars.
-	// DrawColumnsOnly() places bars starting at column (canvasWidth - 24),
-	// so we pad with spaces up to that offset, then write labels every 3 hours.
-	startCol := m.sparklineChart.Width() - 24
-	if startCol < 0 {
-		startCol = 0
-	}
-	var sb strings.Builder
-	sb.WriteString(strings.Repeat(" ", startCol))
-	// 8 groups of 3 hours each = 24 characters total.
-	// Each group: hour label left-justified in 3 chars.
+	// Build hour labels aligned with stretched bar positions.
 	keyHours := []int{0, 3, 6, 9, 12, 15, 18, 21}
-	for _, h := range keyHours {
-		sb.WriteString(fmt.Sprintf("%-3d", h))
+	labelRow := make([]byte, w)
+	for i := range labelRow {
+		labelRow[i] = ' '
 	}
-	labelRow := DimStyle(m.theme).Render(sb.String())
+	for _, h := range keyHours {
+		col := h * w / 24
+		label := fmt.Sprintf("%d", h)
+		for j := 0; j < len(label) && col+j < w; j++ {
+			labelRow[col+j] = label[j]
+		}
+	}
+	styled := DimStyle(m.theme).Render(string(labelRow))
 
-	content = content + "\n" + labelRow
+	content = content + "\n" + styled
 	return renderBorderedPanel("Hourly Activity (Today)", content, m.width-4, m.theme)
 }
 
