@@ -346,6 +346,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case summaryFetchedMsg:
 		m.summaryData = msg.summary
+		// Aggregate summary data into stats format (more reliable than /stats endpoint)
+		if aggregated := types.AggregateFromSummary(msg.summary); aggregated != nil {
+			m.stats = &types.StatsResponse{Data: *aggregated}
+			m.updateLanguagesChart()
+			m.updateProjectsChart()
+			m.updateCategoriesChart()
+			m.updateEditorsChart()
+			m.updateOSChart()
+			m.updateMachinesChart()
+		}
 		return m, nil
 
 	case archiveFetchedMsg:
