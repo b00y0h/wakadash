@@ -13,7 +13,7 @@ Requirements for historical data support. Each maps to roadmap phases.
 
 ### Data Fetching
 
-- [x] **DATA-01**: User can view stats from any date with archived data
+- [ ] **DATA-01**: User can view stats from any date with archived data
 - [x] **DATA-02**: Recent dates (last 7 days) fetch from WakaTime API
 - [x] **DATA-03**: Older dates fetch from GitHub archive at `history_repo`
 - [x] **DATA-04**: Missing archive data shows "no data" gracefully (no error)
@@ -65,20 +65,21 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | CFG-01 | Phase 11 | Complete |
-| DATA-01 | Phase 13 | Complete |
+| DATA-01 | Phase 16 | Pending |
 | DATA-02 | Phase 13 | Complete |
 | DATA-03 | Phase 12 | ✅ Complete |
 | DATA-04 | Phase 12 | ✅ Complete |
 | NAV-01 | Phase 14 | Complete |
 | NAV-02 | Phase 14 | Complete |
 | NAV-03 | Phase 14 | Complete |
-| DISP-01 | Phase 15 | Pending |
-| DISP-02 | Phase 15 | Pending |
-| DISP-03 | Phase 15 | Pending |
+| DISP-01 | Phase 16 | Pending |
+| DISP-02 | Phase 16 | Pending |
+| DISP-03 | Phase 16 | Pending |
 
 **Coverage:**
 - v2.2 requirements: 11 total
-- Mapped to phases: 11
+- Satisfied: 7 (CFG-01, DATA-02, DATA-03, DATA-04, NAV-01, NAV-02, NAV-03)
+- Pending (Phase 16): 4 (DATA-01, DISP-01, DISP-02, DISP-03)
 - Unmapped: 0
 
 ✓ All v2.2 requirements mapped to phases
