@@ -45,12 +45,41 @@ func (ds *DataSource) IsRecent(date string) bool {
 }
 
 // Fetch retrieves data for the given date from API (recent) or archive (old).
+// Returns (*types.DayData, error) for both API and archive sources.
 func (ds *DataSource) Fetch(date string) (*types.DayData, error) {
-	return nil, nil // TODO: implement
+	if ds.IsRecent(date) {
+		// Recent date: use API client
+		// API's FetchSummary returns data for a range, so we need to extract the single day
+		summary, err := ds.api.FetchSummary(7) // Fetch last 7 days to ensure we have the date
+		if err != nil {
+			return nil, err
+		}
+
+		// Extract the specific date from the summary response
+		return ds.extractDay(summary, date), nil
+	}
+
+	// Old date: use archive fetcher
+	// Nil fetcher is graceful no-op (returns nil, nil)
+	if ds.archive == nil {
+		return nil, nil
+	}
+
+	return ds.archive.FetchArchive(date)
 }
 
 // extractDay finds the matching date in a SummaryResponse.
 // Returns nil if no matching date is found.
 func (ds *DataSource) extractDay(summary *types.SummaryResponse, date string) *types.DayData {
-	return nil // TODO: implement
+	if summary == nil {
+		return nil
+	}
+
+	for i := range summary.Data {
+		if summary.Data[i].Range.Date == date {
+			return &summary.Data[i]
+		}
+	}
+
+	return nil
 }
