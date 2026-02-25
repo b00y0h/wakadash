@@ -27,8 +27,8 @@ Requirements for historical data support. Each maps to roadmap phases.
 ### Display
 
 - [x] **DISP-01**: Date indicator appears when viewing historical data
-- [ ] **DISP-02**: Auto-refresh pauses when viewing historical data
-- [ ] **DISP-03**: Auto-refresh resumes when returning to today
+- [x] **DISP-02**: Auto-refresh pauses when viewing historical data
+- [x] **DISP-03**: Auto-refresh resumes when returning to today
 
 ## Future Requirements
 
@@ -73,8 +73,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NAV-02 | Phase 14 | Complete |
 | NAV-03 | Phase 14 | Complete |
 | DISP-01 | Phase 16 | Complete |
-| DISP-02 | Phase 16 | Pending |
-| DISP-03 | Phase 16 | Pending |
+| DISP-02 | Phase 16 | Complete |
+| DISP-03 | Phase 16 | Complete |
 
 **Coverage:**
 - v2.2 requirements: 11 total
