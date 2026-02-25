@@ -38,3 +38,10 @@ type archiveFetchedMsg struct {
 	data *types.DayData // nil if archive not found (404)
 	date string         // Date that was fetched
 }
+
+// dataFetchedMsg is sent when DataSource.Fetch completes.
+// Works for both API (recent) and archive (older) dates.
+type dataFetchedMsg struct {
+	data *types.DayData
+	date string
+}

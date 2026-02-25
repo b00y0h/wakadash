@@ -11,6 +11,7 @@ import (
 
 	"github.com/b00y0h/wakadash/internal/api"
 	"github.com/b00y0h/wakadash/internal/archive"
+	"github.com/b00y0h/wakadash/internal/datasource"
 	"github.com/b00y0h/wakadash/internal/types"
 )
 
@@ -174,5 +175,30 @@ func fetchArchiveCmd(fetcher *archive.Fetcher, date string) tea.Cmd {
 		}
 		// data may be nil if 404 (archive not found) - that's OK
 		return archiveFetchedMsg{data: data, date: date}
+	}
+}
+
+// fetchDataCmd fetches day data using the hybrid DataSource.
+// Routes to API for recent dates, archive for older dates.
+func fetchDataCmd(ds *datasource.DataSource, date string) tea.Cmd {
+	return func() (msg tea.Msg) {
+		defer func() {
+			if r := recover(); r != nil {
+				var err error
+				switch v := r.(type) {
+				case error:
+					err = v
+				default:
+					err = fmt.Errorf("panic in fetchDataCmd: %v", r)
+				}
+				msg = fetchErrMsg{err: err}
+			}
+		}()
+
+		data, err := ds.Fetch(date)
+		if err != nil {
+			return fetchErrMsg{err: err}
+		}
+		return dataFetchedMsg{data: data, date: date}
 	}
 }
