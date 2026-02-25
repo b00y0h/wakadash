@@ -553,6 +553,12 @@ func (m Model) renderStatusBar() string {
 		}
 	}
 
+	// Show historical data indicator
+	var historyIndicator string
+	if m.isViewingHistory() {
+		historyIndicator = WarningStyle(m.theme).Render("[HISTORICAL] ")
+	}
+
 	// Show end-of-history indicator
 	var oldestIndicator string
 	if m.atOldestData {
@@ -582,8 +588,8 @@ func (m Model) renderStatusBar() string {
 	}
 
 	// Prepend indicators if viewing historical data
-	if weekIndicator != "" || oldestIndicator != "" {
-		status = oldestIndicator + weekIndicator + status
+	if historyIndicator != "" || weekIndicator != "" || oldestIndicator != "" {
+		status = oldestIndicator + historyIndicator + weekIndicator + status
 	}
 
 	helpHint := DimStyle(m.theme).Render("? help  1-9 panels  a/h all  r refresh  q quit")
