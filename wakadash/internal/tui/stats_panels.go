@@ -71,8 +71,8 @@ func renderBarChart(items []barItem, maxSeconds float64, barColor lipgloss.Color
 		// Format time
 		timeStr := formatSecondsCompact(item.seconds)
 
-		// Render line: name (padded) + bar + time + blank line for spacing
-		line := fmt.Sprintf("%-*s %s%s %s\n",
+		// Render line: name (padded) + bar + time
+		line := fmt.Sprintf("%-*s %s%s %s\n\n",
 			maxNameLen, name,
 			barStyle.Render(bar), padding,
 			timeStr,
@@ -80,7 +80,8 @@ func renderBarChart(items []barItem, maxSeconds float64, barColor lipgloss.Color
 		sb.WriteString(line)
 	}
 
-	return sb.String()
+	// Trim trailing newline to avoid extra space at end
+	return strings.TrimSuffix(sb.String(), "\n")
 }
 
 // formatSecondsCompact formats seconds as "XXh XXm" or "XXm XXs".
