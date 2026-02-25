@@ -57,7 +57,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 14: Date Navigation** - Week-based navigation with auto-skip blank weeks (gap closure in progress) (completed 2026-02-25)
 - [ ] **Phase 15: Historical Display** - DESCOPED (merged into Phase 16)
 - [x] **Phase 16: Wire Archive Data to Display** - Gap closure: connect archiveData to UI rendering (completed 2026-02-25)
-- [ ] **Phase 17: Background Prefetch and No-Data UX** - Instant navigation and clear end-of-history feedback
+- [x] **Phase 17: Background Prefetch and No-Data UX** - Instant navigation and clear end-of-history feedback (completed 2026-02-25)
 
 ## Phase Details
 
@@ -179,7 +179,7 @@ Phases execute in numeric order: 11 → 11.1 → 11.2 → 12 → 12.1 → 13 →
 | 14. Date Navigation | v2.2 | 3/3 | Complete | 2026-02-25 |
 | 15. Historical Display | v2.2 | - | Descoped | - |
 | 16. Wire Archive Data to Display | v2.2 | 2/2 | Complete | 2026-02-25 |
-| 17. Background Prefetch & No-Data UX | 1/2 | In Progress|  | - |
+| 17. Background Prefetch & No-Data UX | 2/2 | Complete   | 2026-02-25 | - |
 
 ## Distribution Notes
 

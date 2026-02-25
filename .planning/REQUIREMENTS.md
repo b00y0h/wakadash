@@ -37,8 +37,8 @@ Requirements for historical data support. Each maps to roadmap phases.
 
 ### No-Data UX (Phase 17)
 
-- [ ] **NODATA-01**: Full-screen "End of history" banner appears when no data exists
-- [ ] **NODATA-02**: Banner shows navigation hints to return to current week
+- [x] **NODATA-01**: Full-screen "End of history" banner appears when no data exists
+- [x] **NODATA-02**: Banner shows navigation hints to return to current week
 
 ## Future Requirements
 
@@ -87,8 +87,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DISP-03 | Phase 16 | Complete |
 | PREFETCH-01 | Phase 17 | Complete |
 | PREFETCH-02 | Phase 17 | Complete |
-| NODATA-01 | Phase 17 | Pending |
-| NODATA-02 | Phase 17 | Pending |
+| NODATA-01 | Phase 17 | Complete |
+| NODATA-02 | Phase 17 | Complete |
 
 **Coverage:**
 - v2.2 requirements: 15 total
