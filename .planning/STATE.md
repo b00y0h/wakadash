@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 Phase: Milestone boundary (v2.2 complete)
 Plan: -
 Status: Milestone completed
-Last activity: 2026-02-25 — v2.2 Historical Data shipped
+Last activity: 2026-02-25 - Completed quick task 1: create keyboard action w for weekly summary browsing
 
 Progress: [██████████████████████████] 100% (34 plans complete across phases 1-17)
 
@@ -61,6 +61,12 @@ None.
 ### Blockers/Concerns
 
 **homebrew-core resubmission:** Formula ready at b00y0h/homebrew-core:wakadash. Resubmit when project reaches >= 30 forks, >= 30 watchers, or >= 75 stars.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | create keyboard action w for weekly summary browsing | 2026-02-25 | 61772ac | [1-create-keyboard-action-w-for-weekly-summ](./quick/1-create-keyboard-action-w-for-weekly-summ/) |
 
 ## Session Continuity
 
