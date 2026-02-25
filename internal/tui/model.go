@@ -824,6 +824,25 @@ func (m *Model) updateSparkline() {
 // renderSparkline renders the sparkline chart showing hourly activity.
 func (m Model) renderSparkline() string {
 	content := m.sparklineChart.View()
+
+	// Build hour labels row aligned with sparkline bars.
+	// DrawColumnsOnly() places bars starting at column (canvasWidth - 24),
+	// so we pad with spaces up to that offset, then write labels every 3 hours.
+	startCol := m.sparklineChart.Width() - 24
+	if startCol < 0 {
+		startCol = 0
+	}
+	var sb strings.Builder
+	sb.WriteString(strings.Repeat(" ", startCol))
+	// 8 groups of 3 hours each = 24 characters total.
+	// Each group: hour label left-justified in 3 chars.
+	keyHours := []int{0, 3, 6, 9, 12, 15, 18, 21}
+	for _, h := range keyHours {
+		sb.WriteString(fmt.Sprintf("%-3d", h))
+	}
+	labelRow := DimStyle(m.theme).Render(sb.String())
+
+	content = content + "\n" + labelRow
 	return renderBorderedPanel("Hourly Activity (Today)", content, m.width-4, m.theme)
 }
 
