@@ -47,6 +47,9 @@ type Model struct {
 	// Archived data for historical dates
 	archiveData *types.DayData
 
+	// Prefetch cache for instant navigation
+	prefetchedData map[string]*types.DayData // Cache: weekStart -> data
+
 	// Date navigation - week-based (Sunday to Saturday)
 	selectedWeekStart string // Start of currently viewed week (YYYY-MM-DD, always a Sunday), empty = current week
 	atOldestData      bool   // True when viewing the oldest available data
@@ -125,6 +128,7 @@ func NewModel(client *api.Client, rangeStr string, refreshInterval time.Duration
 		rangeStr:          rangeStr,
 		refreshInterval:   refreshInterval,
 		dataSource:        dataSource,
+		prefetchedData:    make(map[string]*types.DayData),
 		selectedWeekStart: "", // Empty means current week (live data)
 		atOldestData:      false,
 		theme:             activeTheme,
