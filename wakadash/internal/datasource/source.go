@@ -48,3 +48,9 @@ func (ds *DataSource) IsRecent(date string) bool {
 func (ds *DataSource) Fetch(date string) (*types.DayData, error) {
 	return nil, nil // TODO: implement
 }
+
+// extractDay finds the matching date in a SummaryResponse.
+// Returns nil if no matching date is found.
+func (ds *DataSource) extractDay(summary *types.SummaryResponse, date string) *types.DayData {
+	return nil // TODO: implement
+}
