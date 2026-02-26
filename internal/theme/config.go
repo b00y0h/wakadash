@@ -16,6 +16,7 @@ func LoadThemeFromConfig() (string, error) {
 		return "", err
 	}
 
+	// #nosec G304 - configPath is ~/.wakatime.cfg
 	f, err := os.Open(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -63,6 +64,7 @@ func SaveThemeToConfig(themeName string) error {
 	}
 
 	// Read entire file
+	// #nosec G304 - configPath is ~/.wakatime.cfg
 	data, err := os.ReadFile(configPath)
 	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("cannot read %s: %w", configPath, err)

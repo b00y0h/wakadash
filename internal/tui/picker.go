@@ -20,6 +20,7 @@ type ThemePickerModel struct {
 	cancelled     bool     // True when user pressed Esc/Q (runtime only)
 	selectedTheme string   // Theme name when confirmed
 	isFirstRun    bool     // True for first-run flow (no cancel allowed)
+	err           error    // Last error encountered
 }
 
 // NewThemePicker creates a new theme picker model.
@@ -61,9 +62,13 @@ func (m ThemePickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "enter":
 			// Confirm selection and save to config
-			m.confirmed = true
 			m.selectedTheme = m.themes[m.selectedIdx]
-			theme.SaveThemeToConfig(m.selectedTheme)
+			if err := theme.SaveThemeToConfig(m.selectedTheme); err != nil {
+				m.err = err
+				// Stay in picker to show error
+				return m, nil
+			}
+			m.confirmed = true
 			return m, tea.Quit
 		case "esc", "q":
 			if m.isFirstRun {
@@ -96,6 +101,15 @@ func (m ThemePickerModel) View() string {
 		Bold(true).
 		Render(fmt.Sprintf("Theme: %s", currentTheme.Name))
 	sb.WriteString(themeLabel + "\n\n")
+
+	// Show error if any
+	if m.err != nil {
+		errorMsg := lipgloss.NewStyle().
+			Foreground(currentTheme.Accent1). // Use theme accent for visibility
+			Bold(true).
+			Render(fmt.Sprintf("Error saving theme: %v", m.err))
+		sb.WriteString(errorMsg + "\n\n")
+	}
 
 	// Navigation hint
 	navHint := lipgloss.NewStyle().

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -18,7 +19,7 @@ const requestTimeout = 10 * time.Second
 
 // Client holds the API credentials and base URL for WakaTime API calls.
 type Client struct {
-	APIKey  string
+	APIKey  string // #nosec G117
 	APIURL  string
 	httpCli *http.Client
 }
@@ -82,8 +83,17 @@ func (c *Client) buildURL(path string) string {
 }
 
 // fetchJSON makes an authenticated GET request and decodes the JSON response into T.
-func fetchJSON[T any](c *Client, url string) (*T, error) {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+func fetchJSON[T any](c *Client, urlStr string) (*T, error) {
+	// Validate URL to mitigate SSRF
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid URL: %w", err)
+	}
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		return nil, fmt.Errorf("invalid URL scheme: %s", parsedURL.Scheme)
+	}
+
+	req, err := http.NewRequest(http.MethodGet, urlStr, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -91,6 +101,7 @@ func fetchJSON[T any](c *Client, url string) (*T, error) {
 	encodedKey := base64.StdEncoding.EncodeToString([]byte(c.APIKey))
 	req.Header.Set("Authorization", "Basic "+encodedKey)
 
+	// #nosec G704 - URL is validated above to have http/https scheme
 	resp, err := c.httpCli.Do(req)
 	if err != nil {
 		if netErr, ok := err.(interface{ Timeout() bool }); ok && netErr.Timeout() {

@@ -1,6 +1,6 @@
 module github.com/b00y0h/wakadash
 
-go 1.24.2
+go 1.24.13
 
 require (
 	github.com/NimbleMarkets/ntcharts v0.4.0

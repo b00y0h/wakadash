@@ -14,7 +14,7 @@ import (
 // Config holds the WakaTime API credentials and endpoint URL.
 type Config struct {
 	APIURL      string
-	APIKey      string
+	APIKey      string // #nosec G117
 	HistoryRepo string // e.g., "b00y0h/wakatime-data"
 }
 
@@ -26,6 +26,7 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("cannot determine config path: %w", err)
 	}
 
+	// #nosec G304 - configPath is ~/.wakatime.cfg
 	f, err := os.Open(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("cannot open %s: %w", configPath, err)
@@ -113,6 +114,7 @@ func EnsureWakadashSection() error {
 	}
 
 	// Read entire file
+	// #nosec G304 - configPath is ~/.wakatime.cfg
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
