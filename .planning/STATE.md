@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 Phase: Milestone boundary (v2.2 complete)
 Plan: -
 Status: Milestone completed
-Last activity: 2026-02-25 - Completed quick task 4: fix terminal too small error when opening theme picker
+Last activity: 2026-03-04 - Completed quick task 5: fix archive fetcher to match wakasync data structure
 
 Progress: [██████████████████████████] 100% (34 plans complete across phases 1-17)
 
@@ -70,11 +70,12 @@ None.
 | 2 | each language needs a different color in Languages panel | 2026-02-25 | 24af5e5 | [2-each-language-needs-to-have-a-different-](./quick/2-each-language-needs-to-have-a-different-/) |
 | 3 | hourly activity needs to show the hour below sparkline bars | 2026-02-25 | 77c148f | [3-hourly-activity-needs-to-show-the-hour-b](./quick/3-hourly-activity-needs-to-show-the-hour-b/) |
 | 4 | fix terminal too small error when opening theme picker | 2026-02-25 | d1f74ea | [4-fix-terminal-too-small-error-when-select](./quick/4-fix-terminal-too-small-error-when-select/) |
+| 5 | fix archive fetcher to match wakasync data structure | 2026-03-04 | 142b362 | [5-fix-archive-fetcher-to-match-wakasync-da](./quick/5-fix-archive-fetcher-to-match-wakasync-da/) |
 
 ## Session Continuity
 
-Last session: 2026-02-25
-Stopped at: Completed quick-4: fix terminal too small error when opening theme picker
+Last session: 2026-03-04
+Stopped at: Completed quick-5: fix archive fetcher to match wakasync data structure
 Resume file: None
 
 ## Next Steps
