@@ -49,9 +49,16 @@ func (f *Fetcher) FetchArchive(date string) (*types.DayData, error) {
 		return nil, nil
 	}
 
-	// Build GitHub raw URL
-	url := fmt.Sprintf("https://raw.githubusercontent.com/%s/main/data/%s.json",
-		f.HistoryRepo, date)
+	// Parse date into components for URL path (YYYY/MM/DD)
+	parts := strings.Split(date, "-")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("invalid date format %q: expected YYYY-MM-DD", date)
+	}
+	year, month, day := parts[0], parts[1], parts[2]
+
+	// Build GitHub raw URL using wakasync's data structure: data/YYYY/MM/DD/summary.json
+	url := fmt.Sprintf("https://raw.githubusercontent.com/%s/main/data/%s/%s/%s/summary.json",
+		f.HistoryRepo, year, month, day)
 
 	// Make GET request (no auth needed for public repos)
 	resp, err := f.httpCli.Get(url)
@@ -63,7 +70,9 @@ func (f *Fetcher) FetchArchive(date string) (*types.DayData, error) {
 	}
 	defer resp.Body.Close()
 
-	// Handle 404: data doesn't exist (not an error)
+	// Handle 404: data doesn't exist (not an error).
+	// Note: private repos also return 404 from raw.githubusercontent.com.
+	// Use CheckAccess() at startup to detect private-repo issues early.
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, nil
 	}
@@ -73,11 +82,35 @@ func (f *Fetcher) FetchArchive(date string) (*types.DayData, error) {
 		return nil, fmt.Errorf("GitHub returned status %d: %s", resp.StatusCode, resp.Status)
 	}
 
-	// Decode JSON response
-	var data types.DayData
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+	// Decode JSON response — wakasync wraps DayData in a SummaryResponse envelope
+	var summary types.SummaryResponse
+	if err := json.NewDecoder(resp.Body).Decode(&summary); err != nil {
 		return nil, fmt.Errorf("invalid JSON in archive file: %w", err)
 	}
 
-	return &data, nil
+	// Extract first day's data from the wrapper
+	if len(summary.Data) == 0 {
+		return nil, nil
+	}
+
+	return &summary.Data[0], nil
+}
+
+// CheckAccess verifies the history repo is accessible (public and exists).
+// Returns nil if accessible, error with guidance if not.
+// Call once at startup to surface private-repo issues early.
+func (f *Fetcher) CheckAccess() error {
+	if f == nil {
+		return nil
+	}
+	url := fmt.Sprintf("https://raw.githubusercontent.com/%s/main/", f.HistoryRepo)
+	resp, err := f.httpCli.Head(url)
+	if err != nil {
+		return fmt.Errorf("unable to reach history repo: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("history repo '%s' is not accessible — if this is a private repo, make it public (raw.githubusercontent.com cannot access private repos)", f.HistoryRepo)
+	}
+	return nil
 }
