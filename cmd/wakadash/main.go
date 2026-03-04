@@ -70,6 +70,11 @@ func main() {
 	archiveFetcher := archive.New(cfg.HistoryRepo)
 	// archiveFetcher is nil if HistoryRepo is empty or invalid - that's OK (graceful no-op)
 
+	// Verify archive repo is accessible (warns about private repos early)
+	if err := archiveFetcher.CheckAccess(); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
+	}
+
 	// Create hybrid data source (routes to API for recent dates, archive for old dates)
 	dataSource := datasource.New(client, archiveFetcher)
 
