@@ -45,6 +45,7 @@ func (ds *DataSource) IsRecent(date string) bool {
 }
 
 // Fetch retrieves data for the given date from API (recent) or archive (old).
+// For archive dates, fetches all 7 days of the week and aggregates them.
 // Returns (*types.DayData, error) for both API and archive sources.
 func (ds *DataSource) Fetch(date string) (*types.DayData, error) {
 	if ds.IsRecent(date) {
@@ -59,13 +60,8 @@ func (ds *DataSource) Fetch(date string) (*types.DayData, error) {
 		return ds.extractDay(summary, date), nil
 	}
 
-	// Old date: use archive fetcher
-	// Nil fetcher is graceful no-op (returns nil, nil)
-	if ds.archive == nil {
-		return nil, nil
-	}
-
-	return ds.archive.FetchArchive(date)
+	// Old date: fetch the full week from archive
+	return ds.fetchArchiveWeek(date)
 }
 
 // extractDay finds the matching date in a SummaryResponse.
@@ -84,10 +80,64 @@ func (ds *DataSource) extractDay(summary *types.SummaryResponse, date string) *t
 	return nil
 }
 
+// fetchArchiveWeek fetches all 7 days of a week from the archive and merges them.
+// weekStart should be a Sunday date in YYYY-MM-DD format.
+func (ds *DataSource) fetchArchiveWeek(weekStart string) (*types.DayData, error) {
+	if ds.archive == nil {
+		return nil, nil
+	}
+
+	start, err := time.Parse("2006-01-02", weekStart)
+	if err != nil {
+		return nil, err
+	}
+
+	var days []types.DayData
+	for i := 0; i < 7; i++ {
+		date := start.AddDate(0, 0, i).Format("2006-01-02")
+		data, err := ds.archive.FetchArchive(date)
+		if err != nil {
+			continue // Skip days that error
+		}
+		if data != nil && data.GrandTotal.TotalSeconds > 0 {
+			days = append(days, *data)
+		}
+	}
+
+	if len(days) == 0 {
+		return nil, nil
+	}
+
+	return types.MergeDayData(days), nil
+}
+
+// weekHasArchiveData checks if any day in a week has archive data.
+// Short-circuits on first day found with data.
+func (ds *DataSource) weekHasArchiveData(weekStart string) bool {
+	if ds.archive == nil {
+		return false
+	}
+
+	start, err := time.Parse("2006-01-02", weekStart)
+	if err != nil {
+		return false
+	}
+
+	for i := 0; i < 7; i++ {
+		date := start.AddDate(0, 0, i).Format("2006-01-02")
+		data, err := ds.archive.FetchArchive(date)
+		if err == nil && data != nil && data.GrandTotal.TotalSeconds > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // FindNonEmptyWeek searches backward from startWeek for a week with data.
 // Returns the week start date (Sunday) of the first week with data, or empty string if none found.
 // maxWeeksBack limits the search depth (e.g., 52 for one year).
 // For recent dates (within 7 days), assumes data exists (API always has recent data).
+// For archive dates, checks all 7 days of each week (not just Sunday).
 func (ds *DataSource) FindNonEmptyWeek(startWeek string, direction int, maxWeeksBack int) (string, bool) {
 	if direction != -1 && direction != 1 {
 		direction = -1 // Default to backward search
@@ -109,12 +159,9 @@ func (ds *DataSource) FindNonEmptyWeek(startWeek string, direction int, maxWeeks
 			return weekDateStr, true
 		}
 
-		// For older dates, check archive
-		if ds.archive != nil {
-			data, err := ds.archive.FetchArchive(weekDateStr)
-			if err == nil && data != nil && data.GrandTotal.TotalSeconds > 0 {
-				return weekDateStr, true
-			}
+		// For older dates, check all 7 days of the week
+		if ds.weekHasArchiveData(weekDateStr) {
+			return weekDateStr, true
 		}
 
 		// Move to next week in search direction
@@ -141,19 +188,15 @@ func (ds *DataSource) HasOlderData(weekStart string) bool {
 		return true
 	}
 
-	// For older dates, check archive (just one week back as quick check)
-	if ds.archive != nil {
-		data, err := ds.archive.FetchArchive(prevWeek)
-		if err == nil && data != nil && data.GrandTotal.TotalSeconds > 0 {
+	// For older dates, check all 7 days of each week
+	if ds.weekHasArchiveData(prevWeek) {
+		return true
+	}
+	// Try a few more weeks back (up to 4) to avoid false negatives
+	for i := 2; i <= 4; i++ {
+		checkWeek := parsed.AddDate(0, 0, -7*i).Format("2006-01-02")
+		if ds.weekHasArchiveData(checkWeek) {
 			return true
-		}
-		// Try a few more weeks back (up to 4) to avoid false negatives
-		for i := 2; i <= 4; i++ {
-			checkWeek := parsed.AddDate(0, 0, -7*i).Format("2006-01-02")
-			data, err := ds.archive.FetchArchive(checkWeek)
-			if err == nil && data != nil && data.GrandTotal.TotalSeconds > 0 {
-				return true
-			}
 		}
 	}
 

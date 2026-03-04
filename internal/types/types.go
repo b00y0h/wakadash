@@ -198,6 +198,64 @@ func AggregateFromSummary(summary *SummaryResponse) *StatsData {
 	return stats
 }
 
+// MergeDayData aggregates multiple daily DayData into a single combined DayData.
+// Used to combine all days of a week into one view.
+func MergeDayData(days []DayData) *DayData {
+	if len(days) == 0 {
+		return nil
+	}
+	if len(days) == 1 {
+		return &days[0]
+	}
+
+	languages := make(map[string]float64)
+	projects := make(map[string]float64)
+	editors := make(map[string]float64)
+	categories := make(map[string]float64)
+	operatingSystems := make(map[string]float64)
+	machines := make(map[string]float64)
+
+	var totalSeconds float64
+
+	for _, day := range days {
+		totalSeconds += day.GrandTotal.TotalSeconds
+		for _, item := range day.Languages {
+			languages[item.Name] += item.TotalSeconds
+		}
+		for _, item := range day.Projects {
+			projects[item.Name] += item.TotalSeconds
+		}
+		for _, item := range day.Editors {
+			editors[item.Name] += item.TotalSeconds
+		}
+		for _, item := range day.Categories {
+			categories[item.Name] += item.TotalSeconds
+		}
+		for _, item := range day.OperatingSystems {
+			operatingSystems[item.Name] += item.TotalSeconds
+		}
+		for _, item := range day.Machines {
+			machines[item.Name] += item.TotalSeconds
+		}
+	}
+
+	return &DayData{
+		Languages:        mapToStatItems(languages, totalSeconds),
+		Projects:         mapToStatItems(projects, totalSeconds),
+		Editors:          mapToStatItems(editors, totalSeconds),
+		Categories:       mapToStatItems(categories, totalSeconds),
+		OperatingSystems: mapToStatItems(operatingSystems, totalSeconds),
+		Machines:         mapToStatItems(machines, totalSeconds),
+		GrandTotal: GrandTotal{
+			TotalSeconds: totalSeconds,
+			Text:         formatDuration(totalSeconds),
+			Hours:        int(totalSeconds) / 3600,
+			Minutes:      (int(totalSeconds) % 3600) / 60,
+		},
+		Range: days[0].Range,
+	}
+}
+
 // mapToStatItems converts a name->seconds map to a sorted slice of StatItems.
 func mapToStatItems(m map[string]float64, total float64) []StatItem {
 	items := make([]StatItem, 0, len(m))
