@@ -42,8 +42,9 @@ type archiveFetchedMsg struct {
 // dataFetchedMsg is sent when DataSource.Fetch completes.
 // Works for both API (recent) and archive (older) dates.
 type dataFetchedMsg struct {
-	data *types.DayData
-	date string
+	data        *types.DayData
+	date        string
+	dailyTotals [7]float64 // Per-day totals (Sun-Sat) for historical weeks
 }
 
 // weekSearchResultMsg is sent when FindNonEmptyWeek completes.

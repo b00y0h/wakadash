@@ -110,14 +110,14 @@ func TestFetch_NilArchiveFetcher(t *testing.T) {
 	apiClient := api.New("test-key", "https://wakatime.com/api")
 	ds := New(apiClient, nil)
 
-	// For old date with nil fetcher, should return (nil, nil)
-	data, err := ds.Fetch(oldDate)
+	// For old date with nil fetcher, should return result with nil data
+	result, err := ds.Fetch(oldDate)
 
 	if err != nil {
 		t.Errorf("Expected nil error with nil fetcher, got: %v", err)
 	}
-	if data != nil {
-		t.Errorf("Expected nil data with nil fetcher, got: %v", data)
+	if result != nil && result.Data != nil {
+		t.Errorf("Expected nil data with nil fetcher, got: %v", result.Data)
 	}
 }
 

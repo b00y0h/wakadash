@@ -45,7 +45,8 @@ type Model struct {
 	dataSource *datasource.DataSource
 
 	// Archived data for historical dates
-	archiveData *types.DayData
+	archiveData      *types.DayData
+	archiveDayTotals [7]float64 // Per-day totals (Sun=0..Sat=6) for historical week
 
 	// Prefetch cache for instant navigation
 	prefetchedData map[string]*types.DayData // Cache: weekStart -> data
@@ -465,10 +466,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case dataFetchedMsg:
 		// Store data from hybrid source (API or archive based on date)
-		// For today, this will be API data formatted as DayData
-		// For older dates, this will be archive data
 		m.archiveData = msg.data
-		// Data may be nil if archive not found - that's graceful
+		m.archiveDayTotals = msg.dailyTotals
 
 		// If navigating to historical week and no data exists
 		if m.selectedWeekStart != "" && msg.data == nil {
@@ -633,8 +632,19 @@ func (m Model) renderStats() string {
 	data := m.stats.Data
 	var sb strings.Builder
 
-	// Title
-	title := TitleStyle(m.theme).Render(fmt.Sprintf("WakaTime Stats (%s)", m.rangeStr))
+	// Title - show date range in historical mode
+	var titleStr string
+	if m.selectedWeekStart != "" {
+		parsed, err := time.Parse("2006-01-02", m.selectedWeekStart)
+		if err == nil {
+			titleStr = fmt.Sprintf("WakaTime Stats (%s)", formatWeekRange(parsed))
+		} else {
+			titleStr = fmt.Sprintf("WakaTime Stats (%s)", m.rangeStr)
+		}
+	} else {
+		titleStr = fmt.Sprintf("WakaTime Stats (%s)", m.rangeStr)
+	}
+	title := TitleStyle(m.theme).Render(titleStr)
 	sb.WriteString(title + "\n\n")
 
 	// Totals
@@ -838,8 +848,13 @@ func (m *Model) updateSparkline() {
 	m.sparklineChart.Draw()
 }
 
-// renderSparkline renders the sparkline chart showing hourly activity.
+// renderSparkline renders the sparkline chart showing hourly activity (live)
+// or daily activity breakdown (historical).
 func (m Model) renderSparkline() string {
+	if m.selectedWeekStart != "" {
+		return m.renderWeeklySparkline()
+	}
+
 	content := m.sparklineChart.View()
 	w := m.sparklineChart.Width()
 
@@ -862,10 +877,110 @@ func (m Model) renderSparkline() string {
 	return renderBorderedPanel("Hourly Activity (Today)", content, m.width-4, m.theme)
 }
 
+// renderWeeklySparkline renders a daily activity bar chart for historical weeks.
+func (m Model) renderWeeklySparkline() string {
+	dayLabels := []string{"S", "M", "T", "W", "T", "F", "S"}
+	maxSeconds := 0.0
+	for _, s := range m.archiveDayTotals {
+		if s > maxSeconds {
+			maxSeconds = s
+		}
+	}
+
+	barHeight := 6
+	panelWidth := m.width - 4
+	colWidth := panelWidth / 7
+
+	var rows []string
+	for row := barHeight; row >= 1; row-- {
+		threshold := maxSeconds * float64(row) / float64(barHeight)
+		var cols []string
+		for _, s := range m.archiveDayTotals {
+			bar := strings.Repeat(" ", colWidth)
+			if maxSeconds > 0 && s >= threshold {
+				blockWidth := colWidth / 2
+				pad := (colWidth - blockWidth) / 2
+				bar = strings.Repeat(" ", pad) +
+					lipgloss.NewStyle().Background(m.theme.Primary).Render(strings.Repeat(" ", blockWidth)) +
+					strings.Repeat(" ", colWidth-pad-blockWidth)
+			}
+			cols = append(cols, bar)
+		}
+		rows = append(rows, strings.Join(cols, ""))
+	}
+
+	// Day labels row
+	var labels []string
+	for _, l := range dayLabels {
+		pad := (colWidth - len(l)) / 2
+		labels = append(labels, strings.Repeat(" ", pad)+l+strings.Repeat(" ", colWidth-pad-len(l)))
+	}
+	labelRow := DimStyle(m.theme).Render(strings.Join(labels, ""))
+
+	// Time labels row
+	var times []string
+	for _, s := range m.archiveDayTotals {
+		var label string
+		if s == 0 {
+			label = ""
+		} else {
+			h := int(s) / 3600
+			mins := (int(s) % 3600) / 60
+			if h > 0 {
+				label = fmt.Sprintf("%dh", h)
+			} else {
+				label = fmt.Sprintf("%dm", mins)
+			}
+		}
+		pad := (colWidth - len(label)) / 2
+		if pad < 0 {
+			pad = 0
+		}
+		times = append(times, strings.Repeat(" ", pad)+label+strings.Repeat(" ", colWidth-pad-len(label)))
+	}
+	timeRow := DimStyle(m.theme).Render(strings.Join(times, ""))
+
+	content := strings.Join(rows, "\n") + "\n" + labelRow + "\n" + timeRow
+
+	title := "Daily Activity"
+	if parsed, err := time.Parse("2006-01-02", m.selectedWeekStart); err == nil {
+		title = fmt.Sprintf("Daily Activity (%s)", formatWeekRange(parsed))
+	}
+	return renderBorderedPanel(title, content, panelWidth, m.theme)
+}
+
 // renderHeatmapPanel renders the heatmap section with title.
 func (m Model) renderHeatmapPanel() string {
+	if m.selectedWeekStart != "" {
+		return m.renderHistoricalHeatmapPanel()
+	}
 	heatmapContent := m.renderHeatmap()
 	return renderBorderedPanel("Activity (Last 7 Days)", heatmapContent, m.width-4, m.theme)
+}
+
+// renderHistoricalHeatmapPanel renders the heatmap for a historical week.
+func (m Model) renderHistoricalHeatmapPanel() string {
+	parsed, err := time.Parse("2006-01-02", m.selectedWeekStart)
+	if err != nil {
+		return renderBorderedPanel("Activity", DimStyle(m.theme).Render("No data"), m.width-4, m.theme)
+	}
+
+	var blocks []string
+	for i := 0; i < 7; i++ {
+		day := parsed.AddDate(0, 0, i)
+		hours := m.archiveDayTotals[i] / 3600.0
+		color := getThemedActivityColor(hours, m.theme)
+		label := day.Format("01-02") // MM-DD
+		block := lipgloss.NewStyle().
+			Background(color).
+			Foreground(m.theme.Foreground).
+			Padding(0, 1).
+			Render(label)
+		blocks = append(blocks, block)
+	}
+
+	title := fmt.Sprintf("Activity (%s)", formatWeekRange(parsed))
+	return renderBorderedPanel(title, lipgloss.JoinHorizontal(lipgloss.Top, blocks...), m.width-4, m.theme)
 }
 
 // renderHeatmap renders a GitHub-style activity heatmap for the last 7 days.

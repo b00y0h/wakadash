@@ -44,20 +44,23 @@ func (ds *DataSource) IsRecent(date string) bool {
 	return !targetDate.Before(sevenDaysAgo) && !targetDate.After(today)
 }
 
+// FetchResult holds the result of a Fetch call.
+// DailyTotals is populated only for archive weeks (index 0=Sun, 6=Sat).
+type FetchResult struct {
+	Data        *types.DayData
+	DailyTotals [7]float64 // Per-day total seconds (Sun-Sat), zero if not archive
+}
+
 // Fetch retrieves data for the given date from API (recent) or archive (old).
 // For archive dates, fetches all 7 days of the week and aggregates them.
-// Returns (*types.DayData, error) for both API and archive sources.
-func (ds *DataSource) Fetch(date string) (*types.DayData, error) {
+func (ds *DataSource) Fetch(date string) (*FetchResult, error) {
 	if ds.IsRecent(date) {
 		// Recent date: use API client
-		// API's FetchSummary returns data for a range, so we need to extract the single day
-		summary, err := ds.api.FetchSummary(7) // Fetch last 7 days to ensure we have the date
+		summary, err := ds.api.FetchSummary(7)
 		if err != nil {
 			return nil, err
 		}
-
-		// Extract the specific date from the summary response
-		return ds.extractDay(summary, date), nil
+		return &FetchResult{Data: ds.extractDay(summary, date)}, nil
 	}
 
 	// Old date: fetch the full week from archive
@@ -82,9 +85,10 @@ func (ds *DataSource) extractDay(summary *types.SummaryResponse, date string) *t
 
 // fetchArchiveWeek fetches all 7 days of a week from the archive and merges them.
 // weekStart should be a Sunday date in YYYY-MM-DD format.
-func (ds *DataSource) fetchArchiveWeek(weekStart string) (*types.DayData, error) {
+// Returns merged data plus per-day totals (index 0=Sun, 6=Sat).
+func (ds *DataSource) fetchArchiveWeek(weekStart string) (*FetchResult, error) {
 	if ds.archive == nil {
-		return nil, nil
+		return &FetchResult{}, nil
 	}
 
 	start, err := time.Parse("2006-01-02", weekStart)
@@ -93,6 +97,7 @@ func (ds *DataSource) fetchArchiveWeek(weekStart string) (*types.DayData, error)
 	}
 
 	var days []types.DayData
+	var dailyTotals [7]float64
 	for i := 0; i < 7; i++ {
 		date := start.AddDate(0, 0, i).Format("2006-01-02")
 		data, err := ds.archive.FetchArchive(date)
@@ -101,14 +106,18 @@ func (ds *DataSource) fetchArchiveWeek(weekStart string) (*types.DayData, error)
 		}
 		if data != nil && data.GrandTotal.TotalSeconds > 0 {
 			days = append(days, *data)
+			dailyTotals[i] = data.GrandTotal.TotalSeconds
 		}
 	}
 
 	if len(days) == 0 {
-		return nil, nil
+		return &FetchResult{}, nil
 	}
 
-	return types.MergeDayData(days), nil
+	return &FetchResult{
+		Data:        types.MergeDayData(days),
+		DailyTotals: dailyTotals,
+	}, nil
 }
 
 // weekHasArchiveData checks if any day in a week has archive data.

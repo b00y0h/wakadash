@@ -195,11 +195,17 @@ func fetchDataCmd(ds *datasource.DataSource, date string) tea.Cmd {
 			}
 		}()
 
-		data, err := ds.Fetch(date)
+		result, err := ds.Fetch(date)
 		if err != nil {
 			return fetchErrMsg{err: err}
 		}
-		return dataFetchedMsg{data: data, date: date}
+		var data *types.DayData
+		var dailyTotals [7]float64
+		if result != nil {
+			data = result.Data
+			dailyTotals = result.DailyTotals
+		}
+		return dataFetchedMsg{data: data, date: date, dailyTotals: dailyTotals}
 	}
 }
 
@@ -277,22 +283,22 @@ func fetchWeeklySummariesCmd(ds *datasource.DataSource, maxWeeks int) tea.Cmd {
 			}
 
 			// Older weeks: fetch from data source
-			data, err := ds.Fetch(weekStartStr)
-			if err != nil || data == nil || data.GrandTotal.TotalSeconds <= 0 {
+			result, err := ds.Fetch(weekStartStr)
+			if err != nil || result == nil || result.Data == nil || result.Data.GrandTotal.TotalSeconds <= 0 {
 				continue // Skip weeks with no data
 			}
 
 			summary := WeeklySummary{
 				WeekStart:    weekStartStr,
 				WeekEnd:      weekEndStr,
-				TotalSeconds: data.GrandTotal.TotalSeconds,
+				TotalSeconds: result.Data.GrandTotal.TotalSeconds,
 				HasData:      true,
 			}
 
-			if len(data.Languages) > 0 {
-				summary.TopLanguage = data.Languages[0].Name
+			if len(result.Data.Languages) > 0 {
+				summary.TopLanguage = result.Data.Languages[0].Name
 			}
-			summary.ProjectCount = len(data.Projects)
+			summary.ProjectCount = len(result.Data.Projects)
 
 			weeks = append(weeks, summary)
 		}
@@ -324,7 +330,11 @@ func prefetchWeekCmd(ds *datasource.DataSource, weekStart string) tea.Cmd {
 			}
 		}()
 
-		data, err := ds.Fetch(weekStart)
+		result, err := ds.Fetch(weekStart)
+		var data *types.DayData
+		if result != nil {
+			data = result.Data
+		}
 		return prefetchResultMsg{weekStart: weekStart, data: data, err: err}
 	}
 }
