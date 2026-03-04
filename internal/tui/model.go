@@ -405,13 +405,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			nextWeekStart := parsed.AddDate(0, 0, 7)
 			currentWeekStart := getWeekStart(time.Now())
-			if !nextWeekStart.Before(currentWeekStart) {
+			// Compare dates as strings to avoid timezone/time-of-day mismatches
+			nextDate := nextWeekStart.Format("2006-01-02")
+			currentDate := currentWeekStart.Format("2006-01-02")
+			if nextDate >= currentDate {
 				// Reached current week, return to live view
 				m.selectedWeekStart = ""
 			} else {
-				m.selectedWeekStart = nextWeekStart.Format("2006-01-02")
+				m.selectedWeekStart = nextDate
 			}
-			dateToFetch := nextWeekStart.Format("2006-01-02")
+			dateToFetch := nextDate
 			if m.selectedWeekStart == "" {
 				dateToFetch = time.Now().Format("2006-01-02")
 			}
