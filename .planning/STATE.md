@@ -70,7 +70,7 @@ None.
 | 2 | each language needs a different color in Languages panel | 2026-02-25 | 24af5e5 | [2-each-language-needs-to-have-a-different-](./quick/2-each-language-needs-to-have-a-different-/) |
 | 3 | hourly activity needs to show the hour below sparkline bars | 2026-02-25 | 77c148f | [3-hourly-activity-needs-to-show-the-hour-b](./quick/3-hourly-activity-needs-to-show-the-hour-b/) |
 | 4 | fix terminal too small error when opening theme picker | 2026-02-25 | d1f74ea | [4-fix-terminal-too-small-error-when-select](./quick/4-fix-terminal-too-small-error-when-select/) |
-| 5 | fix archive fetcher to match wakasync data structure | 2026-03-04 | 4c1eb05 | [5-fix-archive-fetcher-to-match-wakasync-da](./quick/5-fix-archive-fetcher-to-match-wakasync-da/) |
+| 5 | fix archive fetcher to match wakasync data structure | 2026-03-04 | 141104c | [5-fix-archive-fetcher-to-match-wakasync-da](./quick/5-fix-archive-fetcher-to-match-wakasync-da/) |
 
 ## Session Continuity
 
