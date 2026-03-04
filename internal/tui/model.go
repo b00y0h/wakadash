@@ -49,7 +49,7 @@ type Model struct {
 	archiveDayTotals [7]float64 // Per-day totals (Sun=0..Sat=6) for historical week
 
 	// Prefetch cache for instant navigation
-	prefetchedData map[string]*types.DayData // Cache: weekStart -> data
+	prefetchedData map[string]cachedWeekData // Cache: weekStart -> data + daily totals
 
 	// Date navigation - week-based (Sunday to Saturday)
 	selectedWeekStart string // Start of currently viewed week (YYYY-MM-DD, always a Sunday), empty = current week
@@ -99,6 +99,12 @@ type Model struct {
 	rateLimited bool // Visual indicator for rate limit status
 }
 
+// cachedWeekData holds prefetched data and daily totals for a week.
+type cachedWeekData struct {
+	data        *types.DayData
+	dailyTotals [7]float64
+}
+
 // NewModel creates a new Model with the given API client, time range, and refresh interval.
 // rangeStr defaults to "last_7_days" if empty.
 // Valid values: last_7_days, last_30_days, last_6_months, last_year, all_time.
@@ -137,7 +143,7 @@ func NewModel(client *api.Client, rangeStr string, refreshInterval time.Duration
 		rangeStr:          rangeStr,
 		refreshInterval:   refreshInterval,
 		dataSource:        dataSource,
-		prefetchedData:    make(map[string]*types.DayData),
+		prefetchedData:    make(map[string]cachedWeekData),
 		selectedWeekStart: "", // Empty means current week (live data)
 		atOldestData:      false,
 		theme:             activeTheme,
@@ -367,14 +373,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			prevWeekStart := searchStart.AddDate(0, 0, -7).Format("2006-01-02")
 
 			// Check cache first
-			if cachedData, ok := m.prefetchedData[prevWeekStart]; ok {
-				if cachedData == nil {
+			if cached, ok := m.prefetchedData[prevWeekStart]; ok {
+				if cached.data == nil {
 					// No data for this week - show end-of-history banner
 					m.showEndOfHistory = true
 					m.oldestDataDate = m.selectedWeekStart // Last week with data
 					return m, nil
 				}
-				m.archiveData = cachedData
+				m.archiveData = cached.data
+				m.archiveDayTotals = cached.dailyTotals
 				m.selectedWeekStart = prevWeekStart
 				m.atOldestData = !m.dataSource.HasOlderData(prevWeekStart)
 				// Trigger prefetch for week before this one
@@ -465,9 +472,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case dataFetchedMsg:
-		// Store data from hybrid source (API or archive based on date)
-		m.archiveData = msg.data
-		m.archiveDayTotals = msg.dailyTotals
+		// Only update archive fields when viewing historical data
+		if m.selectedWeekStart != "" {
+			m.archiveData = msg.data
+			m.archiveDayTotals = msg.dailyTotals
+		} else {
+			// Live mode: update archiveData (used by getActiveStatsData fallback)
+			// but don't touch archiveDayTotals
+			m.archiveData = msg.data
+		}
 
 		// If navigating to historical week and no data exists
 		if m.selectedWeekStart != "" && msg.data == nil {
@@ -503,7 +516,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Store result in cache (even nil for no-data weeks)
 		// Per user decision: Silent failure — no UI feedback on prefetch errors
 		if msg.err == nil {
-			m.prefetchedData[msg.weekStart] = msg.data
+			m.prefetchedData[msg.weekStart] = cachedWeekData{
+				data:        msg.data,
+				dailyTotals: msg.dailyTotals,
+			}
 		}
 		return m, nil
 

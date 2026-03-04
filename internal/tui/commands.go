@@ -332,9 +332,11 @@ func prefetchWeekCmd(ds *datasource.DataSource, weekStart string) tea.Cmd {
 
 		result, err := ds.Fetch(weekStart)
 		var data *types.DayData
+		var dailyTotals [7]float64
 		if result != nil {
 			data = result.Data
+			dailyTotals = result.DailyTotals
 		}
-		return prefetchResultMsg{weekStart: weekStart, data: data, err: err}
+		return prefetchResultMsg{weekStart: weekStart, data: data, dailyTotals: dailyTotals, err: err}
 	}
 }

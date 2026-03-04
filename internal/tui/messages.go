@@ -56,9 +56,10 @@ type weekSearchResultMsg struct {
 
 // prefetchResultMsg is sent when background prefetch completes.
 type prefetchResultMsg struct {
-	weekStart string         // Week being prefetched (YYYY-MM-DD Sunday)
-	data      *types.DayData // Prefetched data (nil if not found)
-	err       error          // Error (nil for success or 404)
+	weekStart   string         // Week being prefetched (YYYY-MM-DD Sunday)
+	data        *types.DayData // Prefetched data (nil if not found)
+	dailyTotals [7]float64    // Per-day totals (Sun-Sat)
+	err         error          // Error (nil for success or 404)
 }
 
 // WeeklySummary holds summary data for a single week (for the weekly browser list).
