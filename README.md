@@ -1,3 +1,5 @@
+
+
 # wakadash
 
 [![GitHub release](https://img.shields.io/github/v/release/b00y0h/wakadash)](https://github.com/b00y0h/wakadash/releases/latest)
@@ -26,7 +28,7 @@ A beautiful, live-updating terminal dashboard for [WakaTime](https://wakatime.co
 ### Homebrew (macOS/Linux)
 
 ```bash
-brew tap b00y0h/wakadash
+brew tap b00y0h/homebrew-wakadash
 brew install wakadash
 ```
 
