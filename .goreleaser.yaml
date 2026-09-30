@@ -55,13 +55,15 @@ homebrew_casks:
       email: bot@goreleaser.com
     commit_msg_template: "Brew cask update for {{ .ProjectName }} version {{ .Tag }}"
 
-    # macOS quarantine removal for unsigned binaries
-    hooks:
-      post:
-        install: |
-          if OS.mac?
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/wakadash"]
-          end
+    # macOS quarantine removal for unsigned binaries.
+    # GoReleaser's `hooks.post.install` renders the deprecated `postflight`
+    # stanza, so emit `postflight_steps` through `custom_block` instead.
+    custom_block: |
+      postflight_steps do
+        on_macos do
+          run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "wakadash"], chdir: "."
+        end
+      end
 
     # Skip pre-release versions
     skip_upload: auto
